@@ -1,0 +1,49 @@
+:root {
+    --header-height: 56px;
+    --sidebar-width: 20vw;
+}
+
+.sidebar-custom {
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+}
+
+.container-aside {
+    min-width: var(--sidebar-width);
+}
+
+.container-content {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    :root{
+        --sidebar-width: 40vw;
+    }
+
+    .container-aside {
+        min-width: calc(100vw - var(--sidebar-width));
+    }
+
+    header:has(button[aria-expanded="true"]) {
+        min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
+        transition: min-width 0.3s ease;
+    }
+
+    header {
+        transition: min-width 0.3s ease;
+    }
+
+    footer:has(button[aria-expanded="true"]) {
+        min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
+        transition: min-width 0.3s ease;
+    }
+
+    footer {
+        transition: min-width 0.3s ease;
+    }
+
+    .container-content {
+        min-width: 100%;
+    }
+}
