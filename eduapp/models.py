@@ -148,111 +148,130 @@ class HoaDon(db.Model):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-        loai_kh_1 = LoaiKhoaHoc(
-            ma_loai_khoa_hoc="LKH001",
-            ten_loai_khoa_hoc="Tiếng Anh Giao Tiếp",
-            hoc_phi=1500000.0
-        )
-        db.session.add(loai_kh_1)
-
-        # 2. Tạo Người Dùng (Quản lý, Nhân viên, Giáo viên, Học viên)
-        # Lưu ý: Mật khẩu ở đây đang để plain text để test, thực tế nên mã hóa (hash)
-
-        # Quản trị viên
-        admin = QuanLy(
-            ma_nguoi_dung="ADMIN01",
+        quan_ly = QuanLy(
+            ma_nguoi_dung="QL001",
             ten_dang_nhap="admin",
-            mat_khau="123456",
-            ho_va_ten="Nguyễn Quản Trị",
+            mat_khau="123456",  # Lưu ý: Trong thực tế nên mã hóa mật khẩu (hash)
+            ho_va_ten="Nguyễn Văn Quản Lý",
             email="admin@edu.com",
-            so_dien_thoai="0901234567",
-            vai_tro=NguoiDungEnum.QUAN_TRI
+            so_dien_thoai="0909123456",
+            vai_tro=NguoiDungEnum.QUAN_LY
         )
 
-        # Nhân viên
+        # Nhân viên (Người thu tiền/tạo hóa đơn)
         nhan_vien = NhanVien(
             ma_nguoi_dung="NV001",
             ten_dang_nhap="nhanvien1",
             mat_khau="123456",
-            ho_va_ten="Lê Nhân Viên",
-            email="nv1@edu.com",
-            so_dien_thoai="0901112223",
+            ho_va_ten="Trần Thị Nhân Viên",
+            email="nhanvien@edu.com",
+            so_dien_thoai="0909111222",
             vai_tro=NguoiDungEnum.NHAN_VIEN
         )
 
-        # Giáo viên (cần năm kinh nghiệm)
-        giao_vien = GiaoVien(
+        # Giáo viên
+        giao_vien_1 = GiaoVien(
             ma_nguoi_dung="GV001",
             ten_dang_nhap="giaovien1",
             mat_khau="123456",
-            ho_va_ten="Trần Thầy Giáo",
+            ho_va_ten="Lê Thầy Giáo",
             email="gv1@edu.com",
-            so_dien_thoai="0909888777",
+            so_dien_thoai="0912333444",
             vai_tro=NguoiDungEnum.GIAO_VIEN,
             nam_kinh_nghiem=5
         )
 
-        # Học viên (cần ngày sinh, sđt phụ huynh)
-        hoc_vien = HocVien(
+        # Học viên
+        hoc_vien_1 = HocVien(
             ma_nguoi_dung="HV001",
             ten_dang_nhap="hocvien1",
             mat_khau="123456",
-            ho_va_ten="Phạm Học Trò",
+            ho_va_ten="Phạm Em Học",
             email="hv1@edu.com",
-            so_dien_thoai="0905555666",
+            so_dien_thoai="0987654321",
             vai_tro=NguoiDungEnum.HOC_VIEN,
+            so_dien_thoai_phu_huynh="0911222333",
             ngay_sinh=datetime(2005, 5, 20),
-            so_dien_thoai_phu_huynh="0905555888"
+            tinh_trang_xac_nhan_email=True
         )
 
-        db.session.add_all([admin, nhan_vien, giao_vien, hoc_vien])
-        db.session.commit()  # Commit user trước để lấy ID cho khóa học
+        db.session.add_all([quan_ly, nhan_vien, giao_vien_1, hoc_vien_1])
+        db.session.commit()  # Commit để lấy ID cho các bước sau
 
-        # 3. Tạo Khóa Học (Liên kết với Loại KH và Giáo viên)
-        khoa_hoc = KhoaHoc(
-            ma_khoa_hoc="KH001",
-            ma_loai_khoa_hoc="LKH001",
-            ma_giao_vien="GV001",
+        # --- 2. Tạo Loại Khóa Học ---
+        loai_toeic = LoaiKhoaHoc(
+            ma_loai_khoa_hoc="LKH01",
+            ten_loai_khoa_hoc="Luyện thi TOEIC",
+            hoc_phi=5000000.0
+        )
+
+        loai_ielts = LoaiKhoaHoc(
+            ma_loai_khoa_hoc="LKH02",
+            ten_loai_khoa_hoc="Luyện thi IELTS",
+            hoc_phi=8000000.0
+        )
+
+        db.session.add_all([loai_toeic, loai_ielts])
+        db.session.commit()
+
+        # --- 3. Tạo Khóa Học ---
+        khoa_hoc_1 = KhoaHoc(
+            ma_khoa_hoc="TOEIC500",
+            ma_loai_khoa_hoc="LKH01",
             si_so_hien_tai=1,
             si_so_toi_da=30,
-            ngay_bat_dau=datetime(2023, 9, 1),
-            ngay_ket_thuc=datetime(2023, 12, 1),
-            tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+            ngay_bat_dau=datetime(2023, 10, 1),
+            ngay_ket_thuc=datetime(2024, 1, 1),
+            tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH,
+            ma_giao_vien="GV001"  # Foreign Key trỏ tới Giáo viên 1
         )
-        db.session.add(khoa_hoc)
-        db.session.commit()  # Commit khóa học trước
 
-        # 4. Tạo Lịch Học
-        lich_hoc = LichHoc(
-            ma_khoa_hoc="KH001",
+        db.session.add(khoa_hoc_1)
+        db.session.commit()
+
+        # --- 4. Tạo Lịch Học ---
+        # Lớp học này học Thứ 2 và Thứ 4
+        lich_hoc_1 = LichHoc(
+            ma_khoa_hoc="TOEIC500",
             phong_hoc="P101",
             thu=TuanEnum.THU_HAI,
             ca_hoc=CaHocEnum.CA_SANG
         )
-        db.session.add(lich_hoc)
 
-        # 5. Tạo Bảng Điểm (Liên kết Khóa học và Học viên)
+        lich_hoc_2 = LichHoc(
+            ma_khoa_hoc="TOEIC500",
+            phong_hoc="P101",
+            thu=TuanEnum.THU_TU,
+            ca_hoc=CaHocEnum.CA_SANG
+        )
+
+        db.session.add_all([lich_hoc_1, lich_hoc_2])
+
+        # --- 5. Tạo Bảng Điểm (Đăng ký học viên vào lớp) ---
         bang_diem = BangDiem(
-            ma_khoa_hoc="KH001",
+            ma_khoa_hoc="TOEIC500",
             ma_hoc_vien="HV001",
-            diem_giua_ky=8.5,
-            diem_cuoi_ky=9.0,
+            diem_giua_ky=7.5,
+            diem_cuoi_ky=8.0,
             diem_chuyen_can=10.0,
-            diem_trung_binh=9.0,
+            diem_trung_binh=8.2,
             ket_qua=True
         )
+
         db.session.add(bang_diem)
 
-        # 6. Tạo Hóa Đơn (Liên kết Học viên, Khóa học, Nhân viên)
+        # --- 6. Tạo Hóa Đơn ---
         hoa_don = HoaDon(
-            so_tien=1500000.0,
+            so_tien=5000000.0,
             trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
             ma_hoc_vien="HV001",
-            ma_khoa_hoc="KH001",
-            ma_nhan_vien="NV001"
+            ma_khoa_hoc="TOEIC500",
+            ma_nhan_vien="NV001",  # Nhân viên NV001 lập hóa đơn này
+            ngay_nop=datetime.now()
         )
+
         db.session.add(hoa_don)
 
-        # Lưu tất cả vào DB
+        # Lưu tất cả vào database
         db.session.commit()
-        print("Đã thêm dữ liệu mẫu thành công!")
+        print("Đã tạo dữ liệu mẫu thành công!")
