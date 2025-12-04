@@ -2,23 +2,43 @@ import os
 import uuid
 from werkzeug.utils import secure_filename
 from eduapp import app
-from eduapp.models import HocVien
+from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy
 
 
 def login(username, password):
-    return HocVien.query.filter(HocVien.ten_dang_nhap == username or HocVien.mat_khau == password).first()
+    user_models = [HocVien, GiaoVien, NhanVien, QuanLy]
+    for model in user_models:
+        user = model.query.filter_by(ten_dang_nhap=username, mat_khau=password).first()
+        if user:
+            return user
+    return None
 
 
-def get_by_id(id):
-    return HocVien.query.get(id)
+def get_by_id(user_id):
+    user_models = [HocVien, GiaoVien, NhanVien, QuanLy]
+    for model in user_models:
+        user = model.query.get(user_id)
+        if user:
+            return user
+    return None
 
 
 def get_by_username(username):
-    return HocVien.query.filter_by(ten_dang_nhap=username).first()
+    user_models = [HocVien, GiaoVien, NhanVien, QuanLy]
+    for model in user_models:
+        user = model.query.filter_by(ten_dang_nhap=username).first()
+        if user:
+            return user
+    return None
 
 
 def get_by_username_email(username, email):
-    return HocVien.query.filter_by(ten_dang_nhap=username, email=email).first()
+    user_models = [HocVien, GiaoVien, NhanVien, QuanLy]
+    for model in user_models:
+        user = model.query.filter_by(ten_dang_nhap=username, email=email).first()
+        if user:
+            return user
+    return None
 
 
 def add_image(image_file):

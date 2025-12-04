@@ -1,14 +1,71 @@
 {%extends 'layout/base.html'%}
 
-{%block title%}Hồ sở học viên{%endblock%}
+{%block title%}Thông tin cá nhân{%endblock%}
 
 {%block content%}
 <h2 class="text-info text-center mt-3">
-    Trang đổi mật khẩu
+    Trang thông tin cá nhân
 </h2>
-<div class="border border-secondary border-1 m-3" style="border-radius: 20px">
-    <div class="p-5">
+<div class="card shadow-sm border border-secondary border-1 m-3" style="border-radius: 20px">
+    <div class="card-header card-header-custom py-3">
+        <i class="bi bi-person-fill me-2"></i> Thông tin sinh viên
+    </div>
 
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <img src="static/{{current_user.anh_chan_dung}}" alt="..." class="img-thumbnail"
+                     style="width: 150px; height: auto;">
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Mã {{current_user.ten_vai_tro}}:</div>
+            <div class="col-md-9 col-8 fw-bold">{{ current_user.ma_nguoi_dung }}</div>
+        </div>
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Tên {{current_user.ten_vai_tro}}:</div>
+            <div class="col-md-9 col-8 student-name">{{ current_user.ho_va_ten }}</div>
+        </div>
+        {%if current_user.vai_tro.value==1%}
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Ngày sinh:</div>
+            <div class="col-md-9 col-8">{{ current_user.ngay_sinh.strftime('%d/%m/%Y') }}</div>
+        </div>
+        {%elif current_user.vai_tro.value==3%}
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Năm kinh nhiệm:</div>
+            <div class="col-md-9 col-8">{{ current_user.nam_kinh_nghiem }}</div>
+        </div>
+        {%endif%}
+        <!--        <div class="row mb-2">-->
+        <!--            <div class="col-md-3 col-4 info-label">Giới tính:</div>-->
+        <!--            <div class="col-md-9 col-8">Nam</div>-->
+        <!--        </div>-->
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Trạng thái:</div>
+            <div class="col-md-9 col-8 fw-bold {{'text-success' if current_user.tinh_trang_hoat_dong == 1 else 'text-danger'}}">
+                {{'Đang hoạt động' if current_user.tinh_trang_hoat_dong == 1 else 'Không hoạt động'}}
+            </div>
+        </div>
+
+        <hr class="my-3 text-primary" style="opacity: 0.5;">
+
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Số điện thoại:</div>
+            <div class="col-md-9 col-8">{{ current_user.so_dien_thoai }}</div>
+        </div>
+        {%if current_user.vai_tro.value==1%}
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Số điện thoại phụ huynh:</div>
+            <div class="col-md-9 col-8">{{'' if current_user.so_dien_thoai_phu_huynh == None else
+                current_user.so_dien_thoai_phu_huynh }}
+            </div>
+        </div>
+        {%endif%}
+        <div class="row mb-2">
+            <div class="col-md-3 col-4 info-label">Email:</div>
+            <div class="col-md-9 col-8">{{ current_user.email }}</div>
+        </div>
     </div>
 </div>
 {%endblock%}

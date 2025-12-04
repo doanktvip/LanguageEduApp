@@ -16,9 +16,16 @@
                          style="width: 35px; height: 35px; object-fit: cover;">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/change_password">Đổi mật khẩu</a></li>
-                    <li><a class="dropdown-item" href="/verify">Xác nhận email</a></li>
-                    <li><a class="dropdown-item" href="/verify">Xác nhận email</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard-fill"></i> Họ
+                        và tên: {{current_user.ho_va_ten}}</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard"></i> Mã
+                        {{current_user.ten_vai_tro}}: {{ current_user.ma_nguoi_dung }}</a></li>
+                    <li><a href="/profile" class="dropdown-item"><i class="bi bi-person-fill"></i> Thông tin cá
+                        nhân</a></li>
+                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill"></i> Đổi mật khẩu</a>
+                    </li>
+                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill me-2"></i> Xác nhận
+                        email</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>

@@ -8,7 +8,7 @@ from eduapp import db, app
 
 class NguoiDungEnum(RoleEnum):
     HOC_VIEN = 1
-    QUAN_TRI = 2
+    QUAN_LY = 2
     GIAO_VIEN = 3
     NHAN_VIEN = 4
 
@@ -49,13 +49,22 @@ class NguoiDung(db.Model, UserMixin):
     email = Column(String(100), nullable=False, unique=True)
     so_dien_thoai = Column(String(10), nullable=False)
     tinh_trang_hoat_dong = Column(Boolean, default=True)
-    tinh_trang_xac_nhan_email = Column(Boolean, default=False)
     ngay_tao = Column(DateTime, default=datetime.now())
     vai_tro = Column(Enum(NguoiDungEnum), default=NguoiDungEnum.HOC_VIEN)
     anh_chan_dung = Column(String(100), default='images/avatar.png')
 
     def get_id(self):
         return self.ma_nguoi_dung
+
+    @property
+    def ten_vai_tro(self):
+        if self.vai_tro == NguoiDungEnum.HOC_VIEN:
+            return 'học viên'
+        elif self.vai_tro == NguoiDungEnum.GIAO_VIEN:
+            return 'giáo viên'
+        elif self.vai_tro == NguoiDungEnum.NHAN_VIEN:
+            return 'nhân viên'
+        return 'quản lý'
 
 
 class NhanVien(NguoiDung):
@@ -71,6 +80,7 @@ class HocVien(NguoiDung):
     __tablename__ = "hoc_vien"
     so_dien_thoai_phu_huynh = Column(String(10))
     ngay_sinh = Column(DateTime, nullable=False)
+    tinh_trang_xac_nhan_email = Column(Boolean, default=False)
     nhung_bang_diem = relationship('BangDiem', backref='hoc_vien', lazy=True)
     nhung_hoa_don = relationship('HoaDon', backref='hoc_vien', lazy=True)
 

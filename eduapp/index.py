@@ -5,6 +5,7 @@ from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from flask_mail import Message
 from eduapp import app, dao, login_manager, mail
+from eduapp.models import NguoiDungEnum
 
 
 @app.route('/')
