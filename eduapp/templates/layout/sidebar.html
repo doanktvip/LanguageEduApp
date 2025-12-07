@@ -5,20 +5,32 @@
                 <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill"></i> Trang
                     chủ</a>
                 {%if current_user.is_authenticated%}
+                {%if current_user.vai_tro.value==1%}
                 <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-cash-stack"></i> Xem
                     học
                     phí</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-calendar-plus-fill"></i> Đăng ký
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-calendar-plus-fill"></i> Đăng
+                    ký
                     khóa
                     học</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-calendar-date-fill"></i> Thời
+                <a href="/schedule" class="list-group-item list-group-item-action"><i class="bi bi-calendar-date-fill"></i> Thời
                     khóa
                     biểu</a>
                 <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Xem điểm</a>
+                {%elif current_user.vai_tro.value==2%}
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Quản lý</a>
+                {%elif current_user.vai_tro.value==3%}
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Giáo
+                    viên</a>
+                {%elif current_user.vai_tro.value==4%}
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Nhân
+                    viên</a>
+                {%endif%}
                 {%else%}
                 <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill"></i> Đăng
                     nhập</a>
-                <a href="/register" class="list-group-item list-group-item-action"><i class="bi bi-person-plus-fill"></i>
+                <a href="/register" class="list-group-item list-group-item-action"><i
+                        class="bi bi-person-plus-fill"></i>
                     Đăng
                     ký</a>
                 {%endif%}

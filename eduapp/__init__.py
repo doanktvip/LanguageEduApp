@@ -1,3 +1,4 @@
+import cloudinary
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -25,6 +26,10 @@ app.config['MAIL_PASSWORD'] = 'uvoc ehnq pxsk kbmq'
 # Sử dụng mã hóa SSL để bảo mật
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
+
+cloudinary.config(cloud_name='db4bjqp4f',
+                  api_key='588892363794189',
+                  api_secret='eT9TiV07X91x0SFmKN6yjZyF2zk')
 
 mail = Mail(app)
 db = SQLAlchemy(app)

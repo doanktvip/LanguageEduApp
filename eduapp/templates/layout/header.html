@@ -11,11 +11,11 @@
                 <a class="nav-link dropdown-toggle text-light" href="#" role="button"
                    data-bs-toggle="dropdown"
                    aria-expanded="false" style="padding:0 16px 0 0">
-                    <img src="static/{{current_user.anh_chan_dung}}" class="rounded-circle border border-light"
+                    <img src="{{current_user.anh_chan_dung}}" class="rounded-circle border border-light"
                          alt="..."
                          style="width: 35px; height: 35px; object-fit: cover;">
                 </a>
-                <ul class="dropdown-menu dropdown-menu-end">
+                <ul class="dropdown-menu dropdown-menu-start">
                     <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard-fill"></i> Họ
                         và tên: {{current_user.ho_va_ten}}</a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard"></i> Mã
@@ -24,8 +24,10 @@
                         nhân</a></li>
                     <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill"></i> Đổi mật khẩu</a>
                     </li>
-                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill me-2"></i> Xác nhận
+                    {%if current_user.vai_tro.value==1 and current_user.tinh_trang_xac_nhan_email==False%}
+                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill"></i> Xác nhận
                         email</a></li>
+                    {%endif%}
                     <li>
                         <hr class="dropdown-divider">
                     </li>

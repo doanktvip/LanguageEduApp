@@ -1,0 +1,75 @@
+{% extends 'layout/base.html' %}
+
+{%block title%}Thời khóa biểu{%endblock%}
+
+{% block card_header %}<i class="bi bi-calendar-date-fill me-2"></i> Thời khóa biểu{%endblock%}
+
+{% block card_body %}
+<div class="input-group mb-3">
+    <form action="/schedule" method="GET" class="w-100">
+        <select name="course_id" class="form-select" onchange="this.form.submit()">
+            {% for khoa_hoc in current_user.nhung_khoa_hoc %}
+            <option value="{{ khoa_hoc.ma_khoa_hoc }}"
+                    {# Logic giữ lại giá trị đang chọn #}
+                    {% if khoa_hoc.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
+                {{ khoa_hoc.ma_khoa_hoc }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+<div class="table-responsive border border-secondary border-1 text-center"
+     style="border-radius: 10px;">
+    <table class="table table-hover table-bordered m-0 text-nowrap">
+        <tr>
+            <th scope="col">
+                {% if tuan_duoc_chon and current_index > 0 %}
+                <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index - 1) }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                {% else %}
+                <span class="text-muted"><i class="bi bi-chevron-left"></i></span>
+                {% endif %}
+            </th>
+            {%for day in range(tuan_duoc_chon['days'] | length)%}
+            <td>{{cac_thu[day]}} ({{tuan_duoc_chon['days'][day]}})</td>
+            {%endfor%}
+            <th scope="col">
+                {% if tuan_duoc_chon and current_index < tong_so_tuan - 1 %}
+                <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index + 1) }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+                {% else %}
+                <span class="text-muted"><i class="bi bi-chevron-right"></i></span>
+                {% endif %}
+            </th>
+        </tr>
+        <tr>
+            <th scope="row">SÁNG</th>
+            {%for day in range(tuan_duoc_chon['days'] | length)%}
+            {%if tuan_duoc_chon['schedule']['CA_SANG'][day] is not none%}
+            <td class="bg-info">{{tuan_duoc_chon['schedule']['CA_SANG'][day].ma_khoa_hoc}}</td>
+            {%else%}
+            <td></td>
+            {%endif%}
+            {%endfor%}
+            <th scope="row">SÁNG</th>
+        </tr>
+        <tr>
+            <th scope="row">CHIỀU</th>
+            {%for day in range(tuan_duoc_chon['days'] | length)%}
+            {%if tuan_duoc_chon['schedule']['CA_CHIEU'][day] is not none%}
+            <td class="bg-info">{{tuan_duoc_chon['schedule']['CA_CHIEU'][day].ma_khoa_hoc}}</td>
+            {%else%}
+            <td></td>
+            {%endif%}
+            {%endfor%}
+            <th scope="row">CHIỀU</th>
+        </tr>
+    </table>
+</div>
+{%endblock%}
+
+{% block javascript %}
+
+{%endblock%}

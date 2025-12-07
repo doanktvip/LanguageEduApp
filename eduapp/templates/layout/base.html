@@ -25,7 +25,18 @@
         {%include 'layout/sidebar.html'%}
         {%endblock%}
         <main class="flex-grow-1 ms-sm-auto p-0 container-content container" style="height: 2000px;">
-            {%block content required%}
+            {%block content%}
+            <div class="card border border-secondary border-1 m-5" style="border-radius: 10px; overflow: hidden;">
+                <h3 class="card-header">{% block card_header %}{% endblock %}</h3>
+                <div class="card-body">
+                    {% block card_body %}
+                    {% endblock %}
+                </div>
+            </div>
+            <script>
+                {% block javascript %}
+                {% endblock %}
+            </script>
             {%endblock%}
         </main>
     </div>

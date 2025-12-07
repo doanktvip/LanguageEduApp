@@ -27,20 +27,15 @@
 
     header:has(button[aria-expanded="true"]) {
         min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
-        transition: min-width 0.3s ease;
     }
 
-    header {
-        transition: min-width 0.3s ease;
-    }
-
-    footer:has(button[aria-expanded="true"]) {
+    body:has(button[aria-expanded="true"]) footer {
         min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
-        transition: min-width 0.3s ease;
     }
 
-    footer {
-        transition: min-width 0.3s ease;
+    header, body footer {
+        transition: min-width 0.35s ease;
+        min-width: 100%;
     }
 
     .container-content {

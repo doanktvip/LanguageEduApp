@@ -1,61 +1,59 @@
-    {%extends 'layout/base.html'%}
+{%extends 'layout/base.html'%}
 
-    {%block title%}Xác nhận email{%endblock%}
+{%block title%}Xác nhận email{%endblock%}
 
-    {%block content%}
-    <h2 class="text-info text-center mt-3">
-        Trang xác nhận email
-    </h2>
-    <div class="border border-secondary border-1 m-3" style="border-radius: 20px">
-        <div class="p-5">
-            <form method="post">
-                <div class="form-floating mt-3 mb-3 alert alert-primary">
-                    <p class="fw-bold m-0">Kiểm tra email để nhận mã xác nhận</p>
-                </div>
-                <div class="form-floating mt-3 mb-3">
-                    <input type="text" class="form-control" id="verify" placeholder="Nhập mã xác nhận" name="verify"
-                           required minlength="6" maxlength="6" pattern="[0-9]{6}"
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                    <label for="verify">Nhập mã xác nhận</label>
-                </div>
-                <div id="alert-box" class="form-floating mt-3 mb-3 alert alert-warning">
-                    <p id="hieu-luc" class="fw-normal m-0"></p>
-                </div>
-                <div class="form-floating mt-3 mb-3 d-flex justify-content-between align-items-center">
-                    <button class="btn btn-primary">Xác nhận</button>
-                    <a href="{{url_for('verify_page', action='resend')}}" class="link-primary">Gửi mã xác nhận</a>
-                </div>
-            </form>
+{% block card_header %}<i class="bi bi-envelope-check-fill me-2"></i> Xác nhận email{%endblock%}
+
+{% block card_body %}
+<div class="p-3">
+    <form method="post">
+        <div class="form-floating mt-3 mb-3 alert alert-primary">
+            <p class="fw-bold m-0">Kiểm tra email để nhận mã xác nhận</p>
         </div>
-    </div>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            var timeLeft = {{ wait_time | default(0) }};
-            var hasError = {{ 'true' if warn_msg else 'false' }};
-            var msgContent = "{{ warn_msg if warn_msg else '' }}";
-            var isBlocked = {{ 'true' if is_blocked else 'false' }};
-            var blockTime = {{ block_time | default(0) }};
-            var maxResend = {{ max_resend_limit | default(5) }};
-            if (isBlocked) {
-                demNguocGiay(blockTime, "hieu-luc", "alert-box", "Bạn đã gửi mã " + maxResend + " lần, hãy thử lại sau", function(){
-                    formAlert("hieu-luc", "Đã hết thời gian chặn. Bạn có thể gửi lại mã.", "alert-box");
-                });
-                return;
-            }
-            if (timeLeft == 0) {
-                formAlert("hieu-luc", "Vui lòng yêu cầu gửi mã xác nhận.", "alert-box");
-            } else {
-                if (!hasError) {
-                    demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
-                        formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
-                    });
-                } else {
-                    const quanLyBoDem = demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
-                        formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
-                    });
-                    quanLyBoDem.kichHoatThongBao(msgContent, 3);
-                }
-            }
-        });
-    </script>
-    {%endblock%}
+        <div class="form-floating mt-3 mb-3">
+            <input type="text" class="form-control" id="verify" placeholder="Nhập mã xác nhận" name="verify"
+                   required minlength="6" maxlength="6" pattern="[0-9]{6}"
+                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label for="verify">Nhập mã xác nhận</label>
+        </div>
+        <div id="alert-box" class="form-floating mt-3 mb-3 alert alert-warning">
+            <p id="hieu-luc" class="fw-normal m-0"></p>
+        </div>
+        <div class="form-floating mt-3 mb-3 d-flex justify-content-between align-items-center">
+            <button class="btn btn-primary">Xác nhận</button>
+            <a href="{{url_for('verify_page', action='resend')}}" class="link-primary">Gửi mã xác nhận</a>
+        </div>
+    </form>
+</div>
+{%endblock%}
+
+{% block javascript %}
+document.addEventListener("DOMContentLoaded", function() {
+var timeLeft = {{ wait_time | default(0) }};
+var hasError = {{ 'true' if warn_msg else 'false' }};
+var msgContent = "{{ warn_msg if warn_msg else '' }}";
+var isBlocked = {{ 'true' if is_blocked else 'false' }};
+var blockTime = {{ block_time | default(0) }};
+var maxResend = {{ max_resend_limit | default(5) }};
+if (isBlocked) {
+demNguocGiay(blockTime, "hieu-luc", "alert-box", "Bạn đã gửi mã " + maxResend + " lần, hãy thử lại sau", function(){
+formAlert("hieu-luc", "Đã hết thời gian chặn. Bạn có thể gửi lại mã.", "alert-box");
+});
+return;
+}
+if (timeLeft == 0) {
+formAlert("hieu-luc", "Vui lòng yêu cầu gửi mã xác nhận.", "alert-box");
+} else {
+if (!hasError) {
+demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
+formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
+});
+} else {
+const quanLyBoDem = demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
+formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
+});
+quanLyBoDem.kichHoatThongBao(msgContent, 3);
+}
+}
+});
+{%endblock%}

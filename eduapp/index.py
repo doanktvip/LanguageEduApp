@@ -1,11 +1,15 @@
 import time
 import random
 import math
+import datetime
+from collections import defaultdict
+
+import cloudinary.uploader
 from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from flask_mail import Message
 from eduapp import app, dao, login_manager, mail
-from eduapp.models import NguoiDungEnum
+from eduapp.models import HocVien, NguoiDungEnum
 
 
 @app.route('/')
@@ -43,31 +47,66 @@ def load_user(user_id):
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    err_msg = None
-    data = {}
     if current_user.is_authenticated:
         return redirect('/')
+    err_msg = None
+    data = {}
+    show_step2 = False
+    if 'register_info' in session:
+        data = session['register_info']
+        session.pop('register_info', None)
     if request.method == 'POST':
-        #  name,username, password, re_enter_password, image, phone_number, email
+        step = request.form.get('step')
         data = request.form.to_dict()
-        username = data.get('username')
-        password = data.get('password')
-        re_enter_password = data.get('re_enter_password')
-        # image = request.files.get('image') lấy ảnh bằng các này
-        image_file = request.files.get('image')
-        user = dao.get_by_username(username)
-        if user:
-            err_msg = 'Tài khoản đã tồn tại'
-            data['username'] = ''
-        elif password != re_enter_password:
-            err_msg = 'Mật khẩu nhập lại không chính xác'
-            data['password'] = ''
-            data['re_enter_password'] = ''
-        if not err_msg:
-            dao.add_image(image_file)
-
-            return redirect(url_for('login'))
-    return render_template("register.html", err_msg=err_msg, data=data)
+        if step == '1':
+            password = data.get('password')
+            re_enter_password = data.get('re_enter_password')
+            username = data.get('username')
+            if not password or password != re_enter_password:
+                err_msg = 'Mật khẩu nhập lại không chính xác'
+                data['password'] = ''
+                data['re_enter_password'] = ''
+            elif dao.get_by_username(username):
+                err_msg = 'Tài khoản đã tồn tại'
+                data['username'] = ''
+            else:
+                session['register_info'] = {
+                    'name': data.get('name'),
+                    'username': username,
+                    'password': password,
+                    're_enter_password': re_enter_password
+                }
+                show_step2 = True
+        elif step == '2':
+            step1_data = session.get('register_info')
+            if not step1_data:
+                return redirect(url_for('register'))
+            image_file = request.files.get('image')
+            path_image = None
+            if image_file and image_file.filename != '':
+                try:
+                    res = cloudinary.uploader.upload(image_file)
+                    path_image = res['secure_url']
+                except Exception as ex:
+                    err_msg = f'Lỗi upload ảnh: {str(ex)}'
+                    show_step2 = True
+            if not err_msg:
+                is_success = dao.add_user(
+                    user_role=NguoiDungEnum.HOC_VIEN,  # Giả định enum này đúng
+                    ho_va_ten=step1_data.get('name'),
+                    ten_dang_nhap=step1_data.get('username'),
+                    mat_khau=step1_data.get('password'),
+                    so_dien_thoai=data.get('phone_number'),
+                    email=data.get('email'),
+                    anh_chan_dung=path_image,
+                    ngay_sinh=data.get('dob'))
+                if is_success:
+                    session.pop('register_info', None)
+                    return redirect(url_for('login'))
+                else:
+                    err_msg = 'Đã có lỗi hệ thống xảy ra, vui lòng thử lại sau.'
+                    show_step2 = True
+    return render_template("register.html", err_msg=err_msg, data=data, show_step2=show_step2)
 
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -95,28 +134,27 @@ def forgot_password():
             session['otp_code'] = otp_code
             session['reset_username'] = username
             session['reset_email'] = email
-            msg = Message(
-                subject="Mã xác nhận đổi mật khẩu",
-                sender=app.config.get('MAIL_USERNAME'),
-                recipients=[session.get('reset_email')]
-            )
-            msg.body = f"Mã xác nhận đổi mật khẩu của bạn là: {session.get('otp_code')}.\nLưu ý: Mã chỉ sử dụng trong vòng 1 lần nhập (nhập sai hay đúng đều mất hiệu lực khi nhập)."
+            # msg = Message(
+            #     subject="Mã xác nhận đổi mật khẩu",
+            #     sender=app.config.get('MAIL_USERNAME'),
+            #     recipients=[session.get('reset_email')]
+            # )
+            # msg.body = f"Mã xác nhận đổi mật khẩu của bạn là: {session.get('otp_code')}.\nLưu ý: Mã chỉ sử dụng trong vòng 1 lần nhập (nhập sai hay đúng đều mất hiệu lực khi nhập)."
             # mail.send(msg)
         return render_template("forgot_password.html", show_step2=True, err_msg=None, has_otp=True)
     if step == "2":
-        user_otp = request.form.get("verify")
+        real_otp = session.get('otp_code')
         new_password = request.form.get("new_password")
         re_enter_password = request.form.get("re_enter_password")
-        real_otp = session.get('otp_code')
         if new_password != re_enter_password:
             return render_template("forgot_password.html", show_step2=True,
                                    err_msg='Mật khẩu nhập lại không khớp!', has_otp=True)
+        user_otp = request.form.get("verify")
         if not real_otp or user_otp != real_otp:
             session.pop('otp_code', None)
             return render_template("forgot_password.html", show_step2=True,
                                    err_msg='Mã xác nhận sai hoặc đã bị hủy. Vui lòng nhấn "Gửi lại mã".',
                                    has_otp=False)
-        # 3. Thành công -> Đổi pass -> Xóa session
         # dao.update_password(saved_username, new_password)
         session.pop('otp_code', None)
         session.pop('reset_username', None)
@@ -150,7 +188,7 @@ otp_storage = {}
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify_page():
-    if not current_user.is_authenticated:
+    if not current_user.is_authenticated or current_user.tinh_trang_xac_nhan_email == True:
         return redirect('/')
     nguoi_nhan = current_user.email
     otp_lifetime = app.config.get("OTP_LIFETIME")
@@ -208,12 +246,12 @@ def verify_page():
                 'attempts': current_attempts + 1,
                 'blocked_until': 0
             }
-            msg = Message(
-                subject="Mã xác nhận email",
-                sender=app.config.get('MAIL_USERNAME'),
-                recipients=[nguoi_nhan]
-            )
-            msg.body = f"Mã xác nhận của bạn là: {new_otp}. Mã có hiệu lực trong {otp_lifetime} giây."
+            # msg = Message(
+            #     subject="Mã xác nhận email",
+            #     sender=app.config.get('MAIL_USERNAME'),
+            #     recipients=[nguoi_nhan]
+            # )
+            # msg.body = f"Mã xác nhận của bạn là: {new_otp}. Mã có hiệu lực trong {otp_lifetime} giây."
             # mail.send(msg)
             return redirect(url_for('verify_page'))
         except Exception as e:
@@ -226,6 +264,46 @@ def profile():
     if not current_user.is_authenticated:
         return redirect('/')
     return render_template("profile.html")
+
+
+@app.route('/schedule', methods=['GET'])
+def schedule():
+    tuan_duoc_chon = None
+    cac_thu = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
+    ma_khoa_hoc_dang_chon = request.args.get('course_id')
+    if not ma_khoa_hoc_dang_chon and current_user.nhung_khoa_hoc:
+        ma_mac_dinh = current_user.nhung_khoa_hoc[0].ma_khoa_hoc
+        return redirect(url_for('schedule', course_id=ma_mac_dinh))
+    course = dao.get_by_course_id(ma_khoa_hoc_dang_chon)
+    current_index = 0
+    tong_so_tuan = 0
+    if course:
+        danh_sach_hoc = course.lay_danh_sach_tuan_hoc()
+        # lich = course.lich_hoc
+        # for l in lich:
+        #     print(l.ma_khoa_hoc)
+        #     print(l.thoi_gian_theo_ca())
+        #     a = dao.get_by_classroom_id(l.ma_phong_hoc)
+        #     print(a.ten_phong_hoc)
+        tong_so_tuan = len(danh_sach_hoc)
+        if danh_sach_hoc:
+            index_tham_so = request.args.get('index', type=int)
+            if index_tham_so is not None:
+                current_index = max(0, min(index_tham_so, tong_so_tuan - 1))
+            else:
+                nam_hien_tai, tuan_hien_tai, _ = datetime.datetime.today().isocalendar()
+                found = False
+                for i, tuan in enumerate(danh_sach_hoc):
+                    if tuan['week'] == tuan_hien_tai and tuan['year'] == nam_hien_tai:
+                        current_index = i
+                        found = True
+                        break
+                if not found:
+                    current_index = 0
+            tuan_duoc_chon = danh_sach_hoc[current_index]
+            print(tuan_duoc_chon)
+    return render_template('schedule.html', ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon, cac_thu=cac_thu,
+                           tuan_duoc_chon=tuan_duoc_chon, current_index=current_index, tong_so_tuan=tong_so_tuan)
 
 
 if __name__ == '__main__':
