@@ -1,6 +1,10 @@
 :root {
     --header-height: 56px;
     --sidebar-width: 20vw;
+    --table-width: 150px;
+    --color-none-hover: #f2f2f2;
+    --color-not-none: #cfe2ff;
+    --color-not-none-hover: #9ec5fe;
 }
 
 .sidebar-custom {
@@ -14,6 +18,36 @@
 
 .container-content {
     min-width: 0;
+}
+.table-custom td {
+    cursor: pointer;
+}
+
+.table-custom td:not(.co-mon-hoc):hover {
+    background-color: var(--color-none-hover);
+}
+
+.co-mon-hoc {
+    background-color: var(--color-not-none);
+    color: black;
+}
+
+.co-mon-hoc:hover {
+    background-color: var(--color-not-none-hover) !important;
+}
+
+.schedule-cell {
+    width: var(--table-width);
+    min-width: var(--table-width);
+    height: var(--table-width);
+    white-space: normal;
+    vertical-align: top;
+}
+
+.schedule-cell-empty {
+    width: var(--table-width);
+    min-width: var(--table-width);
+    height: var(--table-width);
 }
 
 @media (max-width: 768px) {

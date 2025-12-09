@@ -1,3 +1,4 @@
+import hashlib
 import time
 import random
 import math
@@ -54,21 +55,18 @@ def register():
     show_step2 = False
     if 'register_info' in session:
         data = session['register_info']
-        session.pop('register_info', None)
     if request.method == 'POST':
         step = request.form.get('step')
-        data = request.form.to_dict()
+        form_data = request.form.to_dict()
+        data.update(form_data)
         if step == '1':
             password = data.get('password')
             re_enter_password = data.get('re_enter_password')
             username = data.get('username')
             if not password or password != re_enter_password:
                 err_msg = 'Mật khẩu nhập lại không chính xác'
-                data['password'] = ''
-                data['re_enter_password'] = ''
             elif dao.get_by_username(username):
                 err_msg = 'Tài khoản đã tồn tại'
-                data['username'] = ''
             else:
                 session['register_info'] = {
                     'name': data.get('name'),
@@ -81,31 +79,45 @@ def register():
             step1_data = session.get('register_info')
             if not step1_data:
                 return redirect(url_for('register'))
-            image_file = request.files.get('image')
-            path_image = None
-            if image_file and image_file.filename != '':
-                try:
-                    res = cloudinary.uploader.upload(image_file)
-                    path_image = res['secure_url']
-                except Exception as ex:
-                    err_msg = f'Lỗi upload ảnh: {str(ex)}'
-                    show_step2 = True
-            if not err_msg:
-                is_success = dao.add_user(
-                    user_role=NguoiDungEnum.HOC_VIEN,  # Giả định enum này đúng
-                    ho_va_ten=step1_data.get('name'),
-                    ten_dang_nhap=step1_data.get('username'),
-                    mat_khau=step1_data.get('password'),
-                    so_dien_thoai=data.get('phone_number'),
-                    email=data.get('email'),
-                    anh_chan_dung=path_image,
-                    ngay_sinh=data.get('dob'))
-                if is_success:
-                    session.pop('register_info', None)
-                    return redirect(url_for('login'))
-                else:
-                    err_msg = 'Đã có lỗi hệ thống xảy ra, vui lòng thử lại sau.'
-                    show_step2 = True
+            email = data.get('email')
+            user_check = dao.get_by_email(email)
+            if user_check:
+                err_msg = 'Email này đã được sử dụng bởi tài khoản khác!'
+                show_step2 = True
+            else:
+                image_file = request.files.get('image')
+                path_image = None
+                if image_file and image_file.filename != '':
+                    try:
+                        res = cloudinary.uploader.upload(image_file)
+                        path_image = res['secure_url']
+                    except Exception as ex:
+                        print(f"Lỗi upload ảnh: {ex}")
+                        pass
+                dob_val = None
+                if data.get('dob'):
+                    try:
+                        dob_val = datetime.datetime.strptime(data.get('dob'), '%Y-%m-%d')
+                    except ValueError:
+                        err_msg = "Định dạng ngày sinh không hợp lệ."
+                        show_step2 = True
+                if not err_msg:
+                    is_success = dao.add_user(
+                        NguoiDungEnum.HOC_VIEN,
+                        ho_va_ten=step1_data.get('name'),
+                        ten_dang_nhap=step1_data.get('username'),
+                        mat_khau=step1_data.get('password'),
+                        so_dien_thoai=data.get('phone_number'),
+                        email=email,
+                        anh_chan_dung=path_image,
+                        ngay_sinh=dob_val
+                    )
+                    if is_success:
+                        session.pop('register_info', None)
+                        return redirect(url_for('login'))
+                    else:
+                        err_msg = 'Đã có lỗi hệ thống xảy ra, vui lòng thử lại sau.'
+                        show_step2 = True
     return render_template("register.html", err_msg=err_msg, data=data, show_step2=show_step2)
 
 
@@ -172,13 +184,14 @@ def change_password():
         old_password = data.get('old_password')
         new_password = data.get('new_password')
         re_enter_password = data.get('re_enter_password')
+        old_password = str(hashlib.md5(old_password.encode('utf-8')).hexdigest())
         if old_password != current_user.mat_khau:
             err_msg = "Mật khẩu cũ không chính xác!"
             return render_template("change_password.html", err_msg=err_msg)
         if new_password != re_enter_password:
             err_msg = "Mật khẩu nhập lại không chính xác!"
             return render_template("change_password.html", err_msg=err_msg)
-
+        # update
         return redirect('/')
     return render_template("change_password.html")
 
@@ -188,7 +201,7 @@ otp_storage = {}
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify_page():
-    if not current_user.is_authenticated or current_user.tinh_trang_xac_nhan_email == True:
+    if not current_user.is_authenticated or current_user.vai_tro.value != 1 or current_user.tinh_trang_xac_nhan_email == True:
         return redirect('/')
     nguoi_nhan = current_user.email
     otp_lifetime = app.config.get("OTP_LIFETIME")
@@ -215,6 +228,7 @@ def verify_page():
             return render_template("verify.html", wait_time=0)
         saved_otp = user_otp_data.get('otp')
         if user_input_otp == saved_otp:
+            # update
             otp_storage.pop(nguoi_nhan, None)
             return redirect('/')
         else:
@@ -271,27 +285,26 @@ def schedule():
     tuan_duoc_chon = None
     cac_thu = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
     ma_khoa_hoc_dang_chon = request.args.get('course_id')
-    if not ma_khoa_hoc_dang_chon and current_user.nhung_khoa_hoc:
-        ma_mac_dinh = current_user.nhung_khoa_hoc[0].ma_khoa_hoc
-        return redirect(url_for('schedule', course_id=ma_mac_dinh))
+    ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
+    ds_ma_hop_le = [kh.ma_khoa_hoc for kh in ds_khoa_hoc_cua_hv]
+    if not ma_khoa_hoc_dang_chon or ma_khoa_hoc_dang_chon not in ds_ma_hop_le:
+        if ds_khoa_hoc_cua_hv:
+            ma_mac_dinh = ds_khoa_hoc_cua_hv[0].ma_khoa_hoc
+            return redirect(url_for('schedule', course_id=ma_mac_dinh))
+        return render_template('schedule.html', course_id=None, ds_khoa_hoc=ds_khoa_hoc_cua_hv)
     course = dao.get_by_course_id(ma_khoa_hoc_dang_chon)
     current_index = 0
     tong_so_tuan = 0
     if course:
         danh_sach_hoc = course.lay_danh_sach_tuan_hoc()
-        # lich = course.lich_hoc
-        # for l in lich:
-        #     print(l.ma_khoa_hoc)
-        #     print(l.thoi_gian_theo_ca())
-        #     a = dao.get_by_classroom_id(l.ma_phong_hoc)
-        #     print(a.ten_phong_hoc)
         tong_so_tuan = len(danh_sach_hoc)
         if danh_sach_hoc:
             index_tham_so = request.args.get('index', type=int)
             if index_tham_so is not None:
                 current_index = max(0, min(index_tham_so, tong_so_tuan - 1))
             else:
-                nam_hien_tai, tuan_hien_tai, _ = datetime.datetime.today().isocalendar()
+                today = datetime.datetime.now()
+                nam_hien_tai, tuan_hien_tai, _ = today.isocalendar()
                 found = False
                 for i, tuan in enumerate(danh_sach_hoc):
                     if tuan['week'] == tuan_hien_tai and tuan['year'] == nam_hien_tai:
@@ -301,9 +314,32 @@ def schedule():
                 if not found:
                     current_index = 0
             tuan_duoc_chon = danh_sach_hoc[current_index]
-            print(tuan_duoc_chon)
     return render_template('schedule.html', ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon, cac_thu=cac_thu,
-                           tuan_duoc_chon=tuan_duoc_chon, current_index=current_index, tong_so_tuan=tong_so_tuan)
+                           tuan_duoc_chon=tuan_duoc_chon, current_index=current_index, tong_so_tuan=tong_so_tuan,
+                           ds_khoa_hoc=ds_khoa_hoc_cua_hv)
+
+
+@app.route('/scoreboard', methods=['GET'])
+def scoreboard():
+    if not current_user.is_authenticated:
+        return redirect('/')
+    ma_khoa_hoc_dang_chon = request.args.get('course_id')
+    ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
+    ds_ma_hop_le = [kh.ma_khoa_hoc for kh in ds_khoa_hoc_cua_hv]
+    if not ma_khoa_hoc_dang_chon or ma_khoa_hoc_dang_chon not in ds_ma_hop_le:
+        if ds_khoa_hoc_cua_hv:
+            ma_mac_dinh = ds_khoa_hoc_cua_hv[0].ma_khoa_hoc
+            return redirect(url_for('scoreboard', course_id=ma_mac_dinh))
+        return render_template('scoreboard.html', course_id=None, ds_khoa_hoc=ds_khoa_hoc_cua_hv)
+    course = dao.get_by_course_id(ma_khoa_hoc_dang_chon)
+    list_bang_diem = {}
+    if course:
+        cau_truc_diem = dao.get_cau_truc_diem(course.ma_khoa_hoc)
+        bang_diem = dao.get_by_scoreboard_id(current_user.ma_nguoi_dung, course.ma_khoa_hoc)
+        if cau_truc_diem:
+            list_bang_diem = bang_diem.lay_chi_tiet_diem(cau_truc_diem)
+    return render_template("scoreboard.html", ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon,
+                           ds_khoa_hoc=ds_khoa_hoc_cua_hv, list_bang_diem=list_bang_diem)
 
 
 if __name__ == '__main__':

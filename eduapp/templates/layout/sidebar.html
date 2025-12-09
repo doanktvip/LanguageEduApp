@@ -2,37 +2,38 @@
     <aside id="sidebarMenu" class="collapse collapse-horizontal sidebar-custom sticky-top">
         <div class="card card-body border-0 container-aside">
             <div class="list-group list-group-flush">
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill"></i> Trang
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill me-2"></i>Trang
                     chủ</a>
                 {%if current_user.is_authenticated%}
                 {%if current_user.vai_tro.value==1%}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-cash-stack"></i> Xem
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-cash-stack me-2"></i>Xem
                     học
                     phí</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-calendar-plus-fill"></i> Đăng
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-calendar-plus-fill me-2"></i>Đăng
                     ký
                     khóa
                     học</a>
-                <a href="/schedule" class="list-group-item list-group-item-action"><i class="bi bi-calendar-date-fill"></i> Thời
+                <a href="/schedule" class="list-group-item list-group-item-action"><i
+                        class="bi bi-calendar-date-fill me-2"></i>Thời
                     khóa
                     biểu</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Xem điểm</a>
+                <a href="/scoreboard" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill me-2"></i>Xem
+                    điểm</a>
                 {%elif current_user.vai_tro.value==2%}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Quản lý</a>
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill me-2"></i>Quản
+                    lý</a>
                 {%elif current_user.vai_tro.value==3%}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Giáo
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill me-2"></i>Giáo
                     viên</a>
                 {%elif current_user.vai_tro.value==4%}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill"></i> Nhân
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill me-2"></i>Nhân
                     viên</a>
                 {%endif%}
                 {%else%}
-                <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill"></i> Đăng
+                <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill me-2"></i>Đăng
                     nhập</a>
                 <a href="/register" class="list-group-item list-group-item-action"><i
-                        class="bi bi-person-plus-fill"></i>
-                    Đăng
-                    ký</a>
+                        class="bi bi-person-plus-fill me-2"></i>Đăng ký</a>
                 {%endif%}
             </div>
         </div>

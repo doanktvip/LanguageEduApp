@@ -1,27 +1,26 @@
 {% extends 'layout/base.html' %}
 
-{%block title%}Thời khóa biểu{%endblock%}
+{% block title %}Thời khóa biểu{% endblock %}
 
-{% block card_header %}<i class="bi bi-calendar-date-fill me-2"></i> Thời khóa biểu{%endblock%}
+{% block card_header %}<i class="bi bi-calendar-date-fill me-2"></i>Thời khóa biểu{% endblock %}
 
 {% block card_body %}
+{% if ma_khoa_hoc_hien_tai %}
 <div class="input-group mb-3">
     <form action="/schedule" method="GET" class="w-100">
         <select name="course_id" class="form-select" onchange="this.form.submit()">
-            {% for khoa_hoc in current_user.nhung_khoa_hoc %}
-            <option value="{{ khoa_hoc.ma_khoa_hoc }}"
-                    {# Logic giữ lại giá trị đang chọn #}
-                    {% if khoa_hoc.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
-                {{ khoa_hoc.ma_khoa_hoc }}
+            {% for kh in ds_khoa_hoc %}
+            <option value="{{ kh.ma_khoa_hoc }}"
+                    {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
+                {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
             </option>
             {% endfor %}
         </select>
     </form>
 </div>
-<div class="table-responsive border border-secondary border-1 text-center"
-     style="border-radius: 10px;">
-    <table class="table table-hover table-bordered m-0 text-nowrap">
-        <tr>
+<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
+    <table class="table table-custom table-bordered m-0 text-nowrap">
+        <tr class="align-middle">
             <th scope="col">
                 {% if tuan_duoc_chon and current_index > 0 %}
                 <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index - 1) }}">
@@ -31,9 +30,9 @@
                 <span class="text-muted"><i class="bi bi-chevron-left"></i></span>
                 {% endif %}
             </th>
-            {%for day in range(tuan_duoc_chon['days'] | length)%}
-            <td>{{cac_thu[day]}} ({{tuan_duoc_chon['days'][day]}})</td>
-            {%endfor%}
+            {% for day in range(tuan_duoc_chon['days'] | length) %}
+            <td>{{ cac_thu[day] }}<br><small>({{ tuan_duoc_chon['days'][day] }})</small></td>
+            {% endfor %}
             <th scope="col">
                 {% if tuan_duoc_chon and current_index < tong_so_tuan - 1 %}
                 <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index + 1) }}">
@@ -44,32 +43,51 @@
                 {% endif %}
             </th>
         </tr>
-        <tr>
-            <th scope="row">SÁNG</th>
-            {%for day in range(tuan_duoc_chon['days'] | length)%}
-            {%if tuan_duoc_chon['schedule']['CA_SANG'][day] is not none%}
-            <td class="bg-info">{{tuan_duoc_chon['schedule']['CA_SANG'][day].ma_khoa_hoc}}</td>
-            {%else%}
-            <td></td>
-            {%endif%}
-            {%endfor%}
-            <th scope="row">SÁNG</th>
+        <tr class="align-middle small" style="font-size: 12px;">
+            <th scope="row" class="bg-light">SÁNG</th>
+            {% for day in range(tuan_duoc_chon['days'] | length) %}
+            {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_SANG'][day] %}
+            {% if buoi_hoc %}
+            <td class="text-start co-mon-hoc schedule-cell">
+                <strong class="text-primary">{{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}</strong><br>
+                <strong>Lớp:</strong> {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}<br>
+                <strong>Phòng:</strong> {{ buoi_hoc.phong_hoc.ten_phong_hoc }}<br>
+                <strong>GV:</strong> {{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}<br>
+                <i class="bi bi-clock me-1"></i>
+                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
+                {{ gio_bd }}:00 - {{ gio_kt }}:00
+            </td>
+            {% else %}
+            <td class="schedule-cell-empty"></td>
+            {% endif %}
+            {% endfor %}
+            <th scope="row" class="bg-light">SÁNG</th>
         </tr>
-        <tr>
-            <th scope="row">CHIỀU</th>
-            {%for day in range(tuan_duoc_chon['days'] | length)%}
-            {%if tuan_duoc_chon['schedule']['CA_CHIEU'][day] is not none%}
-            <td class="bg-info">{{tuan_duoc_chon['schedule']['CA_CHIEU'][day].ma_khoa_hoc}}</td>
-            {%else%}
-            <td></td>
-            {%endif%}
-            {%endfor%}
-            <th scope="row">CHIỀU</th>
+        <tr class="align-middle small" style="font-size: 12px;">
+            <th scope="row" class="bg-light">CHIỀU</th>
+            {% for day in range(tuan_duoc_chon['days'] | length) %}
+            {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_CHIEU'][day] %}
+            {% if buoi_hoc %}
+            <td class="text-start co-mon-hoc schedule-cell">
+                <strong class="text-primary">{{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}</strong><br>
+                <strong>Lớp:</strong> {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}<br>
+                <strong>Phòng:</strong> {{ buoi_hoc.phong_hoc.ten_phong_hoc }}<br>
+                <strong>GV:</strong> {{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}<br>
+                <i class="bi bi-clock me-1"></i>
+                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
+                {{ gio_bd }}:00 - {{ gio_kt }}:00
+            </td>
+            {% else %}
+            <td class="schedule-cell-empty"></td>
+            {% endif %}
+            {% endfor %}
+            <th scope="row" class="bg-light">CHIỀU</th>
         </tr>
     </table>
 </div>
-{%endblock%}
-
-{% block javascript %}
-
-{%endblock%}
+{% else %}
+<div class="alert alert-warning text-center mt-3">
+    Bạn chưa đăng ký khóa học nào.
+</div>
+{% endif %}
+{% endblock %}

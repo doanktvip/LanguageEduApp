@@ -1,0 +1,55 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Xem điểm{% endblock %}
+
+{% block card_header %}<i class="bi bi-bar-chart-fill me-2"></i>Xem điểm{% endblock %}
+
+{% block card_body %}
+{% if ma_khoa_hoc_hien_tai %}
+<div class="input-group mb-3">
+    <form action="/scoreboard" method="GET" class="w-100">
+        <select name="course_id" class="form-select" onchange="this.form.submit()">
+            {% for kh in ds_khoa_hoc %}
+            <option value="{{ kh.ma_khoa_hoc }}"
+                    {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
+                {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
+    <table class="table table-custom table-bordered m-0 text-nowrap">
+        <tr>
+            {%for bang_diem in list_bang_diem%}
+            <td>
+                {{bang_diem}} <small>
+                {{(list_bang_diem[bang_diem][1]*100)|int~'%' if list_bang_diem[bang_diem][1] else ""}}</small>
+            </td>
+            {%endfor%}
+        </tr>
+        <tr class="align-middle small">
+            {%for bang_diem in list_bang_diem%}
+            {%set gia_tri=list_bang_diem[bang_diem][0]%}
+            <td>
+                {%if bang_diem=='Kết quả'%}
+                {%if gia_tri==False%}
+                <i class="bi bi-x-circle-fill text-danger"></i>
+                {%else%}
+                <i class="bi bi-check-circle-fill text-success"></i>
+                {%endif%}
+                {%else%}
+                {{gia_tri if gia_tri is not none else ""}}
+                {%endif%}
+            </td>
+            {%endfor%}
+        </tr>
+    </table>
+</div>
+{%else%}
+<div class="alert alert-warning text-center mt-3">
+    Bạn chưa đăng ký khóa học nào.
+</div>
+{%endif%}
+{% endblock %}

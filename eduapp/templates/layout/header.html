@@ -16,22 +16,22 @@
                          style="width: 35px; height: 35px; object-fit: cover;">
                 </a>
                 <ul class="dropdown-menu dropdown-menu-start">
-                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard-fill"></i> Họ
+                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard-fill me-2"></i>Họ
                         và tên: {{current_user.ho_va_ten}}</a></li>
-                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard"></i> Mã
+                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard me-2"></i>Mã
                         {{current_user.ten_vai_tro}}: {{ current_user.ma_nguoi_dung }}</a></li>
-                    <li><a href="/profile" class="dropdown-item"><i class="bi bi-person-fill"></i> Thông tin cá
+                    <li><a href="/profile" class="dropdown-item"><i class="bi bi-person-fill me-2"></i>Thông tin cá
                         nhân</a></li>
-                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill"></i> Đổi mật khẩu</a>
+                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill me-2"></i>Đổi mật khẩu</a>
                     </li>
                     {%if current_user.vai_tro.value==1 and current_user.tinh_trang_xac_nhan_email==False%}
-                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill"></i> Xác nhận
+                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill me-2"></i>Xác nhận
                         email</a></li>
                     {%endif%}
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right"></i> Đăng xuất</a>
+                    <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a>
                     </li>
                 </ul>
             </div>
