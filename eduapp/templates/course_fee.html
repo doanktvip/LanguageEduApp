@@ -1,0 +1,43 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Xem học phí{% endblock %}
+
+{% block card_header %}<i class="bi bi-cash-stack me-2"></i>Xem học phí{% endblock %}
+
+{% block card_body %}
+{%if ds_hoa_don%}
+<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
+    <table class="table table-custom table-bordered m-0 text-nowrap">
+        <tr class="align-middle">
+            {%for ds in ds_hoa_don[0]%}
+            <th class="bg-light">{{ds}}</th>
+            {%endfor%}
+        </tr>
+        {%for ds in ds_hoa_don%}
+        <tr class="align-middle small">
+            {%for i in ds_hoa_don[ds]%}
+            {%if i=='Số tiền'%}
+            <td>{{"{:,.0f}".format(ds_hoa_don[ds][i])}}</td>
+            {%elif i=='Trạng thái'%}
+            {%if ds_hoa_don[ds][i]==1%}
+            <td>Chưa thanh toán</td>
+            {%else%}
+            <td>Đã thanh toán</td>
+            {%endif%}
+            {%elif i == 'Mã khóa học'%}
+            <td><strong>{{ds_hoa_don[ds][i]}}</strong></td>
+            {%endif%}
+            {%endfor%}
+        </tr>
+        {%endfor%}
+    </table>
+</div>
+<div class="mt-3">
+    <p class="text-end m-0"><strong>Tổng số tiền:</strong> {{"{:,.0f}".format(tong_tien)}} VNĐ</p>
+</div>
+{%else%}
+<div class="alert alert-warning text-center m-0">
+    Bạn chưa đăng ký khóa học nào.
+</div>
+{%endif%}
+{% endblock %}

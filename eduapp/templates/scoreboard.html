@@ -23,10 +23,10 @@
     <table class="table table-custom table-bordered m-0 text-nowrap">
         <tr>
             {%for bang_diem in list_bang_diem%}
-            <td>
+            <th class="bg-light">
                 {{bang_diem}} <small>
                 {{(list_bang_diem[bang_diem][1]*100)|int~'%' if list_bang_diem[bang_diem][1] else ""}}</small>
-            </td>
+            </th>
             {%endfor%}
         </tr>
         <tr class="align-middle small">
@@ -48,7 +48,7 @@
     </table>
 </div>
 {%else%}
-<div class="alert alert-warning text-center mt-3">
+<div class="alert alert-warning text-center m-0">
     Bạn chưa đăng ký khóa học nào.
 </div>
 {%endif%}

@@ -224,6 +224,24 @@ class KhoaHoc(db.Model):
             current_date += timedelta(days=1)
         return list(tuan_map.values())
 
+    def to_dict_tuyen_sinh(self):
+        return {
+            'Mã khóa học': self.ma_khoa_hoc,
+            'Tên khóa học': self.ten_khoa_hoc,
+            'Giáo viên': self.giao_vien.ho_va_ten if self.giao_vien else "Chưa phân công",
+            'Sĩ số còn lại': f'{self.si_so_toi_da - self.si_so_hien_tai}',
+            'Ngày bắt đầu': self.ngay_bat_dau.strftime('%d/%m/%Y'),
+            'Ngày kết thúc': self.ngay_ket_thuc.strftime('%d/%m/%Y')
+        }
+
+    @staticmethod
+    def chuyen_danh_sach_sang_dict(danh_sach_khoa_hoc):
+        ket_qua = {}
+        if danh_sach_khoa_hoc:
+            for index, khoa_hoc in enumerate(danh_sach_khoa_hoc):
+                ket_qua[index] = khoa_hoc.to_dict_tuyen_sinh()
+        return ket_qua
+
 
 class PhongHoc(db.Model):
     __tablename__ = "phong_hoc"
@@ -346,6 +364,7 @@ class HoaDon(db.Model):
     __tablename__ = "hoa_don"
     ma_hoa_don = Column(Integer, autoincrement=True, primary_key=True)
     ngay_tao = Column(DateTime, default=datetime.now())
+    ngay_han = Column(DateTime, default=datetime.now() + timedelta(days=30))
     ngay_nop = Column(DateTime, nullable=True)
     so_tien = Column(Float, nullable=False)
     trang_thai = Column(Enum(TrangThaiHoaDonEnum), default=TrangThaiHoaDonEnum.CHUA_THANH_TOAN)
@@ -353,6 +372,21 @@ class HoaDon(db.Model):
     ma_hoc_vien = Column(String(20), ForeignKey('hoc_vien.ma_nguoi_dung'), nullable=False)
     ma_khoa_hoc = Column(String(20), ForeignKey('khoa_hoc.ma_khoa_hoc'), nullable=False)
     ma_nhan_vien = Column(String(20), ForeignKey('nhan_vien.ma_nguoi_dung'), nullable=True)
+
+    def to_dict(self):
+        return {
+            'Mã khóa học': self.ma_khoa_hoc,
+            'Số tiền': self.so_tien,
+            'Trạng thái': self.trang_thai.value
+        }
+
+    @staticmethod
+    def chuyen_danh_sach_sang_dict(danh_sach_hoa_don):
+        ket_qua = {}
+        if danh_sach_hoa_don:
+            for index, hoa_don in enumerate(danh_sach_hoa_don):
+                ket_qua[index] = hoa_don.to_dict()
+        return ket_qua
 
 
 def chay_thu_nghiem_truy_van():
@@ -603,8 +637,9 @@ def tao_du_lieu_mau():
     # Nhập điểm cho HV Bình (Học yếu)
     dt_binh_1 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct1.id, gia_tri_diem=8.0)  # Chuyên cần
     dt_binh_2 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct2.id, gia_tri_diem=4.0)  # Giữa kỳ
+    dt_binh_3 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct3.id, gia_tri_diem=8.0)  # Chuyên cần
 
-    db.session.add_all([dt_an_1, dt_an_2, dt_binh_1, dt_binh_2])
+    db.session.add_all([dt_an_1, dt_an_2, dt_binh_1, dt_binh_2,dt_binh_3])
     db.session.commit()
 
     # 8.3: Cập nhật điểm tổng kết tự động
@@ -617,9 +652,13 @@ def tao_du_lieu_mau():
     hd1 = HoaDon(
         so_tien=3000000, trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
         ma_hoc_vien="HV250001", ma_khoa_hoc="BEG001", ma_nhan_vien="NV250001",
-        ngay_nop=datetime.now() - timedelta(days=20)
+        ngay_nop=datetime.now() + timedelta(days=10)
     )
-    db.session.add(hd1)
+    hd2 = HoaDon(
+        so_tien=3000000,
+        ma_hoc_vien="HV250002", ma_khoa_hoc="BEG001"
+    )
+    db.session.add_all([hd1, hd2])
     db.session.commit()
 
     # --- 10. ĐIỂM DANH (YÊU CẦU MỚI) ---

@@ -1,0 +1,43 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Đăng ký khóa học{% endblock %}
+
+{% block card_header %}<i class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học{% endblock %}
+
+{% block card_body %}
+{%if khoa_hoc_dao_chua_dang_ky%}
+<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
+    <form action="/register_course" id="register_course_id" method="post">
+        <table class="table table-custom table-bordered m-0 text-nowrap">
+            <tr class="align-middle">
+                <th class="bg-light"></th>
+                {%for i in danh_sach[0]%}
+                <th class="bg-light">{{i}}</th>
+                {%endfor%}
+            </tr>
+            {%for i in danh_sach%}
+            <tr class="align-middle small">
+                <td>
+                    <div class="form-check d-flex justify-content-center m-0">
+                        <input class="form-check-input" type="checkbox" name="register_course"
+                               value="{{ danh_sach[i] }}" id="check_{{ danh_sach[i] }}" {% if (danh_sach[i]['Sĩ số còn lại']|int) == 0 %}disabled{% endif %}>
+                        <label class="form-check-label" for="check_{{ danh_sach[i] }}"></label>
+                    </div>
+                </td>
+                {%for j in danh_sach[i]%}
+                <td>{{danh_sach[i][j]}}</td>
+                {%endfor%}
+            </tr>
+            {%endfor%}
+        </table>
+    </form>
+</div>
+<div class="mt-3 text-end">
+    <button type="submit" form="register_course_id" class="btn btn-primary">Đăng ký</button>
+</div>
+{%else%}
+<div class="alert alert-warning text-center m-0">
+    Không có khóa học nào.
+</div>
+{%endif%}
+{% endblock %}

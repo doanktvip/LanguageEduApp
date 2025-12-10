@@ -1,7 +1,7 @@
 import hashlib
 from eduapp import db
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
-    BangDiem, CauTrucDiem
+    BangDiem, CauTrucDiem, TinhTrangKhoaHocEnum
 
 
 def login(username, password):
@@ -96,3 +96,13 @@ def get_by_scoreboard_id(student_id, classroom_id):
 
 def get_cau_truc_diem(course_id):
     return CauTrucDiem.query.filter_by(ma_khoa_hoc=course_id)
+
+
+def lay_khoa_hoc_chua_dang_ky(student_id):
+    ds_ma_da_hoc = [bd.ma_khoa_hoc for bd in BangDiem.query.filter_by(ma_hoc_vien=student_id).all()]
+    query = KhoaHoc.query.filter(
+        KhoaHoc.tinh_trang == TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+    )
+    if ds_ma_da_hoc:
+        query = query.filter(~KhoaHoc.ma_khoa_hoc.in_(ds_ma_da_hoc))
+    return query.all()

@@ -31,7 +31,7 @@
                 {% endif %}
             </th>
             {% for day in range(tuan_duoc_chon['days'] | length) %}
-            <td>{{ cac_thu[day] }}<br><small>({{ tuan_duoc_chon['days'][day] }})</small></td>
+            <th class="bg-light">{{ cac_thu[day] }}<br><small>({{ tuan_duoc_chon['days'][day] }})</small></th>
             {% endfor %}
             <th scope="col">
                 {% if tuan_duoc_chon and current_index < tong_so_tuan - 1 %}
@@ -86,7 +86,7 @@
     </table>
 </div>
 {% else %}
-<div class="alert alert-warning text-center mt-3">
+<div class="alert alert-warning text-center m-0">
     Bạn chưa đăng ký khóa học nào.
 </div>
 {% endif %}

@@ -10,7 +10,7 @@ from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from flask_mail import Message
 from eduapp import app, dao, login_manager, mail
-from eduapp.models import HocVien, NguoiDungEnum
+from eduapp.models import HocVien, NguoiDungEnum, HoaDon, KhoaHoc
 
 
 @app.route('/')
@@ -340,6 +340,39 @@ def scoreboard():
             list_bang_diem = bang_diem.lay_chi_tiet_diem(cau_truc_diem)
     return render_template("scoreboard.html", ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon,
                            ds_khoa_hoc=ds_khoa_hoc_cua_hv, list_bang_diem=list_bang_diem)
+
+
+@app.route('/course_fee')
+def course_fee():
+    if not current_user.is_authenticated:
+        return redirect('/')
+    danh_sach = current_user.nhung_hoa_don
+    if not danh_sach:
+        return render_template('course_fee.html', ds_hoa_don=None)
+    ds_hoa_don = HoaDon.chuyen_danh_sach_sang_dict(danh_sach)
+    tong_tien = 0
+    for i in ds_hoa_don:
+        for j in ds_hoa_don[i]:
+            if j == 'Trạng thái' and ds_hoa_don[i][j] == 2:
+                tong_tien += ds_hoa_don[i]['Số tiền']
+    return render_template('course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
+
+
+@app.route("/register_course", methods=['GET', 'POST'])
+def register_course():
+    if not current_user.is_authenticated:
+        return redirect('/')
+    khoa_hoc_dao_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
+    if request.method == 'POST':
+        ds_khoa_hoc = request.form.getlist('register_course')
+        if ds_khoa_hoc:
+            print(ds_khoa_hoc)
+    if not khoa_hoc_dao_chua_dang_ky:
+        return render_template("register_course.html", khoa_hoc_dao_chua_dang_ky=None)
+    danh_sach = KhoaHoc.chuyen_danh_sach_sang_dict(khoa_hoc_dao_chua_dang_ky)
+    print(danh_sach)
+    return render_template("register_course.html", khoa_hoc_dao_chua_dang_ky=khoa_hoc_dao_chua_dang_ky,
+                           danh_sach=danh_sach)
 
 
 if __name__ == '__main__':
