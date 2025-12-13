@@ -2,42 +2,123 @@
 
 {% block title %}Đăng ký khóa học{% endblock %}
 
-{% block card_header %}<i class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học{% endblock %}
+{% block card_header %}
+<div class="p-3">
+    <i class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học
+</div>
+{% endblock %}
 
 {% block card_body %}
-{%if khoa_hoc_dao_chua_dang_ky%}
-<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
-    <form action="/register_course" id="register_course_id" method="post">
-        <table class="table table-custom table-bordered m-0 text-nowrap">
-            <tr class="align-middle">
-                <th class="bg-light"></th>
-                {%for i in danh_sach[0]%}
-                <th class="bg-light">{{i}}</th>
-                {%endfor%}
-            </tr>
-            {%for i in danh_sach%}
-            <tr class="align-middle small">
-                <td>
-                    <div class="form-check d-flex justify-content-center m-0">
-                        <input class="form-check-input" type="checkbox" name="register_course"
-                               value="{{ danh_sach[i] }}" id="check_{{ danh_sach[i] }}" {% if (danh_sach[i]['Sĩ số còn lại']|int) == 0 %}disabled{% endif %}>
-                        <label class="form-check-label" for="check_{{ danh_sach[i] }}"></label>
-                    </div>
-                </td>
-                {%for j in danh_sach[i]%}
-                <td>{{danh_sach[i][j]}}</td>
-                {%endfor%}
-            </tr>
-            {%endfor%}
-        </table>
-    </form>
+{% if ds_khoa_hoc %}
+<form action="/register_course" method="POST" id="form-dang-ky">
+    <div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 align-middle" style="min-width: 900px;">
+                <thead class="bg-primary text-white">
+                <tr>
+                    <th class="text-center py-3 bg-primary" style="width: 50px;">
+                        <i class="bi bi-check2-square"></i>
+                    </th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1">Thông tin khóa học</th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1">Giáo viên & Lịch</th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1" style="width: 180px;">Sĩ
+                        số
+                    </th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1 text-end">Học phí</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for kh in ds_khoa_hoc %}
+                {% set het_cho = kh.si_so_hien_tai >= kh.si_so_toi_da %}
+                <tr class="{{ 'bg-light text-muted' if het_cho else 'bg-white' }} position-relative">
+                    <td class="text-center bg-white">
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input border-2 border-secondary"
+                                   style="transform: scale(1.2); cursor: pointer;" type="checkbox" name="course_ids"
+                                   value="{{ kh.ma_khoa_hoc }}" id="chk_{{ kh.ma_khoa_hoc }}" {% if het_cho %}disabled{%
+                                   endif %}>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                                <span class="fw-bold fs-6 {{ 'text-secondary' if het_cho else 'text-primary' }}">
+                                    {{ kh.ten_khoa_hoc }}
+                                </span>
+                            <div class="small text-muted mt-1">
+                                    <span class="badge bg-light text-dark border me-1">
+                                        <i class="bi bi-upc-scan me-1"></i>{{ kh.ma_khoa_hoc }}
+                                    </span>
+                                <span class="badge bg-light text-dark border">
+                                        {{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}
+                                    </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column gap-1 small">
+                            <div>
+                                <i class="bi bi-person-badge-fill me-2 text-secondary"></i>
+                                {{ kh.giao_vien.ho_va_ten if kh.giao_vien else 'Chưa phân công' }}
+                            </div>
+                            <div>
+                                <i class="bi bi-calendar-range me-2 text-secondary"></i>
+                                {{ kh.ngay_bat_dau.strftime('%d/%m/%Y') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if het_cho %}
+                        <span class="badge bg-secondary w-100 py-2">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã đầy
+                                </span>
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-between small mb-1 fw-bold">
+                                    <span class="{{ 'text-danger' if kh.si_so_hien_tai >= kh.si_so_toi_da - 2 else 'text-success' }}">
+                                        {{ kh.si_so_hien_tai }}
+                                    </span>
+                            <span class="text-muted">/ {{ kh.si_so_toi_da }}</span>
+                        </div>
+                        {% set percent = (kh.si_so_hien_tai / kh.si_so_toi_da * 100)|int %}
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar {{ 'bg-warning' if percent > 80 else 'bg-success' }}"
+                                 role="progressbar"
+                                 style="width: {{ percent }}%">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-bold font-monospace fs-6 text-dark">
+                            {{ "{:,.0f}".format(kh.loai_khoa_hoc.hoc_phi) if kh.loai_khoa_hoc else 0 }} ₫
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 align-items-center">
+        <div class="me-auto text-muted small fst-italic d-none d-md-block">
+            <i class="bi bi-info-circle me-1"></i>
+            Tích chọn vào ô bên trái lớp học bạn muốn đăng ký.
+        </div>
+        <button type="reset" class="btn btn-light border text-secondary fw-medium">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Chọn lại
+        </button>
+        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+            <i class="bi bi-send-check-fill me-2"></i> Xác nhận đăng ký
+        </button>
+    </div>
+</form>
+{% else %}
+<div class="text-center py-5">
+    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3 text-muted"
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-calendar-x-fill fs-1 opacity-50"></i>
+    </div>
+    <h5 class="text-muted fw-normal">Không tìm thấy khóa học khả dụng.</h5>
+    <p class="text-secondary small">Hiện tại chưa có đợt tuyển sinh hoặc đã hết khóa học đăng ký.</p>
 </div>
-<div class="mt-3 text-end">
-    <button type="submit" form="register_course_id" class="btn btn-primary">Đăng ký</button>
-</div>
-{%else%}
-<div class="alert alert-warning text-center m-0">
-    Không có khóa học nào.
-</div>
-{%endif%}
+{% endif %}
 {% endblock %}

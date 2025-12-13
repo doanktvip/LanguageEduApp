@@ -1,0 +1,148 @@
+{% extends 'layout/base.html' %}
+
+{% block title %} Điểm danh lớp học {% endblock %}
+
+{% block card_header %}
+<div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-check-fill me-2"></i>Điểm danh</h5>
+    {% if course %}
+    <span class="badge bg-light text-dark border">
+        Sĩ số: <strong>{{ course.si_so_hien_tai }}</strong>/{{ course.si_so_toi_da }}
+    </span>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block card_body %}
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <form action="/attendance" method="GET">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-primary"><i class="bi bi-search"></i></span>
+                <select name="course_id" class="form-select border-start-0 fw-bold text-primary"
+                        onchange="this.form.submit()">
+                    {% for kh in ds_khoa_hoc %}
+                    <option value="{{ kh.ma_khoa_hoc }}" {{
+                    'selected' if kh.ma_khoa_hoc == ma_khoa_hoc_hien_tai }}>
+                    {{ kh.ten_khoa_hoc }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+    <div class="col-md-6 text-md-end">
+        {% if course %}
+        <span class="text-muted small">Hôm nay: <strong>{{ today_str }}</strong></span>
+        {% endif %}
+    </div>
+</div>
+{% if course %}
+<form action="/attendance" method="POST">
+    <input type="hidden" name="course_id" value="{{ course.ma_khoa_hoc }}">
+    <div id="mainTableContainer" class="table-responsive rounded shadow-sm">
+        <table class="table table-bordered mb-0 align-middle"
+               style="border-collapse: separate; border-spacing: 0;">
+            <thead class="bg-primary text-white header-row">
+            <tr>
+                <th class="sticky-cell col-fix-left ps-3">Học viên</th>
+                {% for col in date_columns %}
+                {% set is_today = (col['value'] == today_str) %}
+                <th class="text-center py-2 {{ 'today-header' if is_today else 'bg-primary text-white' }}"
+                    data-date="{{ col['value'] }}"
+                    style="min-width: 110px;">
+                    <small class="d-block opacity-75 fw-normal" style="font-size: 0.7rem;">{{ col['weekday'] }}</small>
+                    <span>{{ col['display'] }}</span>
+                </th>
+                {% endfor %}
+                <th class="sticky-cell col-fix-right text-center">%</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in student_rows %}
+            <tr>
+                <td class="bg-light sticky-cell col-fix-left ps-3">
+                    <div class="fw-bold text-truncate" style="max-width: 100%;" title="{{ row['info'].ho_va_ten }}">
+                        {{ row['info'].ho_va_ten }}
+                    </div>
+                    <small class="text-muted">{{ row['info'].ma_nguoi_dung }}</small>
+                </td>
+                {% for cell in row['cells'] %}
+                {% set is_today = (cell['date'] == today_str) %}
+                <td class="text-center p-1 {{ 'today-col' if is_today }}">
+                    {% if cell['editable'] %}
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                        {% for val, icon, color in [(1, 'check-lg', 'success'), (2, 'P', 'warning'), (3, 'x-lg',
+                        'danger')] %}
+                        <input type="radio" class="btn-check"
+                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
+                               id="r{{ val }}_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
+                               value="{{ val }}" {{ 'checked' if cell['status'] == val }}>
+                        <label class="btn btn-outline-{{ color }} py-1 px-1"
+                               for="r{{ val }}_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}">
+                            {% if val == 2 %} P {% else %} <i class="bi bi-{{ icon }}"></i> {% endif %}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {% if cell['status'] == 1 %}<i class="bi bi-check-circle-fill text-success"></i>
+                    {% elif cell['status'] == 2 %}<span class="badge bg-warning text-dark">P</span>
+                    {% elif cell['status'] == 3 %}<i class="bi bi-x-circle-fill text-danger"></i>
+                    {% else %}<span class="text-muted opacity-25">-</span>{% endif %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+                <td class="sticky-cell bg-light col-fix-right text-center fw-bold {{ 'text-success' if row['percent'] >= 80 else 'text-danger' }}">
+                    {{ row['percent'] }}%
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-3 text-end">
+        <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+            <i class="bi bi-save me-2"></i>Lưu Điểm Danh
+        </button>
+    </div>
+</form>
+{% else %}
+<div class="alert alert-info text-center mt-4">Vui lòng chọn khóa học.</div>
+{% endif %}
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const scrollToDate = () => {
+            const container = document.getElementById('mainTableContainer');
+            const dateHeaders = document.querySelectorAll('th[data-date]');
+            const stickyCol = document.querySelector('.col-fix-left');
+            if (!container || !dateHeaders.length) return;
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            let targetHeader = null;
+            for (let i = 0; i < dateHeaders.length; i++) {
+                if (dateHeaders[i].getAttribute('data-date') >= todayStr) {
+                    targetHeader = dateHeaders[i];
+                    break;
+                }
+            }
+            if (!targetHeader) {
+                targetHeader = dateHeaders[dateHeaders.length - 1];
+            }
+            if (targetHeader) {
+                const stickyWidth = stickyCol ? stickyCol.offsetWidth : 150;
+                const scrollLeftPos = targetHeader.offsetLeft - stickyWidth - 5;
+                container.scrollTo({
+                    left: scrollLeftPos,
+                    behavior: 'smooth'
+                });
+            }
+        };
+        scrollToDate();
+        setTimeout(scrollToDate, 300);
+    });
+</script>
+{% endblock %}

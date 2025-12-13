@@ -67,7 +67,7 @@ class NguoiDung(db.Model, UserMixin):
     tinh_trang_hoat_dong = Column(Boolean, default=True)
     ngay_tao = Column(DateTime, default=datetime.now())
     anh_chan_dung = Column(String(255),
-                           default='https://res.cloudinary.com/db4bjqp4f/image/upload/v1765002051/hew7wdmqad2sqw3kpixe.png')
+                           default='https://res.cloudinary.com/db4bjqp4f/image/upload/v1765436438/shtnr60mecp057e2uctk.jpg')
 
     # Cấu hình đa hình
     vai_tro = Column(Enum(NguoiDungEnum), nullable=False)
@@ -326,13 +326,15 @@ class BangDiem(db.Model):
     def lay_chi_tiet_diem(self, list_cau_truc_diem):
         bang_diem = {}
         for ct in list_cau_truc_diem:
-            bang_diem[ct.ten_loai_diem] = [None, ct.trong_so]
+            bang_diem[ct.ten_loai_diem] = [None, ct.trong_so, False]
         for chi_tiet in self.ds_diem_thanh_phan:
             ten_loai = chi_tiet.cau_truc_diem.ten_loai_diem
             if ten_loai in bang_diem:
                 bang_diem[ten_loai][0] = chi_tiet.gia_tri_diem
-        bang_diem['Tổng kết'] = [self.diem_trung_binh, None]
-        bang_diem['Kết quả'] = [self.ket_qua, None]
+                bang_diem[ten_loai][2] = chi_tiet.ban_nhap
+        bang_diem['Tổng kết'] = [self.diem_trung_binh, None, False]
+        bang_diem['Kết quả'] = [self.ket_qua, None, False]
+
         return bang_diem
 
     def cap_nhat_tong_ket(self):
@@ -354,6 +356,7 @@ class ChiTietDiem(db.Model):
 
     gia_tri_diem = Column(Float, nullable=False)
     ngay_nhap = Column(DateTime, default=datetime.now())
+    ban_nhap = Column(Boolean, default=False)
 
 
 # ==========================================
@@ -542,7 +545,7 @@ def tao_du_lieu_mau():
     hv2 = HocVien(
         ma_nguoi_dung="HV250002", ten_dang_nhap="hv_binh", mat_khau=mat_khau_chung,
         ho_va_ten="Lê Thanh Bình", email="binh@edu.com", so_dien_thoai="0987654002",
-        vai_tro=NguoiDungEnum.HOC_VIEN, so_dien_thoai_phu_huynh="0911000002",
+        vai_tro=NguoiDungEnum.HOC_VIEN,
         ngay_sinh=datetime(2006, 8, 15)
     )
 
@@ -639,7 +642,7 @@ def tao_du_lieu_mau():
     dt_binh_2 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct2.id, gia_tri_diem=4.0)  # Giữa kỳ
     dt_binh_3 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct3.id, gia_tri_diem=8.0)  # Chuyên cần
 
-    db.session.add_all([dt_an_1, dt_an_2, dt_binh_1, dt_binh_2,dt_binh_3])
+    db.session.add_all([dt_an_1, dt_an_2, dt_binh_1, dt_binh_2, dt_binh_3])
     db.session.commit()
 
     # 8.3: Cập nhật điểm tổng kết tự động

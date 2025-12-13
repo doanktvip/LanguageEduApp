@@ -1,55 +1,110 @@
 {% extends 'layout/base.html' %}
 
-{% block title %}Xem điểm{% endblock %}
+{% block title %}Xem điểm thi{% endblock %}
 
-{% block card_header %}<i class="bi bi-bar-chart-fill me-2"></i>Xem điểm{% endblock %}
+{% block card_header %}
+<div class="p-3">
+    <i class="bi bi-bar-chart-fill me-2"></i>Bảng điểm cá nhân
+</div>
+{% endblock %}
 
 {% block card_body %}
 {% if ma_khoa_hoc_hien_tai %}
-<div class="input-group mb-3">
-    <form action="/scoreboard" method="GET" class="w-100">
-        <select name="course_id" class="form-select" onchange="this.form.submit()">
-            {% for kh in ds_khoa_hoc %}
-            <option value="{{ kh.ma_khoa_hoc }}"
-                    {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
-                {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
-            </option>
-            {% endfor %}
-        </select>
-    </form>
+<div class="row mb-4">
+    <div class="col-12 col-md-6">
+        <form action="/scoreboard" method="GET" class="shadow-sm rounded">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-primary">
+                    <i class="bi bi-journal-bookmark-fill"></i>
+                </span>
+                <select name="course_id" class="form-select border-start-0 fw-bold text-primary"
+                        onchange="this.form.submit()" style="cursor: pointer;">
+                    {% for kh in ds_khoa_hoc %}
+                    <option value="{{ kh.ma_khoa_hoc }}" {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {%
+                            endif %}>
+                        {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
 </div>
-
-<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
-    <table class="table table-custom table-bordered m-0 text-nowrap">
-        <tr>
-            {%for bang_diem in list_bang_diem%}
-            <th class="bg-light">
-                {{bang_diem}} <small>
-                {{(list_bang_diem[bang_diem][1]*100)|int~'%' if list_bang_diem[bang_diem][1] else ""}}</small>
-            </th>
-            {%endfor%}
-        </tr>
-        <tr class="align-middle small">
-            {%for bang_diem in list_bang_diem%}
-            {%set gia_tri=list_bang_diem[bang_diem][0]%}
-            <td>
-                {%if bang_diem=='Kết quả'%}
-                {%if gia_tri==False%}
-                <i class="bi bi-x-circle-fill text-danger"></i>
-                {%else%}
-                <i class="bi bi-check-circle-fill text-success"></i>
-                {%endif%}
-                {%else%}
-                {{gia_tri if gia_tri is not none else ""}}
-                {%endif%}
-            </td>
-            {%endfor%}
-        </tr>
-    </table>
+<div class="border rounded-3 shadow-sm overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0 align-middle text-center" style="min-width: 800px;">
+            <thead class="bg-primary text-white">
+            <tr>
+                {% for ten_dau_diem, data in list_bang_diem.items() %}
+                <th class="py-3 align-top" style="width: {{ 100 / list_bang_diem|length }}%">
+                    <div class="text-uppercase small fw-bold opacity-75 letter-spacing-1">{{ ten_dau_diem }}</div>
+                    {% set trong_so = data[1] %}
+                    {% if trong_so %}
+                    <div class="mt-2">
+                        <span class="badge bg-white text-white bg-opacity-10 border border-white border-opacity-25">
+                            {{ (trong_so * 100)|int }}%
+                        </span>
+                    </div>
+                    {% endif %}
+                </th>
+                {% endfor %}
+            </tr>
+            </thead>
+            <tbody>
+            <tr style="height: 100px;">
+                {% for ten_dau_diem, data in list_bang_diem.items() %}
+                {% set gia_tri = data[0] %}
+                {% set is_draft = data[2] %}
+                <td class="fs-5 bg-white position-relative">
+                    {% if is_draft %}
+                    <span class="text-muted opacity-25 fs-1">-</span>
+                    {% else %}
+                    {% if ten_dau_diem == 'Kết quả' %}
+                    {% if gia_tri == True %}
+                    <span class="badge rounded-pill bg-success px-3 py-2 shadow-sm">
+                                    <i class="bi bi-check-circle-fill me-1"></i>ĐẠT
+                                </span>
+                    {% elif gia_tri == False and gia_tri is not none %}
+                    <span class="badge rounded-pill bg-danger px-3 py-2 shadow-sm">
+                                    <i class="bi bi-x-circle-fill me-1"></i>CHƯA ĐẠT
+                                </span>
+                    {% else %}
+                    <span class="text-muted small fst-italic">--</span>
+                    {% endif %}
+                    {% elif ten_dau_diem == 'Tổng kết' %}
+                    {% if gia_tri is not none %}
+                    <div class="display-6 fw-bold {{ 'text-success' if gia_tri >= 5.0 else 'text-danger' }}">
+                        {{ gia_tri }}
+                    </div>
+                    {% else %}
+                    <span class="text-muted">--</span>
+                    {% endif %}
+                    {% else %}
+                    {% if gia_tri is not none %}
+                    <span class="fw-bold text-dark fs-4">{{ gia_tri }}</span>
+                    {% else %}
+                    <span class="text-muted opacity-25 fs-1">-</span>
+                    {% endif %}
+                    {% endif %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </div>
-{%else%}
-<div class="alert alert-warning text-center m-0">
-    Bạn chưa đăng ký khóa học nào.
+<div class="mt-3 text-muted small fst-italic text-end">
+    <i class="bi bi-info-circle me-1"></i>
+    Điểm tổng kết và Kết quả được hệ thống tự động tính toán.
 </div>
-{%endif%}
+{% else %}
+<div class="text-center py-5">
+    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3 text-muted"
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-journal-x fs-1 opacity-50"></i>
+    </div>
+    <h5 class="text-muted fw-normal">Bạn chưa đăng ký khóa học nào.</h5>
+</div>
+{% endif %}
 {% endblock %}

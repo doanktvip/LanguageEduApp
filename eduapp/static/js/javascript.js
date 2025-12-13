@@ -49,16 +49,50 @@ function formAlert(alertId, alert, alertBox) {
 }
 
 function setupPasswordToggle(triggerId, inputId, iconId) {
-    const trigger = document.getElementById(triggerId);
+        const trigger = document.getElementById(triggerId);
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (trigger && input && icon) {
+            trigger.addEventListener("click", function () {
+                const currentType = input.getAttribute("type");
+                const newType = currentType === "password" ? "text" : "password";
+                input.setAttribute("type", newType);
+
+                // Toggle icon class
+                if(newType === 'text'){
+                    icon.classList.remove("bi-eye-slash");
+                    icon.classList.add("bi-eye");
+                    trigger.classList.add("text-primary"); // Thêm màu xanh cho đẹp
+                } else {
+                    icon.classList.remove("bi-eye");
+                    icon.classList.add("bi-eye-slash");
+                    trigger.classList.remove("text-primary");
+                }
+            });
+        }
+    }
+    function setupImagePreview(inputId, previewId) {
     const input = document.getElementById(inputId);
-    const icon = document.getElementById(iconId);
-    if (trigger && input && icon) {
-        trigger.addEventListener("click", function () {
-            const currentType = input.getAttribute("type");
-            const newType = currentType === "password" ? "text" : "password";
-            input.setAttribute("type", newType);
-            icon.classList.toggle("bi-eye");
-            icon.classList.toggle("bi-eye-slash");
+    const preview = document.getElementById(previewId);
+
+    // Chỉ chạy khi cả 2 thẻ đều tồn tại trên trang
+    if (input && preview) {
+        input.addEventListener('change', function (evt) {
+            const tgt = evt.target || window.event.srcElement;
+            const files = tgt.files;
+
+            // Kiểm tra FileReader và file đã chọn
+            if (FileReader && files && files.length) {
+                const fr = new FileReader();
+
+                fr.onload = function () {
+                    // Cập nhật src của ảnh
+                    preview.src = fr.result;
+                }
+
+                // Đọc file
+                fr.readAsDataURL(files[0]);
+            }
         });
     }
 }

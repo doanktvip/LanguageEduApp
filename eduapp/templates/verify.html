@@ -1,59 +1,87 @@
-{%extends 'layout/base.html'%}
+{% extends 'layout/base.html' %}
 
-{%block title%}Xác nhận email{%endblock%}
+{% block title %}Xác thực tài khoản{% endblock %}
 
-{% block card_header %}<i class="bi bi-envelope-check-fill me-2"></i>Xác nhận email{%endblock%}
+{% block card_header %}
+<div class="d-none"></div>
+{% endblock %}
 
 {% block card_body %}
-<div class="p-3">
-    <form method="post">
-        <div class="form-floating mt-3 mb-3 alert alert-primary">
-            <p class="fw-bold m-0">Kiểm tra email để nhận mã xác nhận</p>
+<div class="row justify-content-center text-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="mb-4 mt-2">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                 style="width: 80px; height: 80px;">
+                <i class="bi bi-shield-check fs-1"></i>
+            </div>
+            <h4 class="fw-bold text-dark">Xác thực Email</h4>
+            <p class="text-muted small px-3">
+                Nhập mã xác nhận 6 chữ số đã gửi tới email
+                <span class="fw-bold text-dark">{{ current_user.email }}</span>
+            </p>
         </div>
-        <div class="form-floating mt-3 mb-3">
-            <input type="text" class="form-control" id="verify" placeholder="Nhập mã xác nhận" name="verify"
-                   required minlength="6" maxlength="6" pattern="[0-9]{6}"
-                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-            <label for="verify">Nhập mã xác nhận</label>
-        </div>
-        <div id="alert-box" class="form-floating mt-3 mb-3 alert alert-warning">
-            <p id="hieu-luc" class="fw-normal m-0"></p>
-        </div>
-        <div class="form-floating mt-3 mb-3 d-flex justify-content-between align-items-center">
-            <button class="btn btn-primary">Xác nhận</button>
-            <a href="{{url_for('verify_page', action='resend')}}" class="link-primary">Gửi mã xác nhận</a>
-        </div>
-    </form>
+        <form method="post">
+            <div class="mb-4">
+                <input type="text" class="form-control text-center fw-bold text-primary fs-4"
+                       id="verify" name="verify" placeholder="######"
+                       maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                       style="letter-spacing: 0.5em; font-family: monospace;"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '')" autofocus>
+            </div>
+            <div id="alert-box"
+                 class="alert alert-warning d-flex align-items-center justify-content-center mb-4 shadow-sm"
+                 style="min-height: 54px;">
+                <i class="bi bi-clock-history me-2"></i>
+                <p id="hieu-luc" class="mb-0 fw-bold small">
+                    Đang tải trạng thái...
+                </p>
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary btn-lg fw-bold shadow-sm" type="submit">
+                    Xác nhận kích hoạt
+                </button>
+            </div>
+            <div class="mt-4">
+                <span class="text-muted small">Bạn chưa nhận được mã?</span>
+                <a href="{{ url_for('verify_page', action='resend') }}"
+                   class="text-decoration-none small fw-bold ms-1">
+                    Gửi lại mã
+                </a>
+            </div>
+        </form>
+    </div>
 </div>
-{%endblock%}
+{% endblock %}
 
 {% block javascript %}
-document.addEventListener("DOMContentLoaded", function() {
-var timeLeft = {{ wait_time | default(0) }};
-var hasError = {{ 'true' if warn_msg else 'false' }};
-var msgContent = "{{ warn_msg if warn_msg else '' }}";
-var isBlocked = {{ 'true' if is_blocked else 'false' }};
-var blockTime = {{ block_time | default(0) }};
-var maxResend = {{ max_resend_limit | default(5) }};
-if (isBlocked) {
-demNguocGiay(blockTime, "hieu-luc", "alert-box", "Bạn đã gửi mã " + maxResend + " lần, hãy thử lại sau", function(){
-formAlert("hieu-luc", "Đã hết thời gian chặn. Bạn có thể gửi lại mã.", "alert-box");
-});
-return;
-}
-if (timeLeft == 0) {
-formAlert("hieu-luc", "Vui lòng yêu cầu gửi mã xác nhận.", "alert-box");
-} else {
-if (!hasError) {
-demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
-formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
-});
-} else {
-const quanLyBoDem = demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Hiệu lực của mã xác nhận còn", function(){
-formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi mã xác nhận mới.", "alert-box");
-});
-quanLyBoDem.kichHoatThongBao(msgContent, 3);
-}
-}
-});
-{%endblock%}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var timeLeft = {{ wait_time | default(0) }};
+        var hasError = {{ 'true' if warn_msg else 'false' }};
+        var msgContent = "{{ warn_msg if warn_msg else '' }}";
+        var isBlocked = {{ 'true' if is_blocked else 'false' }};
+        var blockTime = {{ block_time | default(0) }};
+        var maxResend = {{ max_resend_limit | default(5) }};
+        if (isBlocked) {
+            demNguocGiay(blockTime, "hieu-luc", "alert-box", "Bạn đã gửi mã " + maxResend + " lần. Thử lại sau:", function(){
+                formAlert("hieu-luc", "Đã hết thời gian chặn. Bạn có thể gửi lại mã.", "alert-box");
+            });
+            return;
+        }
+        if (timeLeft == 0) {
+            formAlert("hieu-luc", "Vui lòng yêu cầu gửi mã xác nhận mới.", "alert-box");
+        } else {
+            if (!hasError) {
+                demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Mã hiệu lực trong:", function(){
+                    formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi lại.", "alert-box");
+                });
+            } else {
+                const quanLyBoDem = demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Mã hiệu lực trong:", function(){
+                    formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi lại.", "alert-box");
+                });
+                quanLyBoDem.kichHoatThongBao(msgContent, 3);
+            }
+        }
+    });
+</script>
+{% endblock %}

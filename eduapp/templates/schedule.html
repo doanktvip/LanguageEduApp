@@ -1,93 +1,202 @@
 {% extends 'layout/base.html' %}
 
-{% block title %}Thời khóa biểu{% endblock %}
+{% block title %}
+{{ "Lịch giảng dạy" if is_teacher else "Thời khóa biểu" }}
+{% endblock %}
 
-{% block card_header %}<i class="bi bi-calendar-date-fill me-2"></i>Thời khóa biểu{% endblock %}
+{% block card_header %}
+<div class="p-3">
+    <i class="bi bi-calendar-week-fill me-2"></i>
+    {{ "Lịch giảng dạy cá nhân" if is_teacher else "Thời khóa biểu cá nhân" }}
+</div>
+{% endblock %}
 
 {% block card_body %}
 {% if ma_khoa_hoc_hien_tai %}
-<div class="input-group mb-3">
-    <form action="/schedule" method="GET" class="w-100">
-        <select name="course_id" class="form-select" onchange="this.form.submit()">
-            {% for kh in ds_khoa_hoc %}
-            <option value="{{ kh.ma_khoa_hoc }}"
-                    {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {% endif %}>
-                {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
-            </option>
-            {% endfor %}
-        </select>
-    </form>
+<div class="row g-3 align-items-center mb-4">
+    <div class="col-12 col-md-6">
+        <form action="/schedule" method="GET" class="shadow-sm rounded">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-primary"><i class="bi bi-search"></i></span>
+                <select name="course_id" class="form-select border-start-0 fw-bold text-primary"
+                        onchange="this.form.submit()">
+                    {% for kh in ds_khoa_hoc %}
+                    <option value="{{ kh.ma_khoa_hoc }}" {% if kh.ma_khoa_hoc== ma_khoa_hoc_hien_tai %} selected {%
+                            endif %}>
+                        {{ kh.ten_khoa_hoc }} ({{ kh.ma_khoa_hoc }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+    <div class="col-12 col-md-6 text-md-end">
+        {% if tuan_duoc_chon %}
+        <span class="badge bg-light text-dark border p-2 px-3 rounded-pill fw-normal fs-6">
+            <i class="bi bi-calendar3 me-1"></i> Tuần <strong>{{ tuan_duoc_chon.week }}</strong> / {{ tuan_duoc_chon.year }}
+        </span>
+        {% endif %}
+    </div>
 </div>
-<div class="table-responsive border border-secondary border-1 text-center" style="border-radius: 10px;">
-    <table class="table table-custom table-bordered m-0 text-nowrap">
-        <tr class="align-middle">
-            <th scope="col">
-                {% if tuan_duoc_chon and current_index > 0 %}
-                <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index - 1) }}">
-                    <i class="bi bi-chevron-left"></i>
-                </a>
-                {% else %}
-                <span class="text-muted"><i class="bi bi-chevron-left"></i></span>
-                {% endif %}
-            </th>
-            {% for day in range(tuan_duoc_chon['days'] | length) %}
-            <th class="bg-light">{{ cac_thu[day] }}<br><small>({{ tuan_duoc_chon['days'][day] }})</small></th>
-            {% endfor %}
-            <th scope="col">
-                {% if tuan_duoc_chon and current_index < tong_so_tuan - 1 %}
-                <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index + 1) }}">
-                    <i class="bi bi-chevron-right"></i>
-                </a>
-                {% else %}
-                <span class="text-muted"><i class="bi bi-chevron-right"></i></span>
-                {% endif %}
-            </th>
-        </tr>
-        <tr class="align-middle small" style="font-size: 12px;">
-            <th scope="row" class="bg-light">SÁNG</th>
-            {% for day in range(tuan_duoc_chon['days'] | length) %}
-            {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_SANG'][day] %}
-            {% if buoi_hoc %}
-            <td class="text-start co-mon-hoc schedule-cell">
-                <strong class="text-primary">{{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}</strong><br>
-                <strong>Lớp:</strong> {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}<br>
-                <strong>Phòng:</strong> {{ buoi_hoc.phong_hoc.ten_phong_hoc }}<br>
-                <strong>GV:</strong> {{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}<br>
-                <i class="bi bi-clock me-1"></i>
-                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
-                {{ gio_bd }}:00 - {{ gio_kt }}:00
-            </td>
-            {% else %}
-            <td class="schedule-cell-empty"></td>
-            {% endif %}
-            {% endfor %}
-            <th scope="row" class="bg-light">SÁNG</th>
-        </tr>
-        <tr class="align-middle small" style="font-size: 12px;">
-            <th scope="row" class="bg-light">CHIỀU</th>
-            {% for day in range(tuan_duoc_chon['days'] | length) %}
-            {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_CHIEU'][day] %}
-            {% if buoi_hoc %}
-            <td class="text-start co-mon-hoc schedule-cell">
-                <strong class="text-primary">{{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}</strong><br>
-                <strong>Lớp:</strong> {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}<br>
-                <strong>Phòng:</strong> {{ buoi_hoc.phong_hoc.ten_phong_hoc }}<br>
-                <strong>GV:</strong> {{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}<br>
-                <i class="bi bi-clock me-1"></i>
-                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
-                {{ gio_bd }}:00 - {{ gio_kt }}:00
-            </td>
-            {% else %}
-            <td class="schedule-cell-empty"></td>
-            {% endif %}
-            {% endfor %}
-            <th scope="row" class="bg-light">CHIỀU</th>
-        </tr>
-    </table>
+<div class="border rounded-3 shadow-sm overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0 align-middle" style="min-width: 1000px;">
+            <thead class="bg-primary text-white">
+            <tr>
+                <th style="width: 60px;" class="bg-light text-center align-middle">
+                    {% if tuan_duoc_chon and current_index > 0 %}
+                    <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index - 1) }}"
+                       class="btn btn-sm btn-outline-secondary border-0 rounded-circle">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                    {%else%}
+                    <span class="btn btn-sm btn-outline-secondary border-0 rounded-circle">
+                        <i class="bi bi-chevron-left"></i>
+                    </span>
+                    {% endif %}
+                </th>
+                {% for day in range(tuan_duoc_chon['days'] | length) %}
+                {% set is_today = (day == today_index) %}
+                <th class="text-center py-3 {{ 'bg-warning text-dark' if is_today else '' }}" style="width: 13%;">
+                    <div class="text-uppercase small fw-bold opacity-75">{{ cac_thu[day] }}</div>
+                    <div class="fs-5 fw-bold">
+                        {{ tuan_duoc_chon['days'][day].split('/')[0] }}
+                        <span class="fs-6 fw-normal">/{{ tuan_duoc_chon['days'][day].split('/')[1] }}</span>
+                    </div>
+                </th>
+                {% endfor %}
+                <th style="width: 60px;" class="bg-light text-center align-middle">
+                    {% if tuan_duoc_chon and current_index < tong_so_tuan - 1 %}
+                    <a href="{{ url_for('schedule', course_id=ma_khoa_hoc_hien_tai, index=current_index + 1) }}"
+                       class="btn btn-sm btn-outline-secondary border-0 rounded-circle">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    {%else%}
+                    <span class="btn btn-sm btn-outline-secondary border-0 rounded-circle">
+                        <i class="bi bi-chevron-right"></i>
+                    </span>
+                    {% endif %}
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <th class="bg-light text-secondary text-center align-middle p-0">
+                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); min-height: 100px;"
+                         class="fw-bold small py-3 mx-auto">
+                        SÁNG
+                    </div>
+                </th>
+                {% for day in range(tuan_duoc_chon['days'] | length) %}
+                {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_SANG'][day] %}
+                {% set is_today = (day == today_index) %}
+                <td class="align-top p-2 {{ 'table-warning' if is_today else '' }}" style="height: 160px;">
+                    {% if buoi_hoc %}
+                    <div class="card h-100 border-0 border-start border-4 border-primary shadow-sm bg-light"
+                         role="button"
+                         data-bs-toggle="popover"
+                         data-bs-trigger="hover focus"
+                         data-bs-html="true"
+                         title="<span class='text-primary fw-bold'>{{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}</span>"
+                         data-bs-content="<div class='small'>
+                         <div><i class='bi bi-upc-scan me-2'></i>{{ buoi_hoc.khoa_hoc.ma_khoa_hoc }}</div>
+                         <div><i class='bi bi-person-badge me-2'></i>{{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}</div>
+                         <div><i class='bi bi-people me-2'></i>{{ buoi_hoc.khoa_hoc.si_so_hien_tai }}/{{ buoi_hoc.khoa_hoc.si_so_toi_da }}</div>
+                         </div>">
+                        <div class="card-body p-2 d-flex flex-column justify-content-between">
+                            <div>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 mb-1 text-wrap text-start lh-sm">
+                                    {{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}
+                                </span>
+                                <div class="fw-bold text-dark small text-wrap lh-sm">
+                                    {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}
+                                </div>
+                            </div>
+                            <div class="small border-top pt-1 text-muted mt-2">
+                                <div class="text-danger fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>{{
+                                    buoi_hoc.phong_hoc.ten_phong_hoc }}
+                                </div>
+                                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
+                                <div><i class="bi bi-clock me-1"></i>{{ gio_bd }}h - {{ gio_kt }}h</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+                <th class="bg-light"></th>
+            </tr>
+            <tr>
+                <th class="bg-light text-secondary text-center align-middle p-0">
+                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); min-height: 100px;"
+                         class="fw-bold small py-3 mx-auto">
+                        CHIỀU
+                    </div>
+                </th>
+                {% for day in range(tuan_duoc_chon['days'] | length) %}
+                {% set buoi_hoc = tuan_duoc_chon['schedule']['CA_CHIEU'][day] %}
+                {% set is_today = (day == today_index) %}
+                <td class="align-top p-2 {{ 'table-warning' if is_today else '' }}" style="height: 160px;">
+                    {% if buoi_hoc %}
+                    <div class="card h-100 border-0 border-start border-4 border-success shadow-sm bg-light"
+                         role="button"
+                         data-bs-toggle="popover"
+                         data-bs-trigger="hover focus"
+                         data-bs-html="true"
+                         title="<span class='text-success fw-bold'>{{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}</span>"
+                         data-bs-content="<div class='small'>
+                         <div><i class='bi bi-upc-scan me-2'></i>{{ buoi_hoc.khoa_hoc.ma_khoa_hoc }}</div>
+                         <div><i class='bi bi-person-badge me-2'></i>{{ buoi_hoc.khoa_hoc.giao_vien.ho_va_ten }}</div>
+                         <div><i class='bi bi-people me-2'></i>{{ buoi_hoc.khoa_hoc.si_so_hien_tai }}/{{ buoi_hoc.khoa_hoc.si_so_toi_da }}</div>
+                         </div>">
+                        <div class="card-body p-2 d-flex flex-column justify-content-between">
+                            <div>
+                               <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 mb-1 text-wrap text-start lh-sm">
+                                   {{ buoi_hoc.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}
+                               </span>
+                                <div class="fw-bold text-dark small text-wrap lh-sm">
+                                    {{ buoi_hoc.khoa_hoc.ten_khoa_hoc }}
+                                </div>
+                            </div>
+                            <div class="small border-top pt-1 text-muted mt-2">
+                                <div class="text-danger fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>{{
+                                    buoi_hoc.phong_hoc.ten_phong_hoc }}
+                                </div>
+                                {% set gio_bd, gio_kt = buoi_hoc.thoi_gian_theo_ca() %}
+                                <div><i class="bi bi-clock me-1"></i>{{ gio_bd }}h - {{ gio_kt }}h</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
+                <th class="bg-light"></th>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="d-flex justify-content-center gap-4 mt-3 small">
+    <div class="d-flex align-items-center"><span class="badge bg-primary rounded-circle p-1 me-2"> </span> Ca Sáng</div>
+    <div class="d-flex align-items-center"><span class="badge bg-success rounded-circle p-1 me-2"> </span> Ca Chiều
+    </div>
+    <div class="d-flex align-items-center"><span class="badge bg-warning text-dark border p-1 me-2"> </span> Hôm nay
+    </div>
 </div>
 {% else %}
-<div class="alert alert-warning text-center m-0">
-    Bạn chưa đăng ký khóa học nào.
+<div class="text-center py-5">
+    <i class="bi bi-calendar2-x display-1 text-muted opacity-25"></i>
+    <p class="mt-3 text-muted">Chưa có lịch học nào được tìm thấy.</p>
 </div>
 {% endif %}
+{% endblock %}
+{% block javascript %}
+<script>
+    document.addEventListener("DOMContentLoaded", function(){
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        })
+    });
+</script>
 {% endblock %}

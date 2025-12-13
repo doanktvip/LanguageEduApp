@@ -6,28 +6,34 @@
                     chủ</a>
                 {%if current_user.is_authenticated%}
                 {%if current_user.vai_tro.value==1%}
-                <a href="/course_fee" class="list-group-item list-group-item-action"><i class="bi bi-cash-stack me-2"></i>Xem
+                <a href="/course_fee" class="list-group-item list-group-item-action"><i
+                        class="bi bi-cash-stack me-2"></i>Xem
                     học
                     phí</a>
-                <a href="/register_course" class="list-group-item list-group-item-action"><i class="bi bi-calendar-plus-fill me-2"></i>Đăng
+                <a href="/register_course" class="list-group-item list-group-item-action"><i
+                        class="bi bi-calendar-plus-fill me-2"></i>Đăng
                     ký
                     khóa
                     học</a>
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-date-fill me-2"></i>Thời
+                        class="bi bi-calendar-week-fill me-2"></i>Thời
                     khóa
                     biểu</a>
-                <a href="/scoreboard" class="list-group-item list-group-item-action"><i class="bi bi-bar-chart-fill me-2"></i>Xem
+                <a href="/scoreboard" class="list-group-item list-group-item-action"><i
+                        class="bi bi-bar-chart-fill me-2"></i>Xem
                     điểm</a>
                 {%elif current_user.vai_tro.value==2%}
-                <a href="/" class="list-group-item list-group-item-action">Cập nhập mức học phí</a>
-                <a href="/" class="list-group-item list-group-item-action">Thay đổi số lượng học viên</a>
+                <a href="/" class="list-group-item list-group-item-action">Xếp lịch học</a>
+                <a href="/" class="list-group-item list-group-item-action">Tạo khóa học</a>
                 {%elif current_user.vai_tro.value==3%}
-                <a href="/" class="list-group-item list-group-item-action">Nhập điểm</a>
-                <a href="/" class="list-group-item list-group-item-action">Điểm danh</a>
-                <a href="/" class="list-group-item list-group-item-action">Xem lịch học</a>
+                <a href="/grading" class="list-group-item list-group-item-action"><i
+                        class="bi bi-pencil-square me-2"></i>Nhập điểm số</a>
+                <a href="/attendance" class="list-group-item list-group-item-action"><i class="bi bi-person-check-fill me-2"></i>Điểm
+                    danh</a>
+                <a href="/schedule" class="list-group-item list-group-item-action"><i
+                        class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>
                 {%elif current_user.vai_tro.value==4%}
-                <a href="/" class="list-group-item list-group-item-action">Thống kế</a>
+                <a href="/" class="list-group-item list-group-item-action">Thống kê</a>
                 <a href="/" class="list-group-item list-group-item-action">Báo cáo</a>
                 {%endif%}
                 {%else%}

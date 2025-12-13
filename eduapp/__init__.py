@@ -26,6 +26,8 @@ app.config['MAIL_PASSWORD'] = 'uvoc ehnq pxsk kbmq'
 # Sử dụng mã hóa SSL để bảo mật
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
+# Email mặc định gửi mail
+app.config['MAIL_DEFAULT_SENDER'] = 'nd21032005@gmail.com'
 
 cloudinary.config(cloud_name='db4bjqp4f',
                   api_key='588892363794189',
