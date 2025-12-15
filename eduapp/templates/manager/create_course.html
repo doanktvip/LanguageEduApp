@@ -1,0 +1,510 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Tạo khóa học mới{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <a href="{{ url_for('manager_course_list') }}" class="btn btn-light btn-sm border shadow-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <i class="bi bi-mortarboard-fill me-2"></i>Tạo khóa học mới
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    input {
+        background-image: none !important;
+    }
+</style>
+{% if msg %}
+<div class="alert {{ 'alert-success' if '✅' in msg else 'alert-danger' }} alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+<form method="POST" action="" id="form-create-course">
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card h-100 border-0 shadow-sm bg-light">
+                <div class="card-header bg-white border-bottom-0 fw-bold text-uppercase small text-muted">
+                    <i class="bi bi-info-circle me-1"></i> Thông tin chung
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên khóa học <span class="text-danger">*</span></label>
+                        <input type="text" name="ten_khoa_hoc" class="form-control"
+                               value="{{ form_data.ten_khoa_hoc if form_data else '' }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Loại khóa học</label>
+                            <select name="ma_loai_khoa_hoc" id="select-loai-kh" class="form-select"
+                                    onchange="calculateTuition()">
+                                {% for l in loai_kh %}
+                                <option value="{{ l.ma_loai_khoa_hoc }}" data-price="{{ l.hoc_phi }}"
+                                        {% if form_data and form_data.ma_loai_khoa_hoc== l.ma_loai_khoa_hoc %}selected{%
+                                        endif %}>
+                                    {{ l.ten_loai_khoa_hoc }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Sĩ số tối đa</label>
+                            <div class="input-group">
+                                <input type="number" name="si_so" class="form-control" min="10" max="100" required
+                                       value="{{ form_data.si_so if form_data else '30' }}">
+                                <span class="input-group-text"><i class="bi bi-people"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Giáo viên phụ trách <span class="text-danger">*</span></label>
+                        <select name="ma_giao_vien" id="select-giao-vien" class="form-select">
+                            {% for gv in ds_gv %}
+                            <option value="{{ gv.ma_nguoi_dung }}"
+                                    {% if form_data and form_data.ma_giao_vien== gv.ma_nguoi_dung %}selected{% endif %}>
+                                {{ gv.ho_va_ten }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <hr class="text-muted">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Thời lượng</label>
+                            <select name="thoi_luong" id="thoi_luong" class="form-select text-primary fw-medium"
+                                    onchange="handleDurationChange()">
+                                <option value="0">-- Tùy chỉnh --</option>
+                                <option value="1.5" {% if form_data and form_data.thoi_luong==
+                                '1.5' %}selected{% endif %}>1.5 Tháng (Cấp tốc)</option>
+                                <option value="3" {% if not form_data or form_data.thoi_luong==
+                                '3' %}selected{% endif %}>3 Tháng (Tiêu chuẩn)</option>
+                                <option value="6" {% if form_data and form_data.thoi_luong==
+                                '6' %}selected{% endif %}>6 Tháng (Nâng cao)</option>
+                                <option value="12" {% if form_data and form_data.thoi_luong==
+                                '12' %}selected{% endif %}>1 Năm (Dài hạn)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Học phí (VNĐ)</label>
+                            <div class="input-group">
+                                <input type="text" id="hoc_phi_display" class="form-control fw-bold text-success"
+                                       readonly>
+                                <span class="input-group-text bg-white text-success fw-bold">₫</span>
+                                <input type="hidden" name="hoc_phi" id="hoc_phi_value">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Ngày bắt đầu</label>
+                            <input type="date" name="ngay_bat_dau" id="ngay_bat_dau" class="form-control" required
+                                   onchange="autoCalculateEndDate()"
+                                   value="{{ form_data.ngay_bat_dau if form_data else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small">Ngày kết thúc</label>
+                            <input type="date" name="ngay_ket_thuc" id="ngay_ket_thuc" class="form-control bg-white"
+                                   required
+                                   value="{{ form_data.ngay_ket_thuc if form_data else '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-uppercase small text-muted"><i class="bi bi-calendar-week me-1"></i> Xếp lịch học</span>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addScheduleRow()">
+                        <i class="bi bi-plus-lg"></i> Thêm buổi
+                    </button>
+                </div>
+                <div class="card-body bg-light">
+                    <div id="schedule-container">
+                        {% if old_lich_hoc %}
+                        {% for item in old_lich_hoc %}
+                        <div class="card mb-2 schedule-row border-primary border-start border-4">
+                            <div class="card-body p-2">
+                                <div class="row align-items-center g-2">
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-calendar-event"></i></span>
+                                            <select name="thu[]" class="form-select border-0 bg-light fw-bold">
+                                                <option value="0" {% if item.thu|string=='0' %}selected{% endif %}>Thứ
+                                                    2
+                                                </option>
+                                                <option value="1" {% if item.thu|string=='1' %}selected{% endif %}>Thứ
+                                                    3
+                                                </option>
+                                                <option value="2" {% if item.thu|string=='2' %}selected{% endif %}>Thứ
+                                                    4
+                                                </option>
+                                                <option value="3" {% if item.thu|string=='3' %}selected{% endif %}>Thứ
+                                                    5
+                                                </option>
+                                                <option value="4" {% if item.thu|string=='4' %}selected{% endif %}>Thứ
+                                                    6
+                                                </option>
+                                                <option value="5" {% if item.thu|string=='5' %}selected{% endif %}>Thứ
+                                                    7
+                                                </option>
+                                                <option value="6" {% if item.thu|string=='6' %}selected{% endif %}>Chủ
+                                                    Nhật
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-clock"></i></span>
+                                            <select name="ca[]" class="form-select border-0 bg-light text-secondary">
+                                                <option value="1" {% if item.ca|string=='1' %}selected{% endif %}>Ca
+                                                    Sáng
+                                                </option>
+                                                <option value="2" {% if item.ca|string=='2' %}selected{% endif %}>Ca
+                                                    Chiều
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-geo-alt"></i></span>
+                                            <select name="phong[]"
+                                                    class="form-select border-0 bg-light text-secondary room-select">
+                                                {% for p in ds_phong %}
+                                                <option value="{{ p.ma_phong_hoc }}" {% if
+                                                        item.ma_phong|string==p.ma_phong_hoc|string %}selected{% endif
+                                                        %}>
+                                                    {{ p.ten_phong_hoc }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <small class="room-msg ms-4 fw-bold fst-italic"
+                                               style="font-size: 0.75rem; display: block; margin-top: 4px;"></small>
+                                        <small class="teacher-msg ms-4 fw-bold text-danger"
+                                               style="font-size: 0.75rem; display: block;"></small>
+                                        <small class="internal-error ms-4 fw-bold text-danger"
+                                               style="font-size: 0.75rem; display: block;"></small>
+                                    </div>
+                                    <div class="col-md-2 text-end">
+                                        <button type="button" class="btn btn-sm text-danger hover-danger"
+                                                onclick="removeRow(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="card mb-2 schedule-row border-primary border-start border-4">
+                            <div class="card-body p-2">
+                                <div class="row align-items-center g-2">
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-calendar-event"></i></span>
+                                            <select name="thu[]" class="form-select border-0 bg-light fw-bold">
+                                                <option value="0">Thứ 2</option>
+                                                <option value="1">Thứ 3</option>
+                                                <option value="2">Thứ 4</option>
+                                                <option value="3">Thứ 5</option>
+                                                <option value="4">Thứ 6</option>
+                                                <option value="5">Thứ 7</option>
+                                                <option value="6">Chủ Nhật</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-clock"></i></span>
+                                            <select name="ca[]" class="form-select border-0 bg-light text-secondary">
+                                                <option value="1">Ca Sáng</option>
+                                                <option value="2">Ca Chiều</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text bg-transparent border-0"><i
+                                                    class="bi bi-geo-alt"></i></span>
+                                            <select name="phong[]"
+                                                    class="form-select border-0 bg-light text-secondary room-select">
+                                                {% for p in ds_phong %}
+                                                <option value="{{ p.ma_phong_hoc }}">{{ p.ten_phong_hoc }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <small class="room-msg ms-4 fw-bold fst-italic"
+                                               style="font-size: 0.75rem; display: block; margin-top: 4px;"></small>
+                                        <small class="teacher-msg ms-4 fw-bold text-danger"
+                                               style="font-size: 0.75rem; display: block;"></small>
+                                        <small class="internal-error ms-4 fw-bold text-danger"
+                                               style="font-size: 0.75rem; display: block;"></small>
+                                    </div>
+                                    <div class="col-md-1 text-center">
+                                        <button type="button" class="btn btn-sm text-danger hover-danger"
+                                                onclick="removeRow(this)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <small class="text-muted fst-italic">
+                            <i class="bi bi-exclamation-triangle"></i> Tự động kiểm tra: Trùng Phòng, Trùng Giáo Viên,
+                            Trùng Lặp.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="reset" class="btn btn-light border text-secondary"
+                onclick="window.location.href='/manager/create_course'">Nhập lại (Xóa hết)
+        </button>
+        <button type="submit" class="btn btn-primary px-4 py-2 fw-bold shadow">
+            <i class="bi bi-check-circle-fill me-2"></i>Hoàn tất & Lưu
+        </button>
+    </div>
+</form>
+{% endblock %}
+{% block javascript %}
+<script>
+    const BUSY_SCHEDULE = {{ lich_ban_json|safe }};
+    const vnCurrency = new Intl.NumberFormat('vi-VN');
+    function isDateOverlap(startA, endA, startB, endB) {
+        if (!startA || !endA || !startB || !endB) return false;
+        const sA = new Date(startA); sA.setHours(0,0,0,0);
+        const eA = new Date(endA); eA.setHours(0,0,0,0);
+        const sB = new Date(startB); sB.setHours(0,0,0,0);
+        const eB = new Date(endB); eB.setHours(0,0,0,0);
+        return (sA <= eB && eA >= sB);
+    }
+    function autoCalculateEndDate() {
+        const startInput = document.getElementById('ngay_bat_dau');
+        const endInput = document.getElementById('ngay_ket_thuc');
+        const durationSelect = document.getElementById('thoi_luong');
+        if (!startInput.value) return;
+        const months = parseFloat(durationSelect.value);
+        if (months === 0) {
+            endInput.readOnly = false;
+            revalidateAll();
+            return;
+        }
+        endInput.readOnly = true;
+        const targetDate = new Date(startInput.value);
+        if (Number.isInteger(months)) {
+            targetDate.setMonth(targetDate.getMonth() + months);
+        } else {
+            targetDate.setDate(targetDate.getDate() + Math.round(months * 30));
+        }
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        endInput.value = `${y}-${m}-${d}`;
+        revalidateAll();
+    }
+    function calculateTuition() {
+        const typeSelect = document.getElementById('select-loai-kh');
+        const durSelect = document.getElementById('thoi_luong');
+        const display = document.getElementById('hoc_phi_display');
+        const hiddenVal = document.getElementById('hoc_phi_value');
+        const basePrice = parseFloat(typeSelect.options[typeSelect.selectedIndex].getAttribute('data-price')) || 0;
+        const months = parseFloat(durSelect.value) || 0;
+        let total = basePrice;
+        if (months > 0) {
+            total = basePrice * (months / 3.0);
+            display.readOnly = true;
+        } else {
+            display.readOnly = false;
+        }
+        total = Math.round(total);
+        display.value = vnCurrency.format(total);
+        hiddenVal.value = total;
+    }
+    function validateRow(row) {
+        const inputStart = document.getElementById('ngay_bat_dau').value;
+        const inputEnd = document.getElementById('ngay_ket_thuc').value;
+        const selectedTeacher = document.getElementById('select-giao-vien').value;
+        const thuSelect = row.querySelector('select[name="thu[]"]');
+        const caSelect = row.querySelector('select[name="ca[]"]');
+        const phongSelect = row.querySelector('select[name="phong[]"]');
+        const roomMsg = row.querySelector('.room-msg');
+        const teacherMsg = row.querySelector('.teacher-msg');
+        roomMsg.innerHTML = "";
+        teacherMsg.innerHTML = "";
+        phongSelect.classList.remove('is-invalid');
+        Array.from(phongSelect.options).forEach(opt => {
+            opt.disabled = false;
+            opt.innerText = opt.innerText.replace(" (BẬN)", "").replace(" (GV BẬN)", "");
+        });
+        if (!inputStart || !inputEnd || !thuSelect.value || !caSelect.value) return;
+        const currentThu = parseInt(thuSelect.value);
+        const currentCa = parseInt(caSelect.value);
+        const currentPhong = phongSelect.value;
+        let conflictRoom = false;
+        let conflictTeacher = false;
+        BUSY_SCHEDULE.forEach(item => {
+            if (isDateOverlap(inputStart, inputEnd, item.start, item.end)) {
+                if (item.thu === currentThu && item.ca === currentCa) {
+                    const optPhong = phongSelect.querySelector(`option[value="${item.phong}"]`);
+                    if (optPhong) {
+                        optPhong.disabled = true;
+                        if (!optPhong.innerText.includes("(BẬN)")) optPhong.innerText += " (BẬN)";
+                        if (currentPhong == item.phong) conflictRoom = true;
+                    }
+                    if (selectedTeacher && item.gv == selectedTeacher) conflictTeacher = true;
+                }
+            }
+        });
+        if (conflictRoom) {
+            roomMsg.innerHTML = `<span class="text-danger fw-bold small"><i class="bi bi-x-circle-fill"></i> Phòng bận!</span>`;
+            phongSelect.classList.add('is-invalid');
+        } else if (currentPhong) {
+             roomMsg.innerHTML = `<span class="text-success fw-bold small"><i class="bi bi-check-circle-fill"></i> Hợp lệ</span>`;
+        }
+        if (conflictTeacher) {
+            teacherMsg.innerHTML = `<span class="text-danger fw-bold small"><i class="bi bi-person-x-fill"></i> GV trùng lịch!</span>`;
+            row.classList.add('border-danger', 'border-2');
+        } else {
+            row.classList.remove('border-danger', 'border-2');
+        }
+    }
+    function checkInternalDuplicates() {
+        const rows = document.querySelectorAll('.schedule-row');
+        const map = {};
+        let hasError = false;
+        rows.forEach(r => {
+            const err = r.querySelector('.internal-error');
+            if(err) err.innerText = "";
+            if (!r.querySelector('.teacher-msg').innerText) {
+                r.classList.remove('border-danger', 'border-2');
+            }
+        });
+        rows.forEach(row => {
+            const t = row.querySelector('select[name="thu[]"]').value;
+            const c = row.querySelector('select[name="ca[]"]').value;
+            const key = `${t}-${c}`;
+            if (!map[key]) map[key] = [];
+            map[key].push(row);
+        });
+        for (const [key, list] of Object.entries(map)) {
+            if (list.length > 1) {
+                hasError = true;
+                list.forEach(row => {
+                    row.classList.add('border-danger', 'border-2');
+                    row.querySelector('.internal-error').innerText = "❌ Trùng lặp!";
+                });
+            }
+        }
+        return hasError;
+    }
+    function revalidateAll() {
+        document.querySelectorAll('.schedule-row').forEach(row => validateRow(row));
+        checkInternalDuplicates();
+    }
+    function attachRowEvents(row) {
+        row.querySelectorAll('select').forEach(s => {
+            const newSelect = s.cloneNode(true);
+            s.parentNode.replaceChild(newSelect, s);
+            newSelect.addEventListener('change', () => {
+                validateRow(row);
+                checkInternalDuplicates();
+            });
+        });
+    }
+    function updateDeleteButtons() {
+        const container = document.getElementById('schedule-container');
+        const btns = container.querySelectorAll('.btn-danger');
+        const count = container.querySelectorAll('.schedule-row').length;
+        btns.forEach(b => b.style.display = (count <= 3) ? 'none' : 'inline-block');
+    }
+    window.addScheduleRow = function() {
+        const container = document.getElementById('schedule-container');
+        if (container.children.length >= 7) { alert("Tối đa 7 buổi!"); return; }
+        const template = container.firstElementChild;
+        const clone = template.cloneNode(true);
+        clone.querySelectorAll('select').forEach(s => {
+            s.selectedIndex = 0;
+            s.classList.remove('is-invalid');
+        });
+        clone.querySelector('.room-msg').innerHTML = "";
+        clone.querySelector('.teacher-msg').innerHTML = "";
+        clone.querySelector('.internal-error').innerText = "";
+        clone.classList.remove('border-danger', 'border-2');
+        const pSel = clone.querySelector('select[name="phong[]"]');
+        Array.from(pSel.options).forEach(o => { o.disabled = false; o.innerText = o.innerText.replace(" (BẬN)", ""); });
+        container.appendChild(clone);
+        attachRowEvents(clone);
+        updateDeleteButtons();
+        revalidateAll();
+    }
+    window.removeRow = function(btn) {
+        const container = document.getElementById('schedule-container');
+        if (container.children.length > 3) {
+            btn.closest('.schedule-row').remove();
+            revalidateAll();
+            updateDeleteButtons();
+        } else {
+            alert("Tối thiểu 3 buổi!");
+        }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('select-loai-kh').addEventListener('change', calculateTuition);
+        document.getElementById('thoi_luong').addEventListener('change', () => { autoCalculateEndDate(); calculateTuition(); });
+        document.getElementById('ngay_bat_dau').addEventListener('change', autoCalculateEndDate);
+        document.getElementById('ngay_ket_thuc').addEventListener('change', revalidateAll);
+        document.getElementById('select-giao-vien').addEventListener('change', revalidateAll);
+        document.getElementById('form-create-course').addEventListener('submit', function(e) {
+            const rows = document.querySelectorAll('.schedule-row');
+            if (rows.length < 3) { e.preventDefault(); alert("Cần tối thiểu 3 buổi!"); return; }
+            const disp = document.getElementById('hoc_phi_display');
+            const val = document.getElementById('hoc_phi_value');
+            if (!disp.readOnly) val.value = disp.value.replace(/\./g, '');
+            if (checkInternalDuplicates()) { e.preventDefault(); alert("Lịch học bị trùng lặp!"); return; }
+            let hasError = false;
+            rows.forEach(r => { if (r.classList.contains('border-danger') || r.querySelector('.is-invalid')) hasError = true; });
+            if (hasError) { e.preventDefault(); alert("Vui lòng xử lý lỗi (màu đỏ)!"); }
+        });
+        const startEl = document.getElementById('ngay_bat_dau');
+        if (!startEl.value) {
+            startEl.value = new Date().toISOString().split('T')[0];
+            autoCalculateEndDate();
+        }
+        const container = document.getElementById('schedule-container');
+        const firstRow = container.querySelector('.schedule-row');
+        if(firstRow) attachRowEvents(firstRow);
+        while (container.querySelectorAll('.schedule-row').length < 3) {
+            const template = container.firstElementChild;
+            const clone = template.cloneNode(true);
+            clone.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            clone.querySelector('.room-msg').innerHTML = "";
+            clone.querySelector('.teacher-msg').innerHTML = "";
+            clone.querySelector('.internal-error').innerText = "";
+            clone.classList.remove('border-danger', 'border-2');
+            clone.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            const pSel = clone.querySelector('select[name="phong[]"]');
+            Array.from(pSel.options).forEach(o => { o.disabled = false; o.innerText = o.innerText.replace(" (BẬN)", ""); });
+            container.appendChild(clone);
+            attachRowEvents(clone);
+        }
+        calculateTuition();
+        updateDeleteButtons();
+        setTimeout(revalidateAll, 100);
+    });
+</script>
+{% endblock %}

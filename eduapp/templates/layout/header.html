@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary"
-     style="z-index: 1200; height: var(--header-height);">
+     style="z-index: 9999; height: var(--header-height); position: relative;">
     <div class="container-fluid">
-        <button class="btn btn-outline-light me-3" type="button" data-bs-toggle="collapse"
+        <button class="btn btn-outline-light me-3 d-md-none" type="button" data-bs-toggle="collapse"
                 data-bs-target="#sidebarMenu" aria-expanded="false" aria-controls="sidebarMenu">
             <i class="bi bi-list-ul"></i>
         </button>
@@ -22,7 +22,8 @@
                         {{current_user.ten_vai_tro}}: {{ current_user.ma_nguoi_dung }}</a></li>
                     <li><a href="/profile" class="dropdown-item"><i class="bi bi-person-fill me-2"></i>Thông tin cá
                         nhân</a></li>
-                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill me-2"></i>Đổi mật khẩu</a>
+                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill me-2"></i>Đổi mật
+                        khẩu</a>
                     </li>
                     {%if current_user.vai_tro.value==1 and current_user.tinh_trang_xac_nhan_email==False%}
                     <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill me-2"></i>Xác nhận

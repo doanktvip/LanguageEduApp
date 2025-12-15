@@ -7,6 +7,11 @@
 {% endblock %}
 
 {% block card_body %}
+<style>
+    input {
+        background-image: none !important;
+    }
+</style>
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8">
         <div class="text-center mb-4 mt-2">
@@ -112,14 +117,14 @@
                     <div class="small text-muted mt-1 fst-italic">Ảnh đại diện (JPG, PNG, JPEG)</div>
                 </div>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-7">
                         <div class="form-floating mb-3">
                             <input type="email" class="form-control" id="email" name="email"
                                    placeholder="Email" required value="{{ data.get('email', '') }}">
                             <label for="email">Địa chỉ Email</label>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <div class="form-floating mb-3">
                             <input type="tel" class="form-control" id="phone_number" name="phone_number"
                                    placeholder="SĐT" required pattern="[0-9]{10}" maxlength="10"

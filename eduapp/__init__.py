@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = "123dasdadasdasdasd"
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/eduappdb?charset=utf8mb4"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
-app.config["PAGE_SIZE"] = 3
+app.config["PAGE_SIZE"] = 5
 
 app.config["OTP_LIFETIME"] = 60
 app.config["MAX_RESEND_LIMIT"] = 3

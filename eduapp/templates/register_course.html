@@ -9,6 +9,32 @@
 {% endblock %}
 
 {% block card_body %}
+<style>
+    input {
+        background-image: none !important;
+    }
+</style>
+{% if thong_bao %}
+<div class="alert alert-light border border-secondary border-opacity-25 shadow-sm mb-4">
+    <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-bell-fill text-warning me-2 fs-5"></i>
+        <span class="fw-bold text-dark">Kết quả xử lý:</span>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for msg in thong_bao %}
+        <li class="list-group-item bg-transparent py-1 border-0 ps-0">
+            {% if '✅' in msg %}
+            <span class="text-success fw-medium">{{ msg }}</span>
+            {% elif '❌' in msg %}
+            <span class="text-danger fw-medium">{{ msg }}</span>
+            {% else %}
+            <span class="text-secondary">{{ msg }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% if ds_khoa_hoc %}
 <form action="/register_course" method="POST" id="form-dang-ky">
     <div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4">

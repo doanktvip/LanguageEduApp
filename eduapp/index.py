@@ -4,10 +4,12 @@ import random
 import math
 import datetime
 import cloudinary.uploader
+import json
 from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from eduapp import app, dao, login_manager, mail, db
-from eduapp.models import NguoiDungEnum, ChiTietDiem
+from eduapp.models import NguoiDungEnum, ChiTietDiem, KhoaHoc, LoaiKhoaHoc, GiaoVien, PhongHoc, CauTrucDiem, \
+    TinhTrangKhoaHocEnum
 from flask_mail import Message
 
 
@@ -442,66 +444,48 @@ def course_fee():
 def register_course():
     if not current_user.is_authenticated:
         return redirect('/')
+    msg = None
     if request.method == 'POST':
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
+        ket_qua_xu_ly = []
         if ds_ma_khoa_hoc:
-            count = 0
             for ma_kh in ds_ma_khoa_hoc:
-                ket_qua = dao.dang_ky_khoa_hoc(current_user.ma_nguoi_dung, ma_kh)
-                if ket_qua: count += 1
-        return redirect(url_for('register_course'))
+                hop_le, ly_do = dao.kiem_tra_trung_lich_hoc_vien(current_user.ma_nguoi_dung, ma_kh)
+                if hop_le:
+                    dao.dang_ky_khoa_hoc(current_user.ma_nguoi_dung, ma_kh)
+                    ket_qua_xu_ly.append(f"{ma_kh}: Đăng ký thành công!")
+                else:
+                    ket_qua_xu_ly.append(f"{ma_kh}: {ly_do}")
+            msg = ket_qua_xu_ly
+        ds_khoa_hoc_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
+        return render_template("register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky, thong_bao=msg)
     ds_khoa_hoc_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
     return render_template("register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky)
 
 
 @app.route('/grading', methods=['GET', 'POST'])
 def grading():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
+    if current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
         return redirect('/')
+    msg = None
+    msg_type = None
     ds_khoa_hoc = current_user.nhung_khoa_hoc
     selected_course_id = request.args.get('course_id') or request.form.get('course_id')
     if not selected_course_id and ds_khoa_hoc:
         selected_course_id = ds_khoa_hoc[0].ma_khoa_hoc
     if request.method == 'POST' and selected_course_id:
-        try:
-            form_data = request.form.to_dict()
-            action = request.form.get('action_type')
-            is_draft_target = True if action == 'save_draft' else False
-            for key, value in form_data.items():
-                if key.startswith('diem_') and value.strip() != '':
-                    parts = key.split('_')
-                    if len(parts) == 3:
-                        bd_id = int(parts[1])
-                        ct_id = int(parts[2])
-                        try:
-                            diem_val = float(value)
-                        except ValueError:
-                            continue
-                        if 0 <= diem_val <= 10:
-                            chi_tiet = dao.get_chi_tiet_diem(bd_id, ct_id)
-                            if chi_tiet:
-                                if is_draft_target and chi_tiet.ban_nhap == False:
-                                    continue
-                                chi_tiet.gia_tri_diem = diem_val
-                                chi_tiet.ban_nhap = is_draft_target
-                            else:
-                                new_score = ChiTietDiem(
-                                    ma_bang_diem=bd_id,
-                                    ma_cau_truc_diem=ct_id,
-                                    gia_tri_diem=diem_val,
-                                    ban_nhap=is_draft_target)
-                                db.session.add(new_score)
-            if not is_draft_target:
-                db.session.commit()
-                course = dao.get_by_course_teacher_id(current_user.ma_nguoi_dung, selected_course_id)
-                if course:
-                    for bd in course.ds_dang_ky:
-                        bd.cap_nhat_tong_ket()
-            db.session.commit()
-            return redirect(url_for('grading', course_id=selected_course_id))
-        except Exception as e:
-            db.session.rollback()
-            print(f"Lỗi: {e}")
+        action = request.form.get('action_type')
+        success = False
+        message = ""
+        if action == 'create_structure':
+            ds_ten = request.form.getlist('ten_thanh_phan[]')
+            ds_trong_so = request.form.getlist('trong_so[]')
+            success, message = dao.tao_cau_truc_diem(selected_course_id, ds_ten, ds_trong_so)
+        elif action in ['save_draft', 'publish']:
+            is_draft = (action == 'save_draft')
+            success, message = dao.luu_bang_diem(selected_course_id, request.form, is_draft)
+        msg = message
+        msg_type = 'success' if success else 'danger'
     selected_course = None
     cau_truc_diem = []
     bang_diem_data = []
@@ -509,14 +493,12 @@ def grading():
         selected_course = dao.get_by_course_teacher_id(current_user.ma_nguoi_dung, selected_course_id)
         if selected_course:
             cau_truc_diem = selected_course.cau_truc_diem
-            for bd in selected_course.ds_dang_ky:
-                chi_tiet = bd.lay_chi_tiet_diem(cau_truc_diem)
-                bang_diem_data.append({
-                    'hoc_vien': bd.hoc_vien,
-                    'ma_bang_diem': bd.id,
-                    'diem_so': chi_tiet})
+            if cau_truc_diem:
+                for bd in selected_course.ds_dang_ky:
+                    chi_tiet = bd.lay_chi_tiet_diem(cau_truc_diem)
+                    bang_diem_data.append({'hoc_vien': bd.hoc_vien, 'ma_bang_diem': bd.id, 'diem_so': chi_tiet})
     return render_template("grading.html", ds_khoa_hoc=ds_khoa_hoc, selected_course=selected_course,
-                           cau_truc_diem=cau_truc_diem, bang_diem_data=bang_diem_data)
+                           cau_truc_diem=cau_truc_diem, bang_diem_data=bang_diem_data, msg=msg, msg_type=msg_type)
 
 
 @app.route('/attendance', methods=['GET', 'POST'])
@@ -545,6 +527,102 @@ def attendance():
         date_columns, student_rows = dao.get_attendance_sheet_data(course)
     return render_template('attendance.html', ds_khoa_hoc=ds_khoa_hoc, course=course, date_columns=date_columns,
                            student_rows=student_rows, today_str=today_str)
+
+
+@app.route('/manager')
+def manager_index():
+    return redirect(url_for('manager_course_list'))
+
+
+@app.route('/manager/course', methods=['GET'])
+def manager_course_list():
+    page = request.args.get('page', 1, type=int)
+    search_params = {
+        'kw': request.args.get('kw', '').strip(),
+        'status': request.args.get('status'),
+        'from_date': request.args.get('from_date'),
+        'to_date': request.args.get('to_date')
+    }
+    pagination = dao.tra_cuu_khoa_hoc(search_params, page=page, page_size=app.config["PAGE_SIZE"])
+    return render_template('manager/course_list.html', pagination=pagination, TinhTrangKhoaHocEnum=TinhTrangKhoaHocEnum)
+
+
+@app.route('/manager/course/<string:ma_khoa_hoc>', methods=['GET'])
+def manager_course_detail(ma_khoa_hoc):
+    khoa_hoc = dao.get_by_course_id(ma_khoa_hoc)
+    if not khoa_hoc:
+        return redirect(url_for('manager_course_list', error_msg=f"Không tìm thấy khóa học {ma_khoa_hoc}"))
+    page = request.args.get('page', 1, type=int)
+    tu_khoa = request.args.get('tu_khoa', '')
+    nam_sinh = request.args.get('nam_sinh', '')
+    ket_qua = request.args.get('ket_qua', '')
+    pagination = dao.lay_ds_hoc_vien_cua_khoa(
+        ma_khoa_hoc,
+        page=page,
+        page_size=app.config["PAGE_SIZE"],
+        tu_khoa=tu_khoa,
+        nam_sinh=nam_sinh,
+        ket_qua=ket_qua
+    )
+    return render_template('manager/course_detail.html', khoa_hoc=khoa_hoc, pagination=pagination, tu_khoa=tu_khoa,
+                           nam_sinh=nam_sinh, ket_qua=ket_qua)
+
+
+@app.route('/manager/create_course', methods=['GET', 'POST'])
+def manager_create_course():
+    msg = None
+    form_data = {}
+    old_lich_hoc = []
+    if request.method == 'POST':
+        try:
+            form_data = {
+                'ten_khoa_hoc': request.form.get('ten_khoa_hoc', ''),
+                'ma_loai_khoa_hoc': request.form.get('ma_loai_khoa_hoc', ''),
+                'ma_giao_vien': request.form.get('ma_giao_vien', ''),
+                'si_so': request.form.get('si_so', '30'),
+                'thoi_luong': request.form.get('thoi_luong', '0'),
+                'ngay_bat_dau': request.form.get('ngay_bat_dau', ''),
+                'ngay_ket_thuc': request.form.get('ngay_ket_thuc', '')
+            }
+            ds_thu = request.form.getlist('thu[]')
+            ds_ca = request.form.getlist('ca[]')
+            ds_phong = request.form.getlist('phong[]')
+            lich_hoc_list = []
+            seen_slots = set()
+            for i in range(len(ds_thu)):
+                item = {
+                    'thu': ds_thu[i],
+                    'ca': ds_ca[i],
+                    'ma_phong': ds_phong[i]
+                }
+                old_lich_hoc.append(item)
+                slot_key = f"{ds_thu[i]}-{ds_ca[i]}"
+                if slot_key in seen_slots: continue
+                seen_slots.add(slot_key)
+                lich_hoc_list.append(item)
+            so_buoi = len(lich_hoc_list)
+            if so_buoi < 3 or so_buoi > 7:
+                raise Exception(f"Số buổi học phải từ 3 đến 7 buổi/tuần (Hiện tại: {so_buoi}).")
+            is_valid, message = dao.kiem_tra_xung_dot_lich(form_data, lich_hoc_list)
+            if is_valid:
+                res, dao_msg = dao.tao_khoa_hoc_moi(form_data, lich_hoc_list)
+                if res:
+                    msg = f"✅ {dao_msg}"
+                    form_data = {}
+                    old_lich_hoc = []
+                else:
+                    msg = f"❌ Lỗi hệ thống: {dao_msg}"
+            else:
+                msg = f"❌ {message}"
+
+        except Exception as e:
+            msg = f"❌ Lỗi dữ liệu: {str(e)}"
+    ds_loai = LoaiKhoaHoc.query.all()
+    ds_gv = GiaoVien.query.all()
+    ds_phong = PhongHoc.query.all()
+    lich_ban_data = dao.lay_tat_ca_lich_ban()
+    return render_template('manager/create_course.html', msg=msg, loai_kh=ds_loai, ds_gv=ds_gv, ds_phong=ds_phong,
+                           form_data=form_data, old_lich_hoc=old_lich_hoc, lich_ban_json=json.dumps(lich_ban_data))
 
 
 if __name__ == '__main__':

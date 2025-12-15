@@ -1,8 +1,10 @@
 import hashlib
 from datetime import datetime, date
-from eduapp import db
+from sqlalchemy import and_, or_, extract
+from eduapp import db, app
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
-    BangDiem, CauTrucDiem, TinhTrangKhoaHocEnum, HoaDon, ChiTietDiem, ChiTietDiemDanh, TrangThaiDiemDanhEnum, DiemDanh
+    BangDiem, CauTrucDiem, TinhTrangKhoaHocEnum, HoaDon, ChiTietDiem, ChiTietDiemDanh, TrangThaiDiemDanhEnum, DiemDanh, \
+    TuanEnum, CaHocEnum, LichHoc
 
 
 def login(username, password):
@@ -221,10 +223,12 @@ def get_attendance_sheet_data(course):
                 row['stats']['total'] += 1
                 if status_val == 1:
                     row['stats']['present'] += 1
+                elif status_val == 2:
+                    row['stats']['present'] += 0.5
         if row['stats']['total'] > 0:
             row['percent'] = int((row['stats']['present'] / row['stats']['total']) * 100)
         else:
-            row['percent'] = 100
+            row['percent'] = 0
         student_rows.append(row)
     return date_columns, student_rows
 
@@ -275,3 +279,269 @@ def save_attendance_sheet(course_id, form_data):
         print(f"Lỗi khi lưu điểm danh: {e}")
         db.session.rollback()
         return False
+
+
+def kiem_tra_trung_lich_hoc_vien(ma_hoc_vien, ma_khoa_hoc_moi):
+    kh_moi = KhoaHoc.query.get(ma_khoa_hoc_moi)
+    if not kh_moi:
+        return False, "Khóa học không tồn tại"
+    ds_khoa_hoc_da_dang_ky = KhoaHoc.query.join(BangDiem).filter(
+        BangDiem.ma_hoc_vien == ma_hoc_vien,
+        KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC
+    ).all()
+    if not ds_khoa_hoc_da_dang_ky:
+        return True, "Lịch trống, có thể đăng ký"
+    for kh_cu in ds_khoa_hoc_da_dang_ky:
+        if (kh_moi.ngay_bat_dau <= kh_cu.ngay_ket_thuc) and (kh_moi.ngay_ket_thuc >= kh_cu.ngay_bat_dau):
+            for lich_moi in kh_moi.lich_hoc:
+                for lich_cu in kh_cu.lich_hoc:
+                    if (lich_moi.thu == lich_cu.thu) and (lich_moi.ca_hoc == lich_cu.ca_hoc):
+                        return False, f"Trùng lịch với khóa {kh_cu.ten_khoa_hoc} ({kh_cu.ma_khoa_hoc}) vào {lich_moi.thu.name} - {lich_moi.ca_hoc.name}"
+    return True, "Hợp lệ"
+
+
+def kiem_tra_xung_dot_lich(form_data, lich_hoc_list):
+    try:
+        try:
+            si_so = int(form_data.get('si_so', 0))
+            if si_so < 10 or si_so > 150:
+                return False, "Sĩ số phải từ 10 đến 150 học viên."
+        except ValueError:
+            return False, "Sĩ số không hợp lệ."
+        start_str = form_data['ngay_bat_dau']
+        end_str = form_data['ngay_ket_thuc']
+        ma_gv_dang_chon = form_data['ma_giao_vien']
+        start_date = datetime.strptime(start_str, '%Y-%m-%d') if isinstance(start_str, str) else start_str
+        end_date = datetime.strptime(end_str, '%Y-%m-%d') if isinstance(end_str, str) else end_str
+        if start_date > end_date:
+            return False, "Ngày kết thúc phải sau ngày bắt đầu."
+        lich_tiem_nang = db.session.query(LichHoc, KhoaHoc).join(KhoaHoc).filter(
+            KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC,
+            KhoaHoc.ngay_bat_dau <= end_date,
+            KhoaHoc.ngay_ket_thuc >= start_date
+        ).all()
+        map_ban = {}
+        for lich, khoa in lich_tiem_nang:
+            key = f"{lich.thu.value}-{lich.ca_hoc.value}"
+            if key not in map_ban:
+                map_ban[key] = {'phong': [], 'gv': []}
+            map_ban[key]['phong'].append({
+                'ma': str(lich.ma_phong_hoc),
+                'ten_lop': khoa.ten_khoa_hoc
+            })
+            map_ban[key]['gv'].append({
+                'ma': str(khoa.ma_giao_vien),
+                'ten_lop': khoa.ten_khoa_hoc
+            })
+        for item in lich_hoc_list:
+            thu = str(item['thu'])
+            ca = str(item['ca'])
+            phong = str(item['ma_phong'])
+            check_key = f"{thu}-{ca}"
+            if check_key in map_ban:
+                data_ban = map_ban[check_key]
+                for p in data_ban['phong']:
+                    if p['ma'] == phong:
+                        thu_text = f"Thứ {int(thu) + 2}"
+                        ca_text = "Sáng" if ca == "1" else "Chiều"
+                        return False, f"Xung đột PHÒNG: Phòng {phong} đã có lớp '{p['ten_lop']}' học vào {thu_text}, {ca_text}."
+                for g in data_ban['gv']:
+                    if g['ma'] == ma_gv_dang_chon:
+                        thu_text = f"Thứ {int(thu) + 2}"
+                        ca_text = "Sáng" if ca == "1" else "Chiều"
+                        return False, f"Xung đột GIÁO VIÊN: GV này đang dạy lớp '{g['ten_lop']}' vào {thu_text}, {ca_text}."
+        return True, "Hợp lệ"
+    except Exception as e:
+        print(f"Lỗi check lịch: {str(e)}")
+        return False, f"Lỗi hệ thống: {str(e)}"
+
+
+def tao_khoa_hoc_moi(data, lich_hoc_list):
+    try:
+        ma_moi = KhoaHoc.tao_ma_khoa_hoc_moi(data['ma_loai_khoa_hoc'])
+        new_kh = KhoaHoc(
+            ma_khoa_hoc=ma_moi,
+            ten_khoa_hoc=data['ten_khoa_hoc'],
+            ma_loai_khoa_hoc=data['ma_loai_khoa_hoc'],
+            ma_giao_vien=data['ma_giao_vien'],
+            si_so_toi_da=data['si_so'],
+            ngay_bat_dau=datetime.strptime(data['ngay_bat_dau'], '%Y-%m-%d'),
+            ngay_ket_thuc=datetime.strptime(data['ngay_ket_thuc'], '%Y-%m-%d'),
+            tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+        )
+        db.session.add(new_kh)
+        for item in lich_hoc_list:
+            new_lich = LichHoc(
+                ma_khoa_hoc=ma_moi,
+                ma_phong_hoc=item['ma_phong'],
+                thu=TuanEnum(int(item['thu'])),
+                ca_hoc=CaHocEnum(int(item['ca']))
+            )
+            db.session.add(new_lich)
+        db.session.commit()
+        return True, "Tạo khóa học thành công!"
+    except Exception as e:
+        db.session.rollback()
+        return False, str(e)
+
+
+def tao_cau_truc_diem(ma_khoa_hoc, ds_ten, ds_trong_so):
+    try:
+        if not ds_ten or len(ds_ten) != len(ds_trong_so):
+            return False, "Dữ liệu cấu trúc không hợp lệ."
+        tong_trong_so = sum([float(ts) for ts in ds_trong_so])
+        if tong_trong_so != 100:
+            return False, f"Tổng trọng số phải là 100% (Hiện tại: {tong_trong_so}%)"
+        for i in range(len(ds_ten)):
+            new_struct = CauTrucDiem(
+                ma_khoa_hoc=ma_khoa_hoc,
+                ten_loai_diem=ds_ten[i].strip(),
+                trong_so=float(ds_trong_so[i]) / 100.0
+            )
+            db.session.add(new_struct)
+        db.session.commit()
+        return True, "Tạo cấu trúc điểm thành công!"
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi DAO tao_cau_truc_diem: {str(e)}")
+        return False, str(e)
+
+
+def luu_bang_diem(ma_khoa_hoc, form_data, is_save_draft):
+    try:
+        count_changes = 0
+        for key, value in form_data.items():
+            if key.startswith('diem_') and value.strip() != '':
+                parts = key.split('_')
+                if len(parts) == 3:
+                    bd_id = int(parts[1])
+                    ct_id = int(parts[2])
+                    try:
+                        diem_val = float(value)
+                    except ValueError:
+                        continue
+                    if 0 <= diem_val <= 10:
+                        chi_tiet = ChiTietDiem.query.filter_by(
+                            ma_bang_diem=bd_id,
+                            ma_cau_truc_diem=ct_id
+                        ).first()
+                        if chi_tiet and is_save_draft and chi_tiet.ban_nhap == False:
+                            continue
+                        if chi_tiet:
+                            if chi_tiet.gia_tri_diem != diem_val or chi_tiet.ban_nhap != is_save_draft:
+                                chi_tiet.gia_tri_diem = diem_val
+                                chi_tiet.ban_nhap = is_save_draft
+                                count_changes += 1
+                        else:
+                            new_score = ChiTietDiem(
+                                ma_bang_diem=bd_id,
+                                ma_cau_truc_diem=ct_id,
+                                gia_tri_diem=diem_val,
+                                ban_nhap=is_save_draft
+                            )
+                            db.session.add(new_score)
+                            count_changes += 1
+        if not is_save_draft:
+            db.session.commit()
+            ds_bang_diem = BangDiem.query.filter_by(ma_khoa_hoc=ma_khoa_hoc).all()
+            for bd in ds_bang_diem:
+                bd.cap_nhat_tong_ket()
+        db.session.commit()
+        return True, f"Đã cập nhật {count_changes} điểm số."
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi DAO luu_bang_diem: {str(e)}")
+        return False, str(e)
+
+
+def lay_tat_ca_lich_ban():
+    try:
+        results = db.session.query(
+            LichHoc.ma_phong_hoc,
+            LichHoc.thu,
+            LichHoc.ca_hoc,
+            KhoaHoc.ngay_bat_dau,
+            KhoaHoc.ngay_ket_thuc,
+            KhoaHoc.ma_giao_vien
+        ).join(KhoaHoc).filter(
+            KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC
+        ).all()
+        lich_ban = []
+        for r in results:
+            lich_ban.append({
+                "phong": r.ma_phong_hoc,
+                "thu": r.thu.value,
+                "ca": r.ca_hoc.value,
+                "start": r.ngay_bat_dau.strftime('%Y-%m-%d'),
+                "end": r.ngay_ket_thuc.strftime('%Y-%m-%d'),
+                "gv": r.ma_giao_vien
+            })
+        return lich_ban
+    except Exception as e:
+        print(f"Lỗi lấy lịch bận: {e}")
+        return []
+
+
+def tra_cuu_khoa_hoc(params=None, page=1, page_size=app.config["PAGE_SIZE"]):
+    if params is None:
+        params = {}
+    query = KhoaHoc.query
+    kw = params.get('kw')
+    if kw:
+        query = query.filter(or_(
+            KhoaHoc.ma_khoa_hoc.ilike(f"%{kw}%"),
+            KhoaHoc.ten_khoa_hoc.ilike(f"%{kw}%")
+        ))
+    status = params.get('status')
+    if status:
+        try:
+            query = query.filter(KhoaHoc.tinh_trang == TinhTrangKhoaHocEnum(int(status)))
+        except:
+            pass
+    from_date = params.get('from_date')
+    if from_date:
+        try:
+            if isinstance(from_date, str):
+                d_from = datetime.strptime(from_date, '%Y-%m-%d')
+            else:
+                d_from = from_date
+            query = query.filter(KhoaHoc.ngay_bat_dau >= d_from)
+        except:
+            pass
+    to_date = params.get('to_date')
+    if to_date:
+        try:
+            if isinstance(to_date, str):
+                d_to = datetime.strptime(to_date, '%Y-%m-%d')
+            else:
+                d_to = to_date
+            query = query.filter(KhoaHoc.ngay_bat_dau <= d_to)
+        except:
+            pass
+    query = query.order_by(KhoaHoc.ngay_bat_dau.desc())
+    return query.paginate(page=page, per_page=page_size, error_out=False)
+
+
+def lay_ds_hoc_vien_cua_khoa(ma_khoa_hoc, page=1, page_size=app.config["PAGE_SIZE"], tu_khoa=None, ket_qua=None,
+                             nam_sinh=None):
+    query = BangDiem.query.join(HocVien).filter(BangDiem.ma_khoa_hoc == ma_khoa_hoc)
+    if tu_khoa:
+        search_term = f"%{tu_khoa}%"
+        query = query.filter(or_(
+            HocVien.ho_va_ten.ilike(search_term),
+            HocVien.ma_nguoi_dung.ilike(search_term)
+        ))
+    if nam_sinh:
+        try:
+            nam = int(nam_sinh)
+            query = query.filter(extract('year', HocVien.ngay_sinh) == nam)
+        except ValueError:
+            pass
+    if ket_qua:
+        if ket_qua == 'dau':
+            query = query.filter(BangDiem.ket_qua == True)
+        elif ket_qua == 'rot':
+            query = query.filter(BangDiem.ket_qua == False, BangDiem.diem_trung_binh != None)
+        elif ket_qua == 'chua_xet':
+            query = query.filter(BangDiem.diem_trung_binh == None)
+    return query.paginate(page=page, per_page=page_size)

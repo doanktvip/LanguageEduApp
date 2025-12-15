@@ -1,5 +1,5 @@
 <div class="border-end" style="z-index: 1000;">
-    <aside id="sidebarMenu" class="collapse collapse-horizontal sidebar-custom sticky-top">
+    <aside id="sidebarMenu" class="collapse collapse-horizontal sidebar-custom sticky-top d-md-block">
         <div class="card card-body border-0 container-aside">
             <div class="list-group list-group-flush">
                 <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill me-2"></i>Trang
@@ -23,12 +23,18 @@
                         class="bi bi-bar-chart-fill me-2"></i>Xem
                     điểm</a>
                 {%elif current_user.vai_tro.value==2%}
-                <a href="/" class="list-group-item list-group-item-action">Xếp lịch học</a>
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-briefcase-fill me-2"></i>Quản
+                    lý nhân viên</a>
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-pen-fill me-2"></i>Quản
+                    lý giáo viên</a>
+                <a href="/manager/course" class="list-group-item list-group-item-action"><i
+                        class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
                 <a href="/" class="list-group-item list-group-item-action">Tạo khóa học</a>
                 {%elif current_user.vai_tro.value==3%}
                 <a href="/grading" class="list-group-item list-group-item-action"><i
-                        class="bi bi-pencil-square me-2"></i>Nhập điểm số</a>
-                <a href="/attendance" class="list-group-item list-group-item-action"><i class="bi bi-person-check-fill me-2"></i>Điểm
+                        class="bi bi-journal-bookmark-fill me-2"></i>Sổ điểm điện tử</a>
+                <a href="/attendance" class="list-group-item list-group-item-action"><i
+                        class="bi bi-calendar-check-fill me-2"></i>Điểm
                     danh</a>
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
                         class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>

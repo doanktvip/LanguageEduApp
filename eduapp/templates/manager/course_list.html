@@ -1,0 +1,186 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Danh sách khóa học{% endblock %}
+
+{% block card_header %}
+<div class="d-flex justify-content-between align-items-center p-3">
+    <span><i class="bi bi-list-ul me-2"></i>QUẢN LÝ KHÓA HỌC</span>
+    <a href="{{ url_for('manager_create_course') }}" class="btn btn-primary btn-sm shadow-sm fw-bold">
+        <i class="bi bi-plus-circle me-1"></i> Thêm khóa học mới
+    </a>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    input {
+        background-image: none !important;
+    }
+</style>
+<div class="bg-light p-3 rounded mb-4 border shadow-sm">
+    <form method="GET" action="{{ url_for('manager_course_list') }}" class="row g-2">
+        <div class="col-lg-3 col-md-12">
+            <label class="form-label small fw-bold text-secondary mb-1">Từ khóa</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" name="kw" class="form-control"
+                       placeholder="Mã hoặc tên..."
+                       value="{{ request.args.get('kw', '') }}">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4">
+            <label class="form-label small fw-bold text-secondary mb-1">Trạng thái</label>
+            <select name="status" class="form-select form-select-sm">
+                <option value="">-- Tất cả --</option>
+                <option value="1" {% if request.args.get(
+                'status') == '1' %}selected{% endif %}>Đang tuyển</option>
+                <option value="2" {% if request.args.get(
+                'status') == '2' %}selected{% endif %}>Dừng tuyển</option>
+                <option value="3" {% if request.args.get(
+                'status') == '3' %}selected{% endif %}>Đã kết thúc</option>
+            </select>
+        </div>
+        <div class="col-lg-5 col-md-8">
+            <label class="form-label small fw-bold text-secondary mb-1">Ngày bắt đầu (Từ - Đến)</label>
+            <div class="input-group input-group-sm">
+                <input type="date" name="from_date" class="form-control"
+                       value="{{ request.args.get('from_date', '') }}" placeholder="Từ ngày">
+                <span class="input-group-text bg-white px-2"><i class="bi bi-arrow-right-short"></i></span>
+                <input type="date" name="to_date" class="form-control"
+                       value="{{ request.args.get('to_date', '') }}" placeholder="Đến ngày">
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-12 d-flex align-items-end mt-3 mt-lg-0">
+            <div class="d-flex w-100 gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold">
+                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                </button>
+                <a href="{{ url_for('manager_course_list') }}" class="btn btn-outline-secondary btn-sm"
+                   title="Xóa bộ lọc">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+<div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle text-nowrap bg-white border-top">
+        <thead class="table-light text-secondary small text-uppercase fw-bold">
+        <tr>
+            <th class="text-center bg-light">STT</th>
+            <th class="bg-light">Mã KH</th>
+            <th class="bg-light">Tên khóa học</th>
+            <th class="bg-light">Giảng viên</th>
+            <th class="bg-light">Thời gian</th>
+            <th class="bg-light">Sĩ số</th>
+            <th class="text-center bg-light">Trạng thái</th>
+            <th class="text-center bg-light"><i class="bi bi-gear-fill"></i></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if pagination.items %}
+        {% for kh in pagination.items %}
+        <tr>
+            <td class="text-center fw-bold text-muted">
+                {{ (pagination.page - 1) * pagination.per_page + loop.index }}
+            </td>
+
+            <td><span class="badge bg-light text-dark border font-monospace">{{ kh.ma_khoa_hoc }}</span></td>
+            <td style="min-width: 250px; white-space: normal;">
+                <div class="fw-bold text-primary">{{ kh.ten_khoa_hoc }}</div>
+                <small class="text-muted fst-italic d-block mt-1">
+                    <i class="bi bi-tag-fill me-1 text-secondary"></i>{{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}
+                </small>
+            </td>
+            <td>{{ kh.giao_vien.ho_va_ten if kh.giao_vien else "Chưa phân công" }}</td>
+            <td>
+                <div class="small text-secondary">
+                    {{ kh.ngay_bat_dau.strftime('%d/%m') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}
+                </div>
+            </td>
+            <td>{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</td>
+            <td class="text-center">
+                {% if kh.tinh_trang.name == 'DANG_TUYEN_SINH' %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">Đang tuyển</span>
+                {% elif kh.tinh_trang.name == 'DUNG_TUYEN_SINH' %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill">Ngừng tuyển</span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill">Kết thúc</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
+                        <li><a class="dropdown-item" href="#">Sửa</a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}">Xem danh sách
+                            học viên</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item text-danger" href="#">Xóa</a></li>
+                    </ul>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="8" class="text-center py-5">Không có dữ liệu</td>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% if pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+            <a class="page-link"
+               href="{{ url_for('manager_course_list', page=pagination.prev_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}"
+               aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+        {% if page_num %}
+        <li class="page-item {{ 'active' if page_num == pagination.page }}">
+            <a class="page-link"
+               href="{{ url_for('manager_course_list', page=page_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}">
+                {{ page_num }}
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">...</span></li>
+        {% endif %}
+        {% endfor %}
+        <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+            <a class="page-link"
+               href="{{ url_for('manager_course_list', page=pagination.next_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}"
+               aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fixedDropdowns = document.querySelectorAll('.js-dropdown-fixed');
+        fixedDropdowns.forEach(function(dropdownToggleEl) {
+            new bootstrap.Dropdown(dropdownToggleEl, {
+                popperConfig: function (defaultBsPopperConfig) {
+                    return { ...defaultBsPopperConfig, strategy: 'fixed' };
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
