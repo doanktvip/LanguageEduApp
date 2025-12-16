@@ -57,12 +57,10 @@ function setupPasswordToggle(triggerId, inputId, iconId) {
                 const currentType = input.getAttribute("type");
                 const newType = currentType === "password" ? "text" : "password";
                 input.setAttribute("type", newType);
-
-                // Toggle icon class
                 if(newType === 'text'){
                     icon.classList.remove("bi-eye-slash");
                     icon.classList.add("bi-eye");
-                    trigger.classList.add("text-primary"); // Thêm màu xanh cho đẹp
+                    trigger.classList.add("text-primary");
                 } else {
                     icon.classList.remove("bi-eye");
                     icon.classList.add("bi-eye-slash");
@@ -74,25 +72,28 @@ function setupPasswordToggle(triggerId, inputId, iconId) {
     function setupImagePreview(inputId, previewId) {
     const input = document.getElementById(inputId);
     const preview = document.getElementById(previewId);
-
-    // Chỉ chạy khi cả 2 thẻ đều tồn tại trên trang
     if (input && preview) {
         input.addEventListener('change', function (evt) {
             const tgt = evt.target || window.event.srcElement;
             const files = tgt.files;
-
-            // Kiểm tra FileReader và file đã chọn
             if (FileReader && files && files.length) {
                 const fr = new FileReader();
-
                 fr.onload = function () {
-                    // Cập nhật src của ảnh
                     preview.src = fr.result;
                 }
-
-                // Đọc file
                 fr.readAsDataURL(files[0]);
             }
         });
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const fixedDropdowns = document.querySelectorAll('.js-dropdown-fixed');
+    fixedDropdowns.forEach(function(dropdownToggleEl) {
+        new bootstrap.Dropdown(dropdownToggleEl, {
+            popperConfig: function (defaultBsPopperConfig) {
+                return { ...defaultBsPopperConfig, strategy: 'fixed' };
+            }
+        });
+    });
+});

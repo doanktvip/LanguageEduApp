@@ -1,5 +1,5 @@
 import hashlib
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, extract
 from eduapp import db, app
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
@@ -133,7 +133,7 @@ def dang_ky_khoa_hoc(ma_hoc_vien, ma_khoa_hoc):
             ket_qua=False
         )
         db.session.add(ghi_danh_moi)
-        hoc_phi = khoa_hoc.loai_khoa_hoc.hoc_phi
+        hoc_phi = khoa_hoc.hoc_phi
         hoa_don_moi = HoaDon(
             ma_hoc_vien=ma_hoc_vien,
             ma_khoa_hoc=ma_khoa_hoc,
@@ -359,6 +359,10 @@ def kiem_tra_xung_dot_lich(form_data, lich_hoc_list):
 def tao_khoa_hoc_moi(data, lich_hoc_list):
     try:
         ma_moi = KhoaHoc.tao_ma_khoa_hoc_moi(data['ma_loai_khoa_hoc'])
+        try:
+            hoc_phi_val = float(data.get('hoc_phi', 0))
+        except:
+            hoc_phi_val = 0.0
         new_kh = KhoaHoc(
             ma_khoa_hoc=ma_moi,
             ten_khoa_hoc=data['ten_khoa_hoc'],
@@ -367,7 +371,8 @@ def tao_khoa_hoc_moi(data, lich_hoc_list):
             si_so_toi_da=data['si_so'],
             ngay_bat_dau=datetime.strptime(data['ngay_bat_dau'], '%Y-%m-%d'),
             ngay_ket_thuc=datetime.strptime(data['ngay_ket_thuc'], '%Y-%m-%d'),
-            tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+            tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH,
+            hoc_phi=hoc_phi_val
         )
         db.session.add(new_kh)
         for item in lich_hoc_list:
@@ -455,31 +460,28 @@ def luu_bang_diem(ma_khoa_hoc, form_data, is_save_draft):
 
 
 def lay_tat_ca_lich_ban():
-    try:
-        results = db.session.query(
-            LichHoc.ma_phong_hoc,
-            LichHoc.thu,
-            LichHoc.ca_hoc,
-            KhoaHoc.ngay_bat_dau,
-            KhoaHoc.ngay_ket_thuc,
-            KhoaHoc.ma_giao_vien
-        ).join(KhoaHoc).filter(
-            KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC
-        ).all()
-        lich_ban = []
-        for r in results:
-            lich_ban.append({
-                "phong": r.ma_phong_hoc,
-                "thu": r.thu.value,
-                "ca": r.ca_hoc.value,
-                "start": r.ngay_bat_dau.strftime('%Y-%m-%d'),
-                "end": r.ngay_ket_thuc.strftime('%Y-%m-%d'),
-                "gv": r.ma_giao_vien
+    """
+    Trả về list các slot đã có người học để JS tô màu
+    """
+    # Lấy các khóa đang hoạt động
+    today = datetime.now()
+    active_courses = KhoaHoc.query.filter(
+        KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC,
+        KhoaHoc.ngay_ket_thuc >= today
+    ).all()
+
+    result = []
+    for kh in active_courses:
+        for lh in kh.lich_hoc:
+            result.append({
+                'start': kh.ngay_bat_dau.strftime('%Y-%m-%d'),
+                'end': kh.ngay_ket_thuc.strftime('%Y-%m-%d'),
+                'thu': lh.thu.value,  # 0-6
+                'ca': lh.ca_hoc.value,  # 1-2
+                'phong': str(lh.ma_phong_hoc),
+                'gv': kh.ma_giao_vien
             })
-        return lich_ban
-    except Exception as e:
-        print(f"Lỗi lấy lịch bận: {e}")
-        return []
+    return result
 
 
 def tra_cuu_khoa_hoc(params=None, page=1, page_size=app.config["PAGE_SIZE"]):
@@ -545,3 +547,106 @@ def lay_ds_hoc_vien_cua_khoa(ma_khoa_hoc, page=1, page_size=app.config["PAGE_SIZ
         elif ket_qua == 'chua_xet':
             query = query.filter(BangDiem.diem_trung_binh == None)
     return query.paginate(page=page, per_page=page_size)
+
+
+def lay_danh_sach_hoc_vien(kw=None, status=None, nam_sinh=None, page=1, per_page=app.config["PAGE_SIZE"]):
+    query = HocVien.query
+    if kw:
+        query = query.filter(or_(
+            HocVien.ho_va_ten.contains(kw),
+            HocVien.ma_nguoi_dung.contains(kw),
+            HocVien.email.contains(kw),
+            HocVien.so_dien_thoai.contains(kw)
+        ))
+    if status:
+        if status == '1':
+            query = query.filter(HocVien.tinh_trang_hoat_dong == True)
+        elif status == '0':
+            query = query.filter(HocVien.tinh_trang_hoat_dong == False)
+    if nam_sinh:
+        try:
+            query = query.filter(extract('year', HocVien.ngay_sinh) == int(nam_sinh))
+        except ValueError:
+            pass
+    return query.order_by(HocVien.ngay_tao.desc()).paginate(page=page, per_page=per_page)
+
+
+def lay_danh_sach_nhan_vien(kw=None, status=None, from_date=None, to_date=None, page=1,
+                            per_page=app.config["PAGE_SIZE"]):
+    query = NhanVien.query
+    if kw:
+        query = query.filter(or_(
+            NhanVien.ma_nguoi_dung.ilike(f"%{kw}%"),
+            NhanVien.ho_va_ten.ilike(f"%{kw}%"),
+            NhanVien.email.ilike(f"%{kw}%"),
+            NhanVien.so_dien_thoai.ilike(f"%{kw}%")
+        ))
+    if status:
+        is_active = True if str(status) == '1' else False
+        query = query.filter(NhanVien.tinh_trang_hoat_dong == is_active)
+    if from_date:
+        try:
+            fd = datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(NhanVien.ngay_tao >= fd)
+        except ValueError:
+            pass
+    if to_date:
+        try:
+            td = datetime.strptime(to_date, '%Y-%m-%d')
+            query = query.filter(NhanVien.ngay_tao <= td)
+        except ValueError:
+            pass
+    return query.order_by(NhanVien.ngay_tao.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+
+def lay_danh_sach_giao_vien(kw=None, status=None, from_date=None, to_date=None, page=1,
+                            page_size=app.config["PAGE_SIZE"]):
+    """
+    Hàm truy vấn danh sách giáo viên có lọc và phân trang.
+    :param kw: Từ khóa tìm kiếm (Tên, Mã, Email, SĐT)
+    :param status: Trạng thái ('1': Đang làm, '0': Đã nghỉ, None: Tất cả)
+    :param from_date: Chuỗi ngày bắt đầu 'YYYY-mm-dd'
+    :param to_date: Chuỗi ngày kết thúc 'YYYY-mm-dd'
+    :param page: Trang hiện tại
+    :param page_size: Số lượng bản ghi trên 1 trang
+    :return: Đối tượng Pagination
+    """
+    query = GiaoVien.query
+
+    # 1. Lọc theo từ khóa (Mã, Tên, Email, SĐT)
+    if kw:
+        query = query.filter(or_(
+            GiaoVien.ho_va_ten.contains(kw),
+            GiaoVien.ma_nguoi_dung.contains(kw),
+            GiaoVien.email.contains(kw),
+            GiaoVien.so_dien_thoai.contains(kw)
+        ))
+
+    # 2. Lọc theo trạng thái
+    if status is not None and status != '':
+        if str(status) == '1':
+            query = query.filter(GiaoVien.tinh_trang_hoat_dong == True)
+        elif str(status) == '0':
+            query = query.filter(GiaoVien.tinh_trang_hoat_dong == False)
+
+    # 3. Lọc theo khoảng thời gian (Ngày tạo)
+    if from_date:
+        try:
+            date_obj = datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(GiaoVien.ngay_tao >= date_obj)
+        except ValueError:
+            pass  # Bỏ qua nếu định dạng ngày sai
+
+    if to_date:
+        try:
+            # Cộng thêm 1 ngày để lấy hết dữ liệu của ngày kết thúc (Logic <= 23:59:59)
+            date_obj = datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(GiaoVien.ngay_tao < date_obj)
+        except ValueError:
+            pass
+
+    # 4. Sắp xếp: Mới nhất lên đầu
+    query = query.order_by(GiaoVien.ngay_tao.desc())
+
+    # 5. Phân trang
+    return query.paginate(page=page, per_page=page_size, error_out=False)

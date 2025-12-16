@@ -3,8 +3,11 @@
 {% block title %}Hồ sơ người dùng{% endblock %}
 
 {% block card_header %}
-<div class="p-3">
-    <i class="bi bi-person-lines-fill me-2"></i>Thông tin hồ sơ
+<div class="p-3 d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-lines-fill me-2"></i>Thông tin hồ sơ</span>
+    <button onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </button>
 </div>
 {% endblock %}
 
@@ -59,13 +62,6 @@
             <span class="badge bg-success">Học viên</span>
             {% endif %}
         </div>
-        {% if current_user.ma_nguoi_dung == user.ma_nguoi_dung %}
-        <button class="btn btn-outline-primary btn-sm"
-                data-bs-toggle="modal"
-                data-bs-target="#avatarModal">
-            <i class="bi bi-camera-fill me-1"></i>Cập nhật ảnh
-        </button>
-        {% endif %}
     </div>
     <div class="col-md-8 ps-md-4 mt-3 mt-md-0">
         <h6 class="text-uppercase text-muted small fw-bold border-bottom pb-2 mb-3">
@@ -149,40 +145,6 @@
     <p class="mt-3 text-muted">Không tìm thấy thông tin người dùng này.</p>
 </div>
 {% endif %}
-<div class="modal fade" id="avatarModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-image me-2"></i>Thay đổi ảnh đại diện
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-            </div>
-            <form action="/update_avatar" method="POST" enctype="multipart/form-data">
-                <div class="modal-body text-center p-4">
-                    <div class="mb-4">
-                        <img src="{{ current_user.anh_chan_dung }}"
-                             class="rounded-circle shadow-sm border border-3 border-light"
-                             style="width: 120px; height: 120px; object-fit: cover;"
-                             id="avatarPreview">
-                    </div>
-                    <div class="mb-3 text-start">
-                        <label for="avatarInput" class="form-label fw-bold text-muted small">Chọn ảnh mới (JPG,
-                            PNG)</label>
-                        <input class="form-control" type="file" name="avatar" id="avatarInput" accept=".png,.jpg,.jpeg"
-                               required>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light border-0">
-                    <button type="submit" class="btn btn-primary px-4 fw-bold">
-                        <i class="bi bi-cloud-upload-fill me-2"></i>Lưu thay đổi
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 <div class="modal fade" id="parentPhoneModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

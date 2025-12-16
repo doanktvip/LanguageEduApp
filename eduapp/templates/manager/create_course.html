@@ -505,6 +505,12 @@
         calculateTuition();
         updateDeleteButtons();
         setTimeout(revalidateAll, 100);
+
+        const hiddenVal = document.getElementById('hoc_phi_value');
+        const display = document.getElementById('hoc_phi_display');
+        if (hiddenVal.value && hiddenVal.value !== '0') {
+            display.value = vnCurrency.format(hiddenVal.value);
+        }
     });
 </script>
 {% endblock %}
