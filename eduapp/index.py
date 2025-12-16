@@ -531,10 +531,45 @@ def attendance():
 
 @app.route('/manager')
 def manager_index():
-    return redirect(url_for('manager_course_list'))
+    return redirect('/')
 
 
-@app.route('/manager/course', methods=['GET'])
+@app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
+def manager_profile_user(ma_nguoi_dung):
+    user_to_show = dao.get_by_id(ma_nguoi_dung)
+    if not user_to_show:
+        return redirect(url_for('manager_course_list'))
+    return render_template('manager/profile_user.html', user=user_to_show)
+
+
+@app.route('/manager/reset_password/<ma_nguoi_dung>', methods=['GET', 'POST'])
+def manager_reset_password_page(ma_nguoi_dung):
+    user = dao.get_by_id(ma_nguoi_dung)
+    if not user:
+        return redirect(url_for('manager_course_list'))
+    err_msg = None
+    success_msg = None
+    if request.method == 'GET':
+        back_url = request.referrer
+    else:
+        back_url = request.form.get('back_url')
+    if request.method == 'POST':
+        mat_khau_moi = request.form.get('new_password')
+        xac_nhan_mk = request.form.get('re_enter_password')
+        if not mat_khau_moi or len(mat_khau_moi) < 6:
+            err_msg = "Mật khẩu phải từ 6 ký tự trở lên."
+        elif mat_khau_moi != xac_nhan_mk:
+            err_msg = "Mật khẩu xác nhận không khớp."
+        else:
+            hashed_password = hashlib.md5(mat_khau_moi.encode('utf-8')).hexdigest()
+            user.mat_khau = hashed_password
+            db.session.commit()
+            success_msg = f"Đã đặt lại mật khẩu cho {user.ho_va_ten} thành công!"
+    return render_template('manager/reset_password.html', user=user, err_msg=err_msg, success_msg=success_msg,
+                           back_url=back_url)
+
+
+@app.route('/manager/courses', methods=['GET'])
 def manager_course_list():
     page = request.args.get('page', 1, type=int)
     search_params = {
@@ -573,11 +608,14 @@ def manager_create_course():
     msg = None
     form_data = {}
     old_lich_hoc = []
+    lich_ban_data = dao.lay_tat_ca_lich_ban()
     if request.method == 'POST':
         try:
+            raw_hoc_phi = request.form.get('hoc_phi', '0').replace('.', '').replace(',', '')
             form_data = {
                 'ten_khoa_hoc': request.form.get('ten_khoa_hoc', ''),
                 'ma_loai_khoa_hoc': request.form.get('ma_loai_khoa_hoc', ''),
+                'hoc_phi': raw_hoc_phi,
                 'ma_giao_vien': request.form.get('ma_giao_vien', ''),
                 'si_so': request.form.get('si_so', '30'),
                 'thoi_luong': request.form.get('thoi_luong', '0'),
@@ -587,42 +625,128 @@ def manager_create_course():
             ds_thu = request.form.getlist('thu[]')
             ds_ca = request.form.getlist('ca[]')
             ds_phong = request.form.getlist('phong[]')
+
             lich_hoc_list = []
             seen_slots = set()
+
+            # Zip lại để duyệt, đồng thời tạo old_lich_hoc để trả về nếu lỗi
             for i in range(len(ds_thu)):
                 item = {
                     'thu': ds_thu[i],
                     'ca': ds_ca[i],
                     'ma_phong': ds_phong[i]
                 }
-                old_lich_hoc.append(item)
+                old_lich_hoc.append(item)  # <--- Lưu lại để hiển thị lại trên form
+
+                if not ds_thu[i] or not ds_ca[i] or not ds_phong[i]:
+                    continue
+
                 slot_key = f"{ds_thu[i]}-{ds_ca[i]}"
-                if slot_key in seen_slots: continue
+                if slot_key in seen_slots:
+                    continue  # Bỏ qua trùng lặp tại chỗ
                 seen_slots.add(slot_key)
+
                 lich_hoc_list.append(item)
+
+            # 4. Validate số buổi
             so_buoi = len(lich_hoc_list)
-            if so_buoi < 3 or so_buoi > 7:
-                raise Exception(f"Số buổi học phải từ 3 đến 7 buổi/tuần (Hiện tại: {so_buoi}).")
+            if so_buoi < 3:
+                raise Exception(f"Vui lòng thêm ít nhất 3 buổi học (Hiện tại: {so_buoi}).")
+
+            # 5. Check xung đột Database
             is_valid, message = dao.kiem_tra_xung_dot_lich(form_data, lich_hoc_list)
+
             if is_valid:
                 res, dao_msg = dao.tao_khoa_hoc_moi(form_data, lich_hoc_list)
                 if res:
                     msg = f"✅ {dao_msg}"
+                    # Reset form khi thành công
                     form_data = {}
                     old_lich_hoc = []
                 else:
                     msg = f"❌ Lỗi hệ thống: {dao_msg}"
             else:
-                msg = f"❌ {message}"
+                msg = f"⚠️ {message}"
 
         except Exception as e:
             msg = f"❌ Lỗi dữ liệu: {str(e)}"
+
+    # Load dữ liệu danh mục
     ds_loai = LoaiKhoaHoc.query.all()
     ds_gv = GiaoVien.query.all()
     ds_phong = PhongHoc.query.all()
-    lich_ban_data = dao.lay_tat_ca_lich_ban()
-    return render_template('manager/create_course.html', msg=msg, loai_kh=ds_loai, ds_gv=ds_gv, ds_phong=ds_phong,
-                           form_data=form_data, old_lich_hoc=old_lich_hoc, lich_ban_json=json.dumps(lich_ban_data))
+
+    return render_template(
+        'manager/create_course.html',
+        msg=msg,
+        loai_kh=ds_loai,
+        ds_gv=ds_gv,
+        ds_phong=ds_phong,
+        form_data=form_data,
+        old_lich_hoc=old_lich_hoc,  # <--- QUAN TRỌNG: Truyền lại lịch cũ
+        lich_ban_json=json.dumps(lich_ban_data, default=str)  # <--- QUAN TRỌNG: Truyền JSON cho JS
+    )
+
+
+@app.route('/manager/employees', methods=['GET'])
+def manager_employee_list():
+    # 1. Lấy tham số từ URL (Request Args)
+    page = request.args.get('page', 1, type=int)
+    kw = request.args.get('kw')
+    status = request.args.get('status')
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+
+    # 2. Gọi hàm DAO để lấy dữ liệu
+    pagination = dao.lay_danh_sach_nhan_vien(
+        kw=kw,
+        status=status,
+        from_date=from_date,
+        to_date=to_date,
+        page=page
+    )
+
+    # 3. Trả về giao diện cùng dữ liệu
+    return render_template('manager/employee_list.html', pagination=pagination)
+
+
+@app.route('/manager/students', methods=['GET'])
+def manager_student_list():
+    kw = request.args.get('kw', '')
+    status = request.args.get('status')
+    nam_sinh = request.args.get('nam_sinh')
+    try:
+        page = int(request.args.get('page', 1))
+    except ValueError:
+        page = 1
+    pagination = dao.lay_danh_sach_hoc_vien(
+        kw=kw,
+        status=status,
+        nam_sinh=nam_sinh,
+        page=page
+    )
+    return render_template('manager/student_list.html', pagination=pagination)
+
+
+@app.route('/manager/teachers', methods=['GET'])
+def manager_teacher_list():
+    # Lấy tham số từ URL
+    kw = request.args.get('kw', '')
+    status = request.args.get('status')
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+    page = request.args.get('page', 1, type=int)
+
+    # Gọi hàm DAO để lấy dữ liệu
+    pagination = dao.lay_danh_sach_giao_vien(
+        kw=kw,
+        status=status,
+        from_date=from_date,
+        to_date=to_date,
+        page=page
+    )
+
+    return render_template('manager/teacher_list.html', pagination=pagination)
 
 
 if __name__ == '__main__':

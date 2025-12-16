@@ -169,18 +169,3 @@
 </nav>
 {% endif %}
 {% endblock %}
-
-{% block javascript %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const fixedDropdowns = document.querySelectorAll('.js-dropdown-fixed');
-        fixedDropdowns.forEach(function(dropdownToggleEl) {
-            new bootstrap.Dropdown(dropdownToggleEl, {
-                popperConfig: function (defaultBsPopperConfig) {
-                    return { ...defaultBsPopperConfig, strategy: 'fixed' };
-                }
-            });
-        });
-    });
-</script>
-{% endblock %}

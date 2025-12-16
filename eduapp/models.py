@@ -170,6 +170,7 @@ class KhoaHoc(db.Model):
     ngay_bat_dau = Column(DateTime, nullable=False)
     ngay_ket_thuc = Column(DateTime, nullable=False)
     tinh_trang = Column(Enum(TinhTrangKhoaHocEnum), default=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH)
+    hoc_phi = Column(Float, nullable=False, default=0.0)
 
     # Quan hệ
     ds_dang_ky = relationship('BangDiem', backref='khoa_hoc', lazy=True)  # Liên kết tới bảng Enrollment

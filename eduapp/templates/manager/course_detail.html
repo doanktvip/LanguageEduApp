@@ -79,9 +79,10 @@
             <th class="text-center">STT</th>
             <th>Mã HV</th>
             <th>Họ và tên</th>
+            <th>Liên hệ</th>
             <th>Ngày sinh</th>
-            <th>SĐT</th>
             <th class="text-center">Kết quả</th>
+            <th class="text-center bg-light" style="width: 80px;"><i class="bi bi-gear-fill"></i></th>
         </tr>
         </thead>
         <tbody>
@@ -93,10 +94,18 @@
             <td><span class="badge bg-light text-dark border">{{ item.hoc_vien.ma_nguoi_dung }}</span></td>
             <td>
                 <div class="fw-bold text-primary">{{ item.hoc_vien.ho_va_ten }}</div>
-                <small class="text-muted">{{ item.hoc_vien.email }}</small>
+                <small class="text-muted d-block mt-1">
+                    <i class="bi bi-person-badge me-1 text-secondary"></i>User: {{ item.hoc_vien.ten_dang_nhap }}
+                </small>
+            </td>
+            <td>
+                <div class="d-flex flex-column small">
+                    <span class="mb-1"><i
+                            class="bi bi-envelope me-2 text-secondary"></i>{{ item.hoc_vien.email }}</span>
+                    <span><i class="bi bi-telephone me-2 text-secondary"></i>{{ item.hoc_vien.so_dien_thoai }}</span>
+                </div>
             </td>
             <td>{{ item.hoc_vien.ngay_sinh.strftime('%d/%m/%Y') if item.hoc_vien.ngay_sinh else '--' }}</td>
-            <td>{{ item.hoc_vien.so_dien_thoai }}</td>
             <td class="text-center">
                 {% if item.diem_trung_binh %}
                 {% if item.ket_qua %}
@@ -107,6 +116,37 @@
                 {% else %}
                 <span class="text-muted fst-italic small">Chưa tổng kết</span>
                 {% endif %}
+            </td>
+            <td class="text-center">
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
+                        <li><a class="dropdown-item" href="{{ url_for('manager_profile_user', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                            <i class="bi bi-pencil-square me-2 text-warning"></i>Xem thông tin
+                        </a></li>
+
+                        <li><a class="dropdown-item" href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                            <i class="bi bi-key me-2 text-info"></i>Đặt lại mật khẩu
+                        </a></li>
+
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+
+                        {% if item.hoc_vien.tinh_trang_hoat_dong %}
+                        <li><a class="dropdown-item text-danger" href="#">
+                            <i class="bi bi-lock-fill me-2"></i>Khóa tài khoản
+                        </a></li>
+                        {% else %}
+                        <li><a class="dropdown-item text-success" href="#">
+                            <i class="bi bi-unlock-fill me-2"></i>Kích hoạt lại
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </div>
             </td>
         </tr>
         {% endfor %}
