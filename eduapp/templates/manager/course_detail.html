@@ -3,16 +3,11 @@
 {% block title %}Danh sách học viên{% endblock %}
 
 {% block card_header %}
-<div class="d-flex justify-content-between align-items-center p-3">
-    <div class="d-flex align-items-center gap-2">
-        <a href="{{ url_for('manager_course_list') }}" class="btn btn-light btn-sm border shadow-sm">
-            <i class="bi bi-arrow-left"></i>
-        </a>
-        <span>
-            <i class="bi bi-people-fill me-2"></i>Danh sách học viên
-        </span>
-    </div>
-    <span class="badge bg-primary fs-6">{{ khoa_hoc.ma_khoa_hoc }}</span>
+<div class="p-3 d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-people-fill me-2"></i>DANH SÁCH HỌC VIÊN</span>
+    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
 </div>
 {% endblock %}
 
@@ -27,6 +22,7 @@
         <div>
             <h5 class="fw-bold mb-2 text-primary d-flex align-items-center gap-2">
                 <i class="bi bi-bookmark-star-fill"></i> {{ khoa_hoc.ten_khoa_hoc }}
+                <span class="badge bg-primary fs-6">{{ khoa_hoc.ma_khoa_hoc }}</span>
             </h5>
             <div class="small text-muted d-flex flex-column flex-sm-row gap-1 gap-sm-4">
                 <span><i class="bi bi-calendar-event me-2"></i>{{ khoa_hoc.ngay_bat_dau.strftime('%d/%m/%Y') }}</span>

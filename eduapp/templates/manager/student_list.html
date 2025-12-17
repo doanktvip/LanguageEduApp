@@ -5,7 +5,7 @@
 {% block card_header %}
 <div class="d-flex justify-content-between align-items-center p-3">
     <span><i class="bi bi-mortarboard-fill me-2"></i>DANH SÁCH HỌC VIÊN</span>
-    <a href="#" class="btn btn-primary btn-sm shadow-sm fw-bold">
+    <a href="{{ url_for('manager_add_user', role_type='HOC_VIEN') }}" class="btn btn-primary btn-sm shadow-sm fw-bold">
         <i class="bi bi-person-plus-fill me-1"></i> Thêm học viên
     </a>
 </div>
