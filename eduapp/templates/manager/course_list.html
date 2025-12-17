@@ -71,10 +71,30 @@
             <th class="bg-light">Mã KH</th>
             <th class="bg-light">Tên khóa học</th>
             <th class="bg-light">Giảng viên</th>
-            <th class="bg-light">Thời gian</th>
-            <th class="bg-light">Sĩ số</th>
+            <th class="text-center bg-light">Thời gian</th>
+            <th class="text-center bg-light">Sĩ số</th>
+            <th class="text-end bg-light">học phí</th>
             <th class="text-center bg-light">Trạng thái</th>
-            <th class="text-center bg-light"><i class="bi bi-gear-fill"></i></th>
+            <th class="text-center bg-light" style="text-transform: none;">
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                        <i class="bi bi-gear-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc='ALL') }}">
+                                <i class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số tối đa cho tất cả
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for('manager_edit_tuition', ma_khoa_hoc='ALL') }}">
+                                <i class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí cho tất cả
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </th>
         </tr>
         </thead>
         <tbody>
@@ -93,19 +113,24 @@
                 </small>
             </td>
             <td>{{ kh.giao_vien.ho_va_ten if kh.giao_vien else "Chưa phân công" }}</td>
-            <td>
+            <td class="text-center">
                 <div class="small text-secondary">
-                    {{ kh.ngay_bat_dau.strftime('%d/%m') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}
+                    {{ kh.ngay_bat_dau.strftime('%d/%m/%Y') }}<br>{{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}
                 </div>
             </td>
-            <td>{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</td>
+            <td class="text-center">{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</td>
+            <td class="text-end">
+                <div class="fw-bold font-monospace fs-6 text-dark">
+                    {{ "{:,.0f}".format(kh.hoc_phi) }} ₫
+                </div>
+            </td>
             <td class="text-center">
                 {% if kh.tinh_trang.name == 'DANG_TUYEN_SINH' %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">Đang tuyển</span>
                 {% elif kh.tinh_trang.name == 'DUNG_TUYEN_SINH' %}
                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill">Ngừng tuyển</span>
                 {% else %}
-                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill">Kết thúc</span>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">Kết thúc</span>
                 {% endif %}
             </td>
             <td class="text-center">
@@ -115,14 +140,32 @@
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
-                        <li><a class="dropdown-item" href="#">Sửa</a></li>
-                        <li><a class="dropdown-item"
-                               href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}">Xem danh sách
-                            học viên</a></li>
+                        <li>
+                            <a class="dropdown-item"
+                               href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}">
+                                <i class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số tối đa
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item"
+                               href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}">
+                                <i class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item"
+                               href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                    class="bi bi-people-fill me-2 text-info"></i>Xem danh sách học viên
+                            </a>
+                        </li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item text-danger" href="#">Xóa</a></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#">
+                                <i class="bi bi-trash me-2"></i>Xóa khóa học
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </td>

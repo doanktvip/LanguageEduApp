@@ -80,7 +80,6 @@ class NguoiDung(db.Model, UserMixin):
 
     @classmethod
     def tao_ma_nguoi_dung(cls, vai_tro_enum):
-        """Hàm tự động sinh mã theo vai trò (VD: HV240001, GV240001)"""
         prefix_map = {
             NguoiDungEnum.HOC_VIEN: "HV",
             NguoiDungEnum.GIAO_VIEN: "GV",
@@ -89,21 +88,16 @@ class NguoiDung(db.Model, UserMixin):
         }
         prefix = prefix_map.get(vai_tro_enum, "ND")
         current_year = datetime.now().strftime('%y')
-
-        # Tìm user cuối cùng có prefix này
-        last_user = db.session.query(NguoiDung.ma_nguoi_dung) \
-            .filter(NguoiDung.ma_nguoi_dung.like(f"{prefix}{current_year}%")) \
-            .order_by(NguoiDung.ma_nguoi_dung.desc()).first()
-
+        last_user = db.session.query(NguoiDung.ma_nguoi_dung).filter(
+            NguoiDung.ma_nguoi_dung.like(f"{prefix}{current_year}%")).order_by(NguoiDung.ma_nguoi_dung.desc()).first()
         if last_user:
             try:
-                last_sequence = int(last_user[0][4:])  # Lấy phần số đuôi
+                last_sequence = int(last_user[0][4:])
                 new_sequence = last_sequence + 1
             except ValueError:
                 new_sequence = 1
         else:
             new_sequence = 1
-
         return f"{prefix}{current_year}{new_sequence:04d}"
 
 

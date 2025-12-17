@@ -6,7 +6,7 @@
 <div class="d-flex justify-content-between align-items-center p-3">
     <span><i class="bi bi-mortarboard-fill me-2"></i>QUẢN LÝ GIÁO VIÊN</span>
     
-    <a href="#" class="btn btn-primary btn-sm shadow-sm fw-bold">
+    <a href="{{ url_for('manager_add_user', role_type='GIAO_VIEN') }}" class="btn btn-primary btn-sm shadow-sm fw-bold">
         <i class="bi bi-person-plus-fill me-1"></i> Thêm giáo viên mới
     </a>
 </div>
@@ -118,11 +118,11 @@
             <td class="text-center">
                 {% if gv.tinh_trang_hoat_dong %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
-                        <i class="bi bi-check-circle-fill me-1"></i>Đang dạy
+                        <i class="bi bi-check-circle-fill me-1"></i>Active
                     </span>
                 {% else %}
                 <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill">
-                        <i class="bi bi-x-circle-fill me-1"></i>Đã nghỉ
+                        <i class="bi bi-x-circle-fill me-1"></i>Locked
                     </span>
                 {% endif %}
             </td>
@@ -135,7 +135,7 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
                         <li><a class="dropdown-item" href="{{ url_for('manager_profile_user', ma_nguoi_dung=gv.ma_nguoi_dung) }}">
-                            <i class="bi bi-pencil-square me-2 text-warning"></i>Xem hồ sơ
+                            <i class="bi bi-person-lines-fill me-2 text-warning"></i>Xem hồ sơ
                         </a></li>
 
                         <li><a class="dropdown-item" href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=gv.ma_nguoi_dung) }}">

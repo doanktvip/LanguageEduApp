@@ -1,6 +1,6 @@
 import hashlib
 from datetime import datetime, date, timedelta
-from sqlalchemy import and_, or_, extract
+from sqlalchemy import and_, or_, extract, func
 from eduapp import db, app
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
     BangDiem, CauTrucDiem, TinhTrangKhoaHocEnum, HoaDon, ChiTietDiem, ChiTietDiemDanh, TrangThaiDiemDanhEnum, DiemDanh, \
@@ -22,19 +22,19 @@ def add_user(loai_nguoi_dung, **kwargs):
         NguoiDungEnum.HOC_VIEN: HocVien,
         NguoiDungEnum.NHAN_VIEN: NhanVien,
         NguoiDungEnum.GIAO_VIEN: GiaoVien,
-        NguoiDungEnum.QUAN_LY: QuanLy
     }
     ModelClass = map_model.get(loai_nguoi_dung)
     if not ModelClass:
-        return False
+        print("Lỗi: Loại người dùng không hợp lệ")
     try:
         if 'ma_nguoi_dung' not in kwargs:
             try:
                 kwargs['ma_nguoi_dung'] = NguoiDung.tao_ma_nguoi_dung(loai_nguoi_dung)
             except Exception as e:
-                raise e
+                return f"Lỗi tạo mã người dùng: {str(e)}"
         if 'mat_khau' in kwargs:
             kwargs['mat_khau'] = str(hashlib.md5(kwargs['mat_khau'].strip().encode('utf-8')).hexdigest())
+
         kwargs['vai_tro'] = loai_nguoi_dung
         nguoi_dung_moi = ModelClass(**kwargs)
         db.session.add(nguoi_dung_moi)
@@ -42,7 +42,7 @@ def add_user(loai_nguoi_dung, **kwargs):
         return True
     except Exception as ex:
         db.session.rollback()
-        return False
+        print(f"LỖI SQL CHI TIẾT: {ex}")
 
 
 def get_by_id(user_id):
@@ -601,19 +601,7 @@ def lay_danh_sach_nhan_vien(kw=None, status=None, from_date=None, to_date=None, 
 
 def lay_danh_sach_giao_vien(kw=None, status=None, from_date=None, to_date=None, page=1,
                             page_size=app.config["PAGE_SIZE"]):
-    """
-    Hàm truy vấn danh sách giáo viên có lọc và phân trang.
-    :param kw: Từ khóa tìm kiếm (Tên, Mã, Email, SĐT)
-    :param status: Trạng thái ('1': Đang làm, '0': Đã nghỉ, None: Tất cả)
-    :param from_date: Chuỗi ngày bắt đầu 'YYYY-mm-dd'
-    :param to_date: Chuỗi ngày kết thúc 'YYYY-mm-dd'
-    :param page: Trang hiện tại
-    :param page_size: Số lượng bản ghi trên 1 trang
-    :return: Đối tượng Pagination
-    """
     query = GiaoVien.query
-
-    # 1. Lọc theo từ khóa (Mã, Tên, Email, SĐT)
     if kw:
         query = query.filter(or_(
             GiaoVien.ho_va_ten.contains(kw),
@@ -621,32 +609,77 @@ def lay_danh_sach_giao_vien(kw=None, status=None, from_date=None, to_date=None, 
             GiaoVien.email.contains(kw),
             GiaoVien.so_dien_thoai.contains(kw)
         ))
-
-    # 2. Lọc theo trạng thái
     if status is not None and status != '':
         if str(status) == '1':
             query = query.filter(GiaoVien.tinh_trang_hoat_dong == True)
         elif str(status) == '0':
             query = query.filter(GiaoVien.tinh_trang_hoat_dong == False)
-
-    # 3. Lọc theo khoảng thời gian (Ngày tạo)
     if from_date:
         try:
             date_obj = datetime.strptime(from_date, '%Y-%m-%d')
             query = query.filter(GiaoVien.ngay_tao >= date_obj)
         except ValueError:
-            pass  # Bỏ qua nếu định dạng ngày sai
-
+            pass
     if to_date:
         try:
-            # Cộng thêm 1 ngày để lấy hết dữ liệu của ngày kết thúc (Logic <= 23:59:59)
             date_obj = datetime.strptime(to_date, '%Y-%m-%d') + timedelta(days=1)
             query = query.filter(GiaoVien.ngay_tao < date_obj)
         except ValueError:
             pass
-
-    # 4. Sắp xếp: Mới nhất lên đầu
     query = query.order_by(GiaoVien.ngay_tao.desc())
-
-    # 5. Phân trang
     return query.paginate(page=page, per_page=page_size, error_out=False)
+
+
+def cap_nhat_si_so_toi_da(ma_khoa_hoc, si_so_moi):
+    try:
+        kh = get_by_course_id(ma_khoa_hoc)
+        if kh:
+            kh.si_so_toi_da = si_so_moi
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+
+def cap_nhat_hoc_phi(ma_khoa_hoc, hoc_phi_moi):
+    try:
+        kh = get_by_course_id(ma_khoa_hoc)
+        if kh:
+            kh.hoc_phi = hoc_phi_moi
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+
+def lay_si_so_hien_tai_lon_nhat():
+    max_val = db.session.query(func.max(KhoaHoc.si_so_hien_tai)).filter(
+        KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).scalar()
+    return max_val if max_val else 0
+
+
+def cap_nhat_si_so_toan_bo(si_so_moi):
+    try:
+        KhoaHoc.query.filter(KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).update(
+            {KhoaHoc.si_so_toi_da: si_so_moi}, synchronize_session=False)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+
+def cap_nhat_hoc_phi_theo_phan_tram(phan_tram_giam):
+    try:
+        he_so = 1.0 - (phan_tram_giam / 100.0)
+        KhoaHoc.query.filter(KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).update(
+            {KhoaHoc.hoc_phi: KhoaHoc.hoc_phi * he_so}, synchronize_session=False)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        raise e

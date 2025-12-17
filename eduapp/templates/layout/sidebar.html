@@ -26,13 +26,19 @@
                 <a href="/manager/employees" class="list-group-item list-group-item-action"><i
                         class="bi bi-briefcase-fill me-2"></i>Quản
                     lý nhân viên</a>
-                <a href="/manager/teachers" class="list-group-item list-group-item-action"><i class="bi bi-pen-fill me-2"></i>Quản
+                <a href="/manager/teachers" class="list-group-item list-group-item-action"><i
+                        class="bi bi-pen-fill me-2"></i>Quản
                     lý giáo viên</a>
-                <a href="/manager/courses" class="list-group-item list-group-item-action"><i
-                        class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
                 <a href="/manager/students" class="list-group-item list-group-item-action"><i
                         class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
-                <a href="/" class="list-group-item list-group-item-action">Tạo khóa học</a>
+                <a href="/manager/courses" class="list-group-item list-group-item-action"><i
+                        class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
+                <a href="/" class="list-group-item list-group-item-action"><i
+                        class="bi bi-journal-bookmark-fill me-2"></i>Xem thống kê</a>
+                <a href="/" class="list-group-item list-group-item-action"><i
+                        class="bi bi-journal-bookmark-fill me-2"></i>Xem báo cáo</a>
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-database me-2"></i>Quản lý cơ
+                    sở dữ liệu</a>
                 {%elif current_user.vai_tro.value==3%}
                 <a href="/grading" class="list-group-item list-group-item-action"><i
                         class="bi bi-journal-bookmark-fill me-2"></i>Sổ điểm điện tử</a>

@@ -3,11 +3,13 @@
 {% block title %}Tạo khóa học mới{% endblock %}
 
 {% block card_header %}
-<div class="p-3">
-    <a href="{{ url_for('manager_course_list') }}" class="btn btn-light btn-sm border shadow-sm">
-        <i class="bi bi-arrow-left"></i>
+<div class="p-3 d-flex justify-content-between align-items-center">
+    <span class="fw-bold text-uppercase">
+        <i class="bi bi-mortarboard-fill me-2"></i>Tạo khóa học mới
+    </span>
+    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
     </a>
-    <i class="bi bi-mortarboard-fill me-2"></i>Tạo khóa học mới
 </div>
 {% endblock %}
 
@@ -18,7 +20,14 @@
     }
 </style>
 {% if msg %}
-<div class="alert {{ 'alert-success' if '✅' in msg else 'alert-danger' }} alert-dismissible fade show" role="alert">
+<div class="alert alert-{{ msg_type }} alert-dismissible fade show shadow-sm" role="alert">
+    {% if msg_type == 'success' %}
+    <i class="bi bi-check-circle-fill me-2"></i>
+    {% elif msg_type == 'warning' %}
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {% else %}
+    <i class="bi bi-x-circle-fill me-2"></i>
+    {% endif %}
     {{ msg }}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
@@ -282,6 +291,7 @@
     </div>
 </form>
 {% endblock %}
+
 {% block javascript %}
 <script>
     const BUSY_SCHEDULE = {{ lich_ban_json|safe }};
@@ -407,7 +417,7 @@
                 hasError = true;
                 list.forEach(row => {
                     row.classList.add('border-danger', 'border-2');
-                    row.querySelector('.internal-error').innerText = "❌ Trùng lặp!";
+                    row.querySelector('.internal-error').innerHTML = '<i class="bi bi-exclamation-octagon-fill"></i> Trùng lặp!';
                 });
             }
         }
@@ -444,7 +454,7 @@
         });
         clone.querySelector('.room-msg').innerHTML = "";
         clone.querySelector('.teacher-msg').innerHTML = "";
-        clone.querySelector('.internal-error').innerText = "";
+        clone.querySelector('.internal-error').innerHTML = "";
         clone.classList.remove('border-danger', 'border-2');
         const pSel = clone.querySelector('select[name="phong[]"]');
         Array.from(pSel.options).forEach(o => { o.disabled = false; o.innerText = o.innerText.replace(" (BẬN)", ""); });
@@ -489,23 +499,11 @@
         const firstRow = container.querySelector('.schedule-row');
         if(firstRow) attachRowEvents(firstRow);
         while (container.querySelectorAll('.schedule-row').length < 3) {
-            const template = container.firstElementChild;
-            const clone = template.cloneNode(true);
-            clone.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-            clone.querySelector('.room-msg').innerHTML = "";
-            clone.querySelector('.teacher-msg').innerHTML = "";
-            clone.querySelector('.internal-error').innerText = "";
-            clone.classList.remove('border-danger', 'border-2');
-            clone.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-            const pSel = clone.querySelector('select[name="phong[]"]');
-            Array.from(pSel.options).forEach(o => { o.disabled = false; o.innerText = o.innerText.replace(" (BẬN)", ""); });
-            container.appendChild(clone);
-            attachRowEvents(clone);
+            window.addScheduleRow();
         }
         calculateTuition();
         updateDeleteButtons();
         setTimeout(revalidateAll, 100);
-
         const hiddenVal = document.getElementById('hoc_phi_value');
         const display = document.getElementById('hoc_phi_display');
         if (hiddenVal.value && hiddenVal.value !== '0') {

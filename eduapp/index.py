@@ -18,6 +18,11 @@ def index():
     return render_template("index.html")
 
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return redirect('/')
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -529,11 +534,6 @@ def attendance():
                            student_rows=student_rows, today_str=today_str)
 
 
-@app.route('/manager')
-def manager_index():
-    return redirect('/')
-
-
 @app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
 def manager_profile_user(ma_nguoi_dung):
     user_to_show = dao.get_by_id(ma_nguoi_dung)
@@ -606,6 +606,7 @@ def manager_course_detail(ma_khoa_hoc):
 @app.route('/manager/create_course', methods=['GET', 'POST'])
 def manager_create_course():
     msg = None
+    msg_type = None
     form_data = {}
     old_lich_hoc = []
     lich_ban_data = dao.lay_tat_ca_lich_ban()
@@ -625,79 +626,57 @@ def manager_create_course():
             ds_thu = request.form.getlist('thu[]')
             ds_ca = request.form.getlist('ca[]')
             ds_phong = request.form.getlist('phong[]')
-
             lich_hoc_list = []
             seen_slots = set()
-
-            # Zip lại để duyệt, đồng thời tạo old_lich_hoc để trả về nếu lỗi
             for i in range(len(ds_thu)):
                 item = {
                     'thu': ds_thu[i],
                     'ca': ds_ca[i],
                     'ma_phong': ds_phong[i]
                 }
-                old_lich_hoc.append(item)  # <--- Lưu lại để hiển thị lại trên form
-
+                old_lich_hoc.append(item)
                 if not ds_thu[i] or not ds_ca[i] or not ds_phong[i]:
                     continue
-
                 slot_key = f"{ds_thu[i]}-{ds_ca[i]}"
                 if slot_key in seen_slots:
-                    continue  # Bỏ qua trùng lặp tại chỗ
+                    continue
                 seen_slots.add(slot_key)
-
                 lich_hoc_list.append(item)
-
-            # 4. Validate số buổi
             so_buoi = len(lich_hoc_list)
             if so_buoi < 3:
                 raise Exception(f"Vui lòng thêm ít nhất 3 buổi học (Hiện tại: {so_buoi}).")
-
-            # 5. Check xung đột Database
             is_valid, message = dao.kiem_tra_xung_dot_lich(form_data, lich_hoc_list)
-
             if is_valid:
                 res, dao_msg = dao.tao_khoa_hoc_moi(form_data, lich_hoc_list)
                 if res:
-                    msg = f"✅ {dao_msg}"
-                    # Reset form khi thành công
+                    msg = dao_msg
+                    msg_type = 'success'
                     form_data = {}
                     old_lich_hoc = []
                 else:
-                    msg = f"❌ Lỗi hệ thống: {dao_msg}"
+                    msg = f"Lỗi hệ thống: {dao_msg}"
+                    msg_type = 'danger'
             else:
-                msg = f"⚠️ {message}"
-
+                msg = message
+                msg_type = 'warning'
         except Exception as e:
-            msg = f"❌ Lỗi dữ liệu: {str(e)}"
-
-    # Load dữ liệu danh mục
+            msg = f"Lỗi dữ liệu: {str(e)}"
+            msg_type = 'danger'
     ds_loai = LoaiKhoaHoc.query.all()
     ds_gv = GiaoVien.query.all()
     ds_phong = PhongHoc.query.all()
-
-    return render_template(
-        'manager/create_course.html',
-        msg=msg,
-        loai_kh=ds_loai,
-        ds_gv=ds_gv,
-        ds_phong=ds_phong,
-        form_data=form_data,
-        old_lich_hoc=old_lich_hoc,  # <--- QUAN TRỌNG: Truyền lại lịch cũ
-        lich_ban_json=json.dumps(lich_ban_data, default=str)  # <--- QUAN TRỌNG: Truyền JSON cho JS
-    )
+    return render_template('manager/create_course.html', msg=msg, msg_type=msg_type, loai_kh=ds_loai, ds_gv=ds_gv,
+                           ds_phong=ds_phong, form_data=form_data, old_lich_hoc=old_lich_hoc,
+                           lich_ban_json=json.dumps(lich_ban_data, default=str))
 
 
 @app.route('/manager/employees', methods=['GET'])
 def manager_employee_list():
-    # 1. Lấy tham số từ URL (Request Args)
     page = request.args.get('page', 1, type=int)
     kw = request.args.get('kw')
     status = request.args.get('status')
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
-
-    # 2. Gọi hàm DAO để lấy dữ liệu
     pagination = dao.lay_danh_sach_nhan_vien(
         kw=kw,
         status=status,
@@ -705,8 +684,6 @@ def manager_employee_list():
         to_date=to_date,
         page=page
     )
-
-    # 3. Trả về giao diện cùng dữ liệu
     return render_template('manager/employee_list.html', pagination=pagination)
 
 
@@ -730,14 +707,11 @@ def manager_student_list():
 
 @app.route('/manager/teachers', methods=['GET'])
 def manager_teacher_list():
-    # Lấy tham số từ URL
     kw = request.args.get('kw', '')
     status = request.args.get('status')
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
     page = request.args.get('page', 1, type=int)
-
-    # Gọi hàm DAO để lấy dữ liệu
     pagination = dao.lay_danh_sach_giao_vien(
         kw=kw,
         status=status,
@@ -745,8 +719,211 @@ def manager_teacher_list():
         to_date=to_date,
         page=page
     )
-
     return render_template('manager/teacher_list.html', pagination=pagination)
+
+
+@app.route('/manager/edit_enrollment/<ma_khoa_hoc>', methods=['GET', 'POST'])
+def manager_edit_enrollment(ma_khoa_hoc):
+    msg = None
+    msg_type = None
+    kh = None
+    if ma_khoa_hoc == 'ALL':
+        min_limit = dao.lay_si_so_hien_tai_lon_nhat()
+        print(min_limit)
+        if request.method == 'POST':
+            try:
+                new_si_so = int(request.form.get('si_so_toi_da'))
+                if new_si_so < min_limit:
+                    msg = f"Lỗi: Không thể set thấp hơn {min_limit} (Do có lớp đang học với sĩ số này)."
+                    msg_type = 'danger'
+                else:
+                    dao.cap_nhat_si_so_toan_bo(new_si_so)
+                    msg = f"Đã đồng bộ sĩ số tối đa thành {new_si_so} cho TẤT CẢ khóa học."
+                    msg_type = 'success'
+            except ValueError:
+                msg = "Lỗi: Vui lòng nhập số nguyên."
+                msg_type = 'danger'
+            except Exception as e:
+                msg = f"Lỗi hệ thống: {str(e)}"
+                msg_type = 'danger'
+    else:
+        kh = dao.get_by_course_id(ma_khoa_hoc)
+        if not kh:
+            return "Không tìm thấy khóa học", 404
+        min_limit = kh.si_so_hien_tai
+        if request.method == 'POST':
+            try:
+                new_si_so = int(request.form.get('si_so_toi_da'))
+                if new_si_so < min_limit:
+                    msg = f"Lỗi: Không được thấp hơn sĩ số hiện tại ({min_limit})."
+                    msg_type = 'danger'
+                else:
+                    dao.cap_nhat_si_so_toi_da(ma_khoa_hoc, new_si_so)
+                    msg = f"Đã cập nhật sĩ số thành {new_si_so}."
+                    msg_type = 'success'
+                    kh.si_so_toi_da = new_si_so
+            except ValueError:
+                msg = "Lỗi nhập liệu."
+                msg_type = 'danger'
+            except Exception as e:
+                msg = f"Lỗi hệ thống: {str(e)}"
+                msg_type = 'danger'
+    return render_template('manager/edit_enrollment.html', khoa_hoc=kh, msg=msg, msg_type=msg_type, min_limit=min_limit)
+
+
+@app.route('/manager/edit_tuition/<ma_khoa_hoc>', methods=['GET', 'POST'])
+def manager_edit_tuition(ma_khoa_hoc):
+    msg = None
+    msg_type = None
+    kh = None
+    if ma_khoa_hoc == 'ALL':
+        if request.method == 'POST':
+            try:
+                percent = float(request.form.get('percent_value', 0))
+                if percent <= 0 or percent > 100:
+                    msg = "Lỗi: Phần trăm giảm giá không hợp lệ."
+                    msg_type = 'danger'
+                else:
+                    dao.cap_nhat_hoc_phi_theo_phan_tram(percent)
+                    msg = f"Đã áp dụng giảm giá {int(percent)}% cho TOÀN BỘ khóa học đang hoạt động."
+                    msg_type = 'success'
+            except ValueError:
+                msg = "Lỗi dữ liệu nhập."
+                msg_type = 'danger'
+            except Exception as e:
+                msg = f"Lỗi hệ thống: {str(e)}"
+                msg_type = 'danger'
+    else:
+        kh = dao.get_by_course_id(ma_khoa_hoc)
+        if not kh:
+            return "Không tìm thấy khóa học", 404
+        if request.method == 'POST':
+            try:
+                new_hoc_phi = float(request.form.get('hoc_phi_moi'))
+                if new_hoc_phi < 0:
+                    msg = "Lỗi: Học phí không được là số âm."
+                    msg_type = 'danger'
+                else:
+                    dao.cap_nhat_hoc_phi(ma_khoa_hoc, new_hoc_phi)
+                    msg = f"Đã cập nhật học phí thành {int(new_hoc_phi):,} VND."
+                    msg_type = 'success'
+                    kh.hoc_phi = new_hoc_phi
+            except ValueError:
+                msg = "Lỗi: Dữ liệu nhập vào không hợp lệ."
+                msg_type = 'danger'
+            except Exception as e:
+                msg = f"Lỗi hệ thống: {str(e)}"
+                msg_type = 'danger'
+    return render_template('manager/edit_tuition.html', khoa_hoc=kh, msg=msg, msg_type=msg_type)
+
+
+@app.route('/manager/add_user/<role_type>', methods=['GET', 'POST'])
+def manager_add_user(role_type):
+    ROLE_MAP = {
+        'HOC_VIEN': {
+            'enum': NguoiDungEnum.HOC_VIEN,
+            'title': 'Thêm Học Viên Mới',
+            'list_route': 'manager_student_list'
+        },
+        'GIAO_VIEN': {
+            'enum': NguoiDungEnum.GIAO_VIEN,
+            'title': 'Thêm Giáo Viên Mới',
+            'list_route': 'manager_teacher_list'
+        },
+        'NHAN_VIEN': {
+            'enum': NguoiDungEnum.NHAN_VIEN,
+            'title': 'Thêm Nhân Viên Mới',
+            'list_route': 'manager_employee_list'
+        },
+    }
+    config = ROLE_MAP.get(role_type)
+    if not config:
+        print("Loại tài khoản không hợp lệ")
+    try:
+        back_url = url_for(config['list_route'])
+    except:
+        back_url = "#"
+    session_key = f'manager_add_user_{role_type}'
+    if request.method == 'GET':
+        session.pop(session_key, None)
+        return render_template("manager/add_user.html", data={}, show_step2=False, role_title=config['title'],
+                               role_name=role_type, back_url=back_url)
+    err_msg = None
+    msg = None
+    show_step2 = False
+    data = session.get(session_key, {})
+    form_data = request.form.to_dict()
+    data.update(form_data)
+    session[session_key] = data
+    if 'back_to_step1' in request.form:
+        return render_template("manager/add_user.html", data=data, show_step2=False, role_title=config['title'],
+                               role_name=role_type, back_url=back_url)
+    step = request.form.get('step')
+    if step == '1':
+        password = data.get('password')
+        re_enter_password = data.get('re_enter_password')
+        username = data.get('username')
+        if dao.get_by_username(username):
+            err_msg = 'Tên đăng nhập đã tồn tại!'
+            data['username'] = ''
+        elif not password or password != re_enter_password:
+            err_msg = 'Mật khẩu xác nhận không khớp!'
+        else:
+            show_step2 = True
+    elif step == '2':
+        email = data.get('email')
+        if dao.get_by_email(email):
+            err_msg = 'Email này đã được sử dụng!'
+            show_step2 = True
+        else:
+            image_file = request.files.get('image')
+            path_image = None
+            if image_file and image_file.filename != '':
+                try:
+                    res = cloudinary.uploader.upload(image_file)
+                    path_image = res['secure_url']
+                except Exception as ex:
+                    print(f"Lỗi upload ảnh: {ex}")
+            dob_val = None
+            if role_type == 'HOC_VIEN':
+                dob_str = data.get('dob')
+                if dob_str:
+                    try:
+                        dob_val = datetime.datetime.strptime(dob_str, '%Y-%m-%d')
+                    except ValueError:
+                        err_msg = "Ngày sinh không hợp lệ."
+                        show_step2 = True
+                else:
+                    pass
+            exp_str = None
+            if role_type == 'GIAO_VIEN':
+                exp_str = data.get('exp')
+            if not err_msg:
+                user_params = {
+                    'ho_va_ten': data.get('name'),
+                    'ten_dang_nhap': data.get('username'),
+                    'mat_khau': data.get('password'),
+                    'so_dien_thoai': data.get('phone_number'),
+                    'email': email,
+                    'anh_chan_dung': path_image
+                }
+                if role_type == 'HOC_VIEN' and dob_val:
+                    user_params['ngay_sinh'] = dob_val
+                elif role_type == 'GIAO_VIEN' and exp_str:
+                    user_params['nam_kinh_nghiem'] = exp_str
+                is_success = dao.add_user(config['enum'], **user_params)
+                if is_success:
+                    session.pop(session_key, None)
+                    msg = f"Đã thêm tài khoản cho {data.get('name')} thành công!"
+                    show_step2 = False
+                else:
+                    if isinstance(is_success, str):
+                        err_msg = f'Lỗi: {is_success}'
+                    else:
+                        err_msg = 'Lỗi hệ thống: Không thể thêm vào cơ sở dữ liệu.'
+                    show_step2 = True
+    return render_template("manager/add_user.html", err_msg=err_msg, msg=msg, data=data, show_step2=show_step2,
+                           role_title=config['title'], role_name=role_type, back_url=back_url)
 
 
 if __name__ == '__main__':

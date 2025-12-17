@@ -1,0 +1,253 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Điều chỉnh học phí{% endblock %}
+
+{% block card_header %}
+<div class="p-3 d-flex justify-content-between align-items-center">
+    <span class="fw-bold text-uppercase">
+        {% if khoa_hoc %}
+            <i class="bi bi-cash-coin me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (ĐƠN LẺ)
+        {% else %}
+            <i class="bi bi-tags-fill me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (HÀNG LOẠT)
+        {% endif %}
+    </span>
+    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    .no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+        -webkit-appearance: none; margin: 0;
+    }
+    .course-avatar {
+        width: 80px; height: 80px;
+        background-color: #e9ecef;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto;
+    }
+    /* Avatar riêng cho Batch Update (Màu tím) */
+    .course-avatar.is-batch {
+        background-color: #e0cffc;
+        color: #6610f2;
+        border: 2px dashed #6610f2;
+    }
+    .text-indigo { color: #6610f2; }
+</style>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8 col-lg-6">
+
+        {% if msg %}
+        <div class="alert alert-{{ msg_type }} shadow-sm border-0 mb-4">
+            {% if msg_type == 'success' %}
+            <i class="bi bi-check-circle-fill me-2"></i> {{ msg }}
+            <div class="mt-2">
+                <a href="{{ url_for('manager_course_list') }}" class="btn btn-success btn-sm fw-bold">
+                    <i class="bi bi-arrow-return-left me-1"></i> Quay về danh sách
+                </a>
+            </div>
+            {% else %}
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ msg }}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if (msg is none) or (msg_type != 'success') %}
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body p-4 {% if not khoa_hoc %}border border-2 border-indigo-subtle rounded{% endif %}">
+
+                <div class="text-center mb-4">
+                    {% if khoa_hoc %}
+                    <div class="course-avatar mb-2 bg-success-subtle">
+                        <i class="bi bi-currency-dollar fs-1 text-success"></i>
+                    </div>
+                    <h5 class="fw-bold text-success">{{ khoa_hoc.ten_khoa_hoc }}</h5>
+                    <span class="badge bg-secondary font-monospace">{{ khoa_hoc.ma_khoa_hoc }}</span>
+
+                    <div class="mt-3 p-2 bg-white rounded border">
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Học phí hiện
+                            tại</small>
+                        <div class="fs-4 fw-bold text-dark" id="display_current_price">
+                            {{ "{:,.0f}".format(khoa_hoc.hoc_phi) }}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="course-avatar is-batch mb-3">
+                        <i class="bi bi-percent fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold text-indigo">GIẢM GIÁ TOÀN HỆ THỐNG</h5>
+                    <span class="badge bg-warning text-dark border border-warning-subtle">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>BATCH UPDATE
+                        </span>
+                    <p class="text-muted small mt-2 fst-italic">
+                        Áp dụng mức giảm giá theo phần trăm (%) cho<br>
+                        <strong>tất cả khóa học đang hoạt động</strong>.
+                    </p>
+                    {% endif %}
+                </div>
+
+                <form method="post" id="tuitionForm">
+
+                    <div class="mb-3" {% if not khoa_hoc %}style="display:none" {% endif %}>
+                        <label class="form-label fw-bold text-secondary small">CHỌN PHƯƠNG THỨC:</label>
+                        <select class="form-select" id="method_select" onchange="toggleMethod()">
+                            <option value="manual">Nhập giá thủ công (VNĐ)</option>
+                            <option value="percent">Giảm giá theo phần trăm (%)</option>
+                        </select>
+                    </div>
+
+                    {% if khoa_hoc %}
+                    <div id="manual_input_group" class="mb-3">
+                        <label class="form-label">Học phí mới (VNĐ)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control fw-bold fs-5 text-primary"
+                                   id="manual_price_display"
+                                   placeholder="Nhập số tiền..."
+                                   oninput="handleManualInput()">
+                            <span class="input-group-text fw-bold">₫</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div id="percent_input_group" class="mb-3" style="display: none;">
+                        <label class="form-label">Chọn mức giảm giá</label>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-8">
+                                <select class="form-select fw-bold text-danger" id="percent_select"
+                                        onchange="handlePercentInput()">
+                                    <option value="0">Không giảm (0%)</option>
+                                    <option value="5">Giảm 5%</option>
+                                    <option value="10">Giảm 10%</option>
+                                    <option value="15">Giảm 15%</option>
+                                    <option value="20">Giảm 20%</option>
+                                    <option value="30">Giảm 30%</option>
+                                    <option value="50">Giảm 50%</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <div class="input-group">
+                                    <input type="number" class="form-control fw-bold text-danger"
+                                           id="percent_manual" placeholder="Tự nhập" min="0" max="100"
+                                           oninput="handlePercentManual()">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if khoa_hoc %}
+                        <div class="form-text mt-2">
+                            Sau khi giảm: <span id="percent_result" class="fw-bold text-success fs-6">--- ₫</span>
+                        </div>
+                        {% else %}
+                        <div class="form-text mt-2 text-indigo">
+                            * Mức giảm này sẽ được nhân với giá hiện tại của từng khóa học.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <input type="hidden" name="hoc_phi_moi" id="final_price_value">
+                    <input type="hidden" name="percent_value" id="percent_value_hidden">
+
+                    <hr>
+                    <div class="d-grid">
+                        {% if khoa_hoc %}
+                        <button type="submit" class="btn btn-success fw-bold py-2 shadow-sm">
+                            <i class="bi bi-check-lg me-2"></i>Lưu học phí mới
+                        </button>
+                        {% else %}
+                        <button type="submit" class="btn btn-warning fw-bold py-2 shadow-sm text-dark">
+                            <i class="bi bi-tags-fill me-2"></i>Áp dụng cho tất cả
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+    // Kiểm tra xem đang ở chế độ nào
+    const isSingleMode = {{ 'true' if khoa_hoc else 'false' }};
+    const currentPrice = {{ khoa_hoc.hoc_phi if khoa_hoc else 0 }};
+    const vnCurrency = new Intl.NumberFormat('vi-VN');
+
+    function toggleMethod() {
+        const method = document.getElementById('method_select').value;
+        const manualGroup = document.getElementById('manual_input_group');
+        const percentGroup = document.getElementById('percent_input_group');
+
+        // Nếu là Batch Mode, luôn ép hiển thị Percent Group
+        if (!isSingleMode) {
+            if (manualGroup) manualGroup.style.display = 'none';
+            percentGroup.style.display = 'block';
+            return;
+        }
+
+        // Logic cũ cho Single Mode
+        const manualInput = document.getElementById('manual_price_display');
+        if (method === 'manual') {
+            manualGroup.style.display = 'block';
+            percentGroup.style.display = 'none';
+            manualInput.value = vnCurrency.format(currentPrice);
+            document.getElementById('final_price_value').value = currentPrice;
+        } else {
+            manualGroup.style.display = 'none';
+            percentGroup.style.display = 'block';
+            document.getElementById('percent_select').value = 0;
+            handlePercentInput();
+        }
+    }
+
+    function handleManualInput() {
+        if (!isSingleMode) return; // Batch mode không dùng hàm này
+        const input = document.getElementById('manual_price_display');
+        let rawValue = input.value.replace(/\D/g, '');
+        if (rawValue === '') {
+            document.getElementById('final_price_value').value = 0;
+            return;
+        }
+        const numericVal = parseInt(rawValue);
+        input.value = vnCurrency.format(numericVal);
+        document.getElementById('final_price_value').value = numericVal;
+    }
+
+    function handlePercentInput() {
+        const percent = parseInt(document.getElementById('percent_select').value) || 0;
+        document.getElementById('percent_manual').value = '';
+        applyPercentLogic(percent);
+    }
+
+    function handlePercentManual() {
+        let percent = parseFloat(document.getElementById('percent_manual').value);
+        if (isNaN(percent)) percent = 0;
+        if (percent > 100) percent = 100;
+        document.getElementById('percent_select').value = 0;
+        applyPercentLogic(percent);
+    }
+
+    function applyPercentLogic(percent) {
+        // Luôn cập nhật vào input ẩn % để gửi về server (Cho Batch Mode)
+        document.getElementById('percent_value_hidden').value = percent;
+
+        // Nếu là Single Mode thì tính ra tiền hiển thị chơi
+        if (isSingleMode) {
+            const discountAmount = currentPrice * (percent / 100);
+            const newPrice = currentPrice - discountAmount;
+            document.getElementById('percent_result').innerText = vnCurrency.format(newPrice) + " ₫";
+            document.getElementById('final_price_value').value = Math.round(newPrice);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        toggleMethod();
+    });
+</script>
+{% endblock %}
