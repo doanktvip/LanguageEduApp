@@ -8,8 +8,7 @@ import json
 from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from eduapp import app, dao, login_manager, mail, db
-from eduapp.models import NguoiDungEnum, ChiTietDiem, KhoaHoc, LoaiKhoaHoc, GiaoVien, PhongHoc, CauTrucDiem, \
-    TinhTrangKhoaHocEnum
+from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum
 from flask_mail import Message
 
 
@@ -33,6 +32,10 @@ def login():
         password = request.form.get('password')
         user = dao.login(username, password)
         if user:
+            if not user.tinh_trang_hoat_dong:
+                err_msg = f'''<strong>Tài khoản của bạn đã bị khóa!</strong><br>
+                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="alert-link fw-bold">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
+                return render_template("login.html", err_msg=err_msg)
             login_user(user)
             next_page = request.args.get('next')
             return redirect(next_page or '/')
@@ -145,6 +148,10 @@ def forgot_password():
             err_msg = 'Tên tài khoản hoặc Email không chính xác.'
             reset_info = {'username': username, 'email': email}
         else:
+            if not user.tinh_trang_hoat_dong:
+                err_msg = f'''<strong>Tài khoản của bạn đã bị khóa!</strong><br>
+                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="alert-link fw-bold">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
+                return render_template("forgot_password.html", show_step2=False, err_msg=err_msg, data={})
             otp_code = str(random.randint(0, 999999)).zfill(6)
             reset_info = {
                 'username': username,
@@ -154,13 +161,13 @@ def forgot_password():
             session['reset_info'] = reset_info
             # chức năng gửi mail
             # msg = Message(
-            #     subject="Xin chào từ Flask!",
+            #     subject="Xin chào.",
             #     recipients=[email],
-            #     html=f"""<p>Xin chào {username},</p>
-            #     <p>Cảm ơn bạn đã tham gia cùng chúng tôi! Để kích hoạt tài khoản, vui lòng nhập mã xác thực bên dưới:</p>
-            #     <p style="font-size: 24px;"><b>{otp_code}</b></p>
-            #     <p>Mã này sẽ hết hạn sau 10 phút. Hẹn gặp bạn bên trong ứng dụng nhé!</p>
-            #     <p>Thân mến,<br>Đội ngũ [Tên_App]</p>"""
+            #     html=f"""<p>Chào bạn {user.ho_va_ten},</p>
+            #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ đổi mật khẩu từ bạn.<br>Đừng lo lắng nhé, hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
+            #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
+            #     <small>Lưu ý mã không có thời gian hiệu lực nhưng mà nếu bạn nhập sai thì mã đó sẽ bị vô hiệu!</small>
+            #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
             # )
             # mail.send(msg)
             print(otp_code)
@@ -172,13 +179,13 @@ def forgot_password():
         session['reset_info'] = reset_info
         # chức năng gửi mail
         # msg = Message(
-        #     subject="Xin chào từ Flask!",
+        #     subject="Xin chào.",
         #     recipients=[email],
-        #     html=f"""<p>Xin chào {username},</p>
-        #     <p>Cảm ơn bạn đã tham gia cùng chúng tôi! Để kích hoạt tài khoản, vui lòng nhập mã xác thực bên dưới:</p>
-        #     <p style="font-size: 24px;"><b>{otp_code}</b></p>
-        #     <p>Mã này sẽ hết hạn sau 10 phút. Hẹn gặp bạn bên trong ứng dụng nhé!</p>
-        #     <p>Thân mến,<br>Đội ngũ [Tên_App]</p>"""
+        #     html=f"""<p>Chào bạn {user.ho_va_ten},</p>
+        #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ đổi mật khẩu từ bạn.<br>Đừng lo lắng nhé, hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
+        #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
+        #     <small>Lưu ý mã không có thời gian hiệu lực nhưng mà nếu bạn nhập sai thì mã đó sẽ bị vô hiệu!</small>
+        #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
         # )
         # mail.send(msg)
         print(f"DEBUG NEW OTP: {new_otp}")
@@ -212,6 +219,8 @@ def forgot_password():
 
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
+    if not current_user.is_authenticated:
+        return redirect('/')
     err_msg = None
     if request.method == 'POST':
         old_password = request.form.get('old_password')
@@ -240,9 +249,7 @@ otp_storage = {}
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify_page():
-    if not current_user.is_authenticated or \
-            current_user.vai_tro != NguoiDungEnum.HOC_VIEN or \
-            current_user.tinh_trang_xac_nhan_email:
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN or current_user.tinh_trang_xac_nhan_email:
         return redirect('/')
     email = current_user.email
     current_time = time.time()
@@ -271,7 +278,7 @@ def verify_page():
             try:
                 current_user.tinh_trang_xac_nhan_email = True
                 db.session.commit()
-                otp_storage.pop(email, None)  # Xóa OTP
+                otp_storage.pop(email, None)
                 return redirect('/')
             except Exception as e:
                 db.session.rollback()
@@ -306,13 +313,13 @@ def verify_page():
             }
             # chức năng gửi mail
             # msg = Message(
-            #     subject="Xin chào từ Flask!",
+            #     subject="Xin chào.",
             #     recipients=[email],
-            #     html=f"""<p>Xin chào {username},</p>
-            #     <p>Cảm ơn bạn đã tham gia cùng chúng tôi! Để kích hoạt tài khoản, vui lòng nhập mã xác thực bên dưới:</p>
-            #     <p style="font-size: 24px;"><b>{otp_code}</b></p>
-            #     <p>Mã này sẽ hết hạn sau 10 phút. Hẹn gặp bạn bên trong ứng dụng nhé!</p>
-            #     <p>Thân mến,<br>Đội ngũ [Tên_App]</p>"""
+            #     html=f"""<p>Chào bạn {current_user.ho_va_ten},</p>
+            #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ xác nhận email từ bạn.<br>Bạn hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
+            #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
+            #     <small>Lưu ý mã này có thời gian hiệu lực là 1 phút!</small>
+            #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
             # )
             # mail.send(msg)
             print(f"DEBUG OTP: {new_otp}")
@@ -322,8 +329,10 @@ def verify_page():
     return render_template("verify.html", wait_time=wait_time)
 
 
-@app.route('/update_avatar', methods=['POST'])
+@app.route('/update_avatar', methods=['GET', 'POST'])
 def update_avatar():
+    if request.method == 'GET':
+        return redirect('/')
     avatar = request.files.get('avatar')
     if avatar:
         try:
@@ -336,11 +345,13 @@ def update_avatar():
     return redirect(url_for('profile'))
 
 
-@app.route('/update_parent_phone', methods=['POST'])
+@app.route('/update_parent_phone', methods=['GET', 'POST'])
 def update_parent_phone():
+    if request.method == 'GET':
+        return redirect('/')
     parent_phone = request.form.get('parent_phone')
     target_user_id = request.form.get('user_id')
-    if current_user.ma_nguoi_dung != target_user_id and current_user.vai_tro.name != 'QUAN_LY':
+    if current_user.ma_nguoi_dung != target_user_id and current_user.vai_tro != NguoiDungEnum.QUAN_LY:
         return redirect(url_for('profile', user_id=target_user_id, status='denied'))
     user_to_update = dao.get_by_id(target_user_id)
     if user_to_update:
@@ -358,6 +369,8 @@ def update_parent_phone():
 @app.route('/profile', defaults={'user_id': None})
 @app.route('/profile/<user_id>')
 def profile(user_id):
+    if not current_user.is_authenticated:
+        return redirect('/')
     if user_id:
         user_to_show = dao.get_by_id(user_id)
         if not user_to_show:
@@ -369,6 +382,9 @@ def profile(user_id):
 
 @app.route('/schedule', methods=['GET'])
 def schedule():
+    if not current_user.is_authenticated or current_user.vai_tro not in [NguoiDungEnum.HOC_VIEN,
+                                                                         NguoiDungEnum.GIAO_VIEN]:
+        return redirect('/')
     cac_thu = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
     ds_khoa_hoc = []
     is_teacher = False
@@ -418,6 +434,8 @@ def schedule():
 
 @app.route('/scoreboard', methods=['GET'])
 def scoreboard():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN:
+        return redirect('/')
     ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
     if not ds_khoa_hoc_cua_hv:
         return render_template('scoreboard.html', ma_khoa_hoc_hien_tai=None, ds_khoa_hoc=[])
@@ -439,12 +457,15 @@ def scoreboard():
 
 @app.route('/course_fee')
 def course_fee():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN:
+        return redirect('/')
     ds_hoa_don = list(current_user.nhung_hoa_don)
     ds_hoa_don.sort(key=lambda x: x.ngay_tao, reverse=True)
     tong_tien = sum(hd.so_tien for hd in ds_hoa_don if hd.trang_thai.value == 2)
     return render_template('course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
 
 
+# chưa xử lý logic truy vẫn của các người dùng khác nhau
 @app.route("/register_course", methods=['GET', 'POST'])
 def register_course():
     if not current_user.is_authenticated:
@@ -470,7 +491,7 @@ def register_course():
 
 @app.route('/grading', methods=['GET', 'POST'])
 def grading():
-    if current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
         return redirect('/')
     msg = None
     msg_type = None
@@ -508,7 +529,7 @@ def grading():
 
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance():
-    if current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
         return redirect('/')
     ds_khoa_hoc_raw = current_user.nhung_khoa_hoc
     ds_khoa_hoc = sorted(ds_khoa_hoc_raw, key=lambda x: x.ngay_bat_dau, reverse=True)
@@ -536,6 +557,8 @@ def attendance():
 
 @app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
 def manager_profile_user(ma_nguoi_dung):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     user_to_show = dao.get_by_id(ma_nguoi_dung)
     if not user_to_show:
         return redirect(url_for('manager_course_list'))
@@ -544,6 +567,8 @@ def manager_profile_user(ma_nguoi_dung):
 
 @app.route('/manager/reset_password/<ma_nguoi_dung>', methods=['GET', 'POST'])
 def manager_reset_password_page(ma_nguoi_dung):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     user = dao.get_by_id(ma_nguoi_dung)
     if not user:
         return redirect(url_for('manager_course_list'))
@@ -571,6 +596,9 @@ def manager_reset_password_page(ma_nguoi_dung):
 
 @app.route('/manager/courses', methods=['GET'])
 def manager_course_list():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
+    dao.cap_nhat_database_tinh_trang_khoa_hoc()
     page = request.args.get('page', 1, type=int)
     search_params = {
         'kw': request.args.get('kw', '').strip(),
@@ -584,6 +612,8 @@ def manager_course_list():
 
 @app.route('/manager/course/<string:ma_khoa_hoc>', methods=['GET'])
 def manager_course_detail(ma_khoa_hoc):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     khoa_hoc = dao.get_by_course_id(ma_khoa_hoc)
     if not khoa_hoc:
         return redirect(url_for('manager_course_list', error_msg=f"Không tìm thấy khóa học {ma_khoa_hoc}"))
@@ -605,6 +635,8 @@ def manager_course_detail(ma_khoa_hoc):
 
 @app.route('/manager/create_course', methods=['GET', 'POST'])
 def manager_create_course():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     msg = None
     msg_type = None
     form_data = {}
@@ -662,9 +694,9 @@ def manager_create_course():
         except Exception as e:
             msg = f"Lỗi dữ liệu: {str(e)}"
             msg_type = 'danger'
-    ds_loai = LoaiKhoaHoc.query.all()
-    ds_gv = GiaoVien.query.all()
-    ds_phong = PhongHoc.query.all()
+    ds_loai = dao.get_all_loai_khoa_hoc()
+    ds_gv = dao.get_all_giao_vien()
+    ds_phong = dao.get_all_phong_hoc()
     return render_template('manager/create_course.html', msg=msg, msg_type=msg_type, loai_kh=ds_loai, ds_gv=ds_gv,
                            ds_phong=ds_phong, form_data=form_data, old_lich_hoc=old_lich_hoc,
                            lich_ban_json=json.dumps(lich_ban_data, default=str))
@@ -672,6 +704,8 @@ def manager_create_course():
 
 @app.route('/manager/employees', methods=['GET'])
 def manager_employee_list():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     page = request.args.get('page', 1, type=int)
     kw = request.args.get('kw')
     status = request.args.get('status')
@@ -689,6 +723,8 @@ def manager_employee_list():
 
 @app.route('/manager/students', methods=['GET'])
 def manager_student_list():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     kw = request.args.get('kw', '')
     status = request.args.get('status')
     nam_sinh = request.args.get('nam_sinh')
@@ -707,6 +743,8 @@ def manager_student_list():
 
 @app.route('/manager/teachers', methods=['GET'])
 def manager_teacher_list():
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     kw = request.args.get('kw', '')
     status = request.args.get('status')
     from_date = request.args.get('from_date')
@@ -724,6 +762,8 @@ def manager_teacher_list():
 
 @app.route('/manager/edit_enrollment/<ma_khoa_hoc>', methods=['GET', 'POST'])
 def manager_edit_enrollment(ma_khoa_hoc):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     msg = None
     msg_type = None
     kh = None
@@ -773,6 +813,8 @@ def manager_edit_enrollment(ma_khoa_hoc):
 
 @app.route('/manager/edit_tuition/<ma_khoa_hoc>', methods=['GET', 'POST'])
 def manager_edit_tuition(ma_khoa_hoc):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     msg = None
     msg_type = None
     kh = None
@@ -819,6 +861,8 @@ def manager_edit_tuition(ma_khoa_hoc):
 
 @app.route('/manager/add_user/<role_type>', methods=['GET', 'POST'])
 def manager_add_user(role_type):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
     ROLE_MAP = {
         'HOC_VIEN': {
             'enum': NguoiDungEnum.HOC_VIEN,
@@ -924,6 +968,23 @@ def manager_add_user(role_type):
                     show_step2 = True
     return render_template("manager/add_user.html", err_msg=err_msg, msg=msg, data=data, show_step2=show_step2,
                            role_title=config['title'], role_name=role_type, back_url=back_url)
+
+
+@app.route('/thay_doi_trang_thai/<string:ma_nd>')
+def thay_doi_trang_thai(ma_nd):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
+    dao.update_trang_thai_nguoi_dung(ma_nd)
+    next_url = request.referrer or '/'
+    return redirect(next_url)
+
+
+@app.route('/manager/course/delete/<string:ma_kh>')
+def delete_course(ma_kh):
+    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
+        return redirect('/')
+    dao.xoa_khoa_hoc_dao(ma_kh)
+    return redirect(request.referrer or url_for('manager_course_list'))
 
 
 if __name__ == '__main__':

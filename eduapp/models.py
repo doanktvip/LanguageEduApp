@@ -167,11 +167,11 @@ class KhoaHoc(db.Model):
     hoc_phi = Column(Float, nullable=False, default=0.0)
 
     # Quan hệ
-    ds_dang_ky = relationship('BangDiem', backref='khoa_hoc', lazy=True)  # Liên kết tới bảng Enrollment
-    lich_hoc = relationship('LichHoc', backref='khoa_hoc', lazy=True)
-    nhung_hoa_don = relationship('HoaDon', backref='khoa_hoc', lazy=True)
-    ds_diem_danh = relationship('DiemDanh', backref='khoa_hoc', lazy=True)
-    cau_truc_diem = relationship('CauTrucDiem', backref='khoa_hoc', lazy=True)
+    ds_dang_ky = relationship('BangDiem', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    lich_hoc = relationship('LichHoc', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    nhung_hoa_don = relationship('HoaDon', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    ds_diem_danh = relationship('DiemDanh', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    cau_truc_diem = relationship('CauTrucDiem', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
 
     # Proxy: Giúp gọi khoa_hoc.ds_hoc_vien trực tiếp
     ds_hoc_vien = association_proxy('ds_dang_ky', 'hoc_vien')
@@ -236,6 +236,19 @@ class KhoaHoc(db.Model):
             for index, khoa_hoc in enumerate(danh_sach_khoa_hoc):
                 ket_qua[index] = khoa_hoc.to_dict_tuyen_sinh()
         return ket_qua
+
+    def cap_nhat_tinh_trang_tu_dong(self):
+        today = datetime.now().date()
+        ngay_bd = self.ngay_bat_dau.date()
+        ngay_kt = self.ngay_ket_thuc.date()
+        if today < ngay_bd:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+        elif ngay_bd <= today <= ngay_kt:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH
+        else:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DA_KET_THUC
+
+        return self.tinh_trang
 
 
 class PhongHoc(db.Model):

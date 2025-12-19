@@ -116,7 +116,7 @@
                         <i class="bi bi-check-circle-fill me-1"></i>Active
                     </span>
                 {% else %}
-                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">
                         <i class="bi bi-x-circle-fill me-1"></i>Locked
                     </span>
                 {% endif %}
@@ -144,13 +144,19 @@
                         </li>
 
                         {% if hv.tinh_trang_hoat_dong %}
-                        <li><a class="dropdown-item text-danger" href="#">
-                            <i class="bi bi-lock-fill me-2"></i>Khóa tài khoản
-                        </a></li>
+                        <li>
+                            <a class="dropdown-item text-danger"
+                               href="{{ url_for('thay_doi_trang_thai', ma_nd=hv.ma_nguoi_dung) }}">
+                                <i class="bi bi-lock-fill me-2"></i>Khóa tài khoản
+                            </a>
+                        </li>
                         {% else %}
-                        <li><a class="dropdown-item text-success" href="#">
-                            <i class="bi bi-unlock-fill me-2"></i>Kích hoạt lại
-                        </a></li>
+                        <li>
+                            <a class="dropdown-item text-success"
+                               href="{{ url_for('thay_doi_trang_thai', ma_nd=hv.ma_nguoi_dung) }}">
+                                <i class="bi bi-unlock-fill me-2"></i>Kích hoạt lại
+                            </a>
+                        </li>
                         {% endif %}
                     </ul>
                 </div>
