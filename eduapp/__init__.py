@@ -20,14 +20,14 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 # Cổng kết nối (Port) - 465 cho SSL hoặc 587 cho TLS
 app.config['MAIL_PORT'] = 465
 # Email của bạn (người gửi)
-app.config['MAIL_USERNAME'] = 'nd21032005@gmail.com'
+app.config['MAIL_USERNAME'] = 'edu.simple.talk@gmail.com'
 # Mật khẩu ứng dụng (App Password) - KHÔNG phải mật khẩu đăng nhập Gmail
-app.config['MAIL_PASSWORD'] = 'uvoc ehnq pxsk kbmq'
+app.config['MAIL_PASSWORD'] = 'iqmf vlko yvbo bsdm'
 # Sử dụng mã hóa SSL để bảo mật
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 # Email mặc định gửi mail
-app.config['MAIL_DEFAULT_SENDER'] = 'nd21032005@gmail.com'
+app.config['MAIL_DEFAULT_SENDER'] = 'edu.simple.talk@gmail.com'
 
 cloudinary.config(cloud_name='db4bjqp4f',
                   api_key='588892363794189',

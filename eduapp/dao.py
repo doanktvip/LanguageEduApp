@@ -109,6 +109,18 @@ def get_chi_tiet_diem(ma_bang_diem, ma_cau_truc_diem):
     return ChiTietDiem.query.filter_by(ma_bang_diem=ma_bang_diem, ma_cau_truc_diem=ma_cau_truc_diem).first()
 
 
+def get_all_loai_khoa_hoc():
+    return LoaiKhoaHoc.query.all()
+
+
+def get_all_giao_vien():
+    return GiaoVien.query.all()
+
+
+def get_all_phong_hoc():
+    return PhongHoc.query.all()
+
+
 def lay_khoa_hoc_chua_dang_ky(student_id):
     ds_ma_da_hoc = [bd.ma_khoa_hoc for bd in BangDiem.query.filter_by(ma_hoc_vien=student_id).all()]
     query = KhoaHoc.query.filter(
@@ -304,13 +316,13 @@ def kiem_tra_xung_dot_lich(form_data, lich_hoc_list):
     try:
         try:
             si_so = int(form_data.get('si_so', 0))
-            if si_so < 10 or si_so > 150:
-                return False, "Sĩ số phải từ 10 đến 150 học viên."
+            if si_so < 10 or si_so > 100:
+                return False, "Sĩ số phải từ 10 đến 100 học viên."
         except ValueError:
             return False, "Sĩ số không hợp lệ."
         start_str = form_data['ngay_bat_dau']
         end_str = form_data['ngay_ket_thuc']
-        ma_gv_dang_chon = form_data['ma_giao_vien']
+        ma_gv_dang_chon = str(form_data['ma_giao_vien'])
         start_date = datetime.strptime(start_str, '%Y-%m-%d') if isinstance(start_str, str) else start_str
         end_date = datetime.strptime(end_str, '%Y-%m-%d') if isinstance(end_str, str) else end_str
         if start_date > end_date:
@@ -325,6 +337,7 @@ def kiem_tra_xung_dot_lich(form_data, lich_hoc_list):
             key = f"{lich.thu.value}-{lich.ca_hoc.value}"
             if key not in map_ban:
                 map_ban[key] = {'phong': [], 'gv': []}
+
             map_ban[key]['phong'].append({
                 'ma': str(lich.ma_phong_hoc),
                 'ten_lop': khoa.ten_khoa_hoc
@@ -341,13 +354,13 @@ def kiem_tra_xung_dot_lich(form_data, lich_hoc_list):
             if check_key in map_ban:
                 data_ban = map_ban[check_key]
                 for p in data_ban['phong']:
-                    if p['ma'] == phong:
-                        thu_text = f"Thứ {int(thu) + 2}"
+                    if str(p['ma']) == phong:
+                        thu_text = f"Thứ {int(thu) + 2}" if thu != '6' else "Chủ Nhật"
                         ca_text = "Sáng" if ca == "1" else "Chiều"
-                        return False, f"Xung đột PHÒNG: Phòng {phong} đã có lớp '{p['ten_lop']}' học vào {thu_text}, {ca_text}."
+                        return False, f"Xung đột PHÒNG: Phòng {phong} đã có lớp '{p['ten_lop']}' vào {thu_text}, {ca_text}."
                 for g in data_ban['gv']:
-                    if g['ma'] == ma_gv_dang_chon:
-                        thu_text = f"Thứ {int(thu) + 2}"
+                    if str(g['ma']) == ma_gv_dang_chon:
+                        thu_text = f"Thứ {int(thu) + 2}" if thu != '6' else "Chủ Nhật"
                         ca_text = "Sáng" if ca == "1" else "Chiều"
                         return False, f"Xung đột GIÁO VIÊN: GV này đang dạy lớp '{g['ten_lop']}' vào {thu_text}, {ca_text}."
         return True, "Hợp lệ"
@@ -460,10 +473,6 @@ def luu_bang_diem(ma_khoa_hoc, form_data, is_save_draft):
 
 
 def lay_tat_ca_lich_ban():
-    """
-    Trả về list các slot đã có người học để JS tô màu
-    """
-    # Lấy các khóa đang hoạt động
     today = datetime.now()
     active_courses = KhoaHoc.query.filter(
         KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC,
@@ -683,3 +692,49 @@ def cap_nhat_hoc_phi_theo_phan_tram(phan_tram_giam):
     except Exception as e:
         db.session.rollback()
         raise e
+
+
+def update_trang_thai_nguoi_dung(ma_nd):
+    try:
+        user = NguoiDung.query.get(ma_nd)
+        if user:
+            user.tinh_trang_hoat_dong = not user.tinh_trang_hoat_dong
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Lỗi khi cập nhật trạng thái: {e}")
+        db.session.rollback()
+        return False
+
+
+def xoa_khoa_hoc_dao(ma_kh):
+    try:
+        kh = get_by_course_id(ma_kh)
+        if kh:
+            db.session.delete(kh)
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Lỗi khi xóa khóa học: {e}")
+        db.session.rollback()
+        return False
+
+
+def cap_nhat_database_tinh_trang_khoa_hoc():
+    khoa_hocs = KhoaHoc.query.filter(KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).all()
+    so_luong_thay_doi = 0
+    for kh in khoa_hocs:
+        trang_thai_cu = kh.tinh_trang
+        kh.cap_nhat_tinh_trang_tu_dong()
+        if kh.tinh_trang != trang_thai_cu:
+            so_luong_thay_doi += 1
+    try:
+        if so_luong_thay_doi > 0:
+            db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi khi cập nhật database: {e}")
+        return False
