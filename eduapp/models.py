@@ -167,11 +167,11 @@ class KhoaHoc(db.Model):
     hoc_phi = Column(Float, nullable=False, default=0.0)
 
     # Quan hệ
-    ds_dang_ky = relationship('BangDiem', backref='khoa_hoc', lazy=True)  # Liên kết tới bảng Enrollment
-    lich_hoc = relationship('LichHoc', backref='khoa_hoc', lazy=True)
-    nhung_hoa_don = relationship('HoaDon', backref='khoa_hoc', lazy=True)
-    ds_diem_danh = relationship('DiemDanh', backref='khoa_hoc', lazy=True)
-    cau_truc_diem = relationship('CauTrucDiem', backref='khoa_hoc', lazy=True)
+    ds_dang_ky = relationship('BangDiem', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    lich_hoc = relationship('LichHoc', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    nhung_hoa_don = relationship('HoaDon', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    ds_diem_danh = relationship('DiemDanh', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
+    cau_truc_diem = relationship('CauTrucDiem', backref='khoa_hoc', lazy=True, cascade="all, delete-orphan")
 
     # Proxy: Giúp gọi khoa_hoc.ds_hoc_vien trực tiếp
     ds_hoc_vien = association_proxy('ds_dang_ky', 'hoc_vien')
@@ -187,37 +187,6 @@ class KhoaHoc(db.Model):
         else:
             new_number = 1
         return f"{prefix}{new_number:03d}"
-
-    def lay_danh_sach_tuan_hoc(self):
-        tuan_map = {}
-        days_to_subtract = self.ngay_bat_dau.weekday()
-        start_date = self.ngay_bat_dau - timedelta(days=days_to_subtract)
-        days_to_add = 6 - self.ngay_ket_thuc.weekday()
-        end_date = self.ngay_ket_thuc + timedelta(days=days_to_add)
-        current_date = start_date
-        while current_date <= end_date:
-            nam_iso, tuan_iso, _ = current_date.isocalendar()
-            key = (nam_iso, tuan_iso)
-            if key not in tuan_map:
-                tuan_map[key] = {
-                    "week": tuan_iso,
-                    "year": nam_iso,
-                    "days": [],
-                    "schedule": {
-                        "CA_SANG": [None] * 7,
-                        "CA_CHIEU": [None] * 7,
-                    }
-                }
-            tuan_map[key]["days"].append(current_date.strftime("%d/%m"))
-            if self.ngay_bat_dau.date() <= current_date.date() <= self.ngay_ket_thuc.date():
-                weekday = current_date.weekday()
-                for lh in self.lich_hoc:
-                    if lh.thu.value == weekday:
-                        ca_key = lh.ca_hoc.name
-                        if ca_key in tuan_map[key]["schedule"]:
-                            tuan_map[key]["schedule"][ca_key][weekday] = lh
-            current_date += timedelta(days=1)
-        return list(tuan_map.values())
 
     def to_dict_tuyen_sinh(self):
         return {
@@ -236,6 +205,19 @@ class KhoaHoc(db.Model):
             for index, khoa_hoc in enumerate(danh_sach_khoa_hoc):
                 ket_qua[index] = khoa_hoc.to_dict_tuyen_sinh()
         return ket_qua
+
+    def cap_nhat_tinh_trang_tu_dong(self):
+        today = datetime.now().date()
+        ngay_bd = self.ngay_bat_dau.date()
+        ngay_kt = self.ngay_ket_thuc.date()
+        if today < ngay_bd:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
+        elif ngay_bd <= today <= ngay_kt:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH
+        else:
+            self.tinh_trang = TinhTrangKhoaHocEnum.DA_KET_THUC
+
+        return self.tinh_trang
 
 
 class PhongHoc(db.Model):

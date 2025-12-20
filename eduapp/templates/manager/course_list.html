@@ -162,11 +162,34 @@
                             <hr class="dropdown-divider">
                         </li>
                         <li>
-                            <a class="dropdown-item text-danger" href="#">
+                            <a class="dropdown-item text-danger" data-bs-toggle="modal"
+                               data-bs-target="#modalDelete{{ kh.ma_khoa_hoc }}">
                                 <i class="bi bi-trash me-2"></i>Xóa khóa học
                             </a>
                         </li>
                     </ul>
+                </div>
+                <div class="modal fade" id="modalDelete{{ kh.ma_khoa_hoc }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>CẢNH BÁO XÓA
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white"
+                                        data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-start" style="white-space: normal;">
+                                Bạn sắp xóa khóa học: <strong>{{ kh.ten_khoa_hoc }}</strong> ({{ kh.ma_khoa_hoc }}).<br>
+                                <p class="mt-2 mb-0 text-muted small">Lưu ý: Hành động này sẽ xóa sạch dữ liệu điểm,
+                                    danh sách học viên và hóa đơn liên quan.</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                <a href="{{ url_for('delete_course', ma_kh=kh.ma_khoa_hoc) }}" class="btn btn-danger">Đồng
+                                    ý xóa</a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </td>
         </tr>
