@@ -4,16 +4,15 @@ import random
 import math
 import datetime
 from datetime import timedelta
-
+import admin
 import cloudinary.uploader
 import json
-import admin
-from flask import render_template, redirect, request, url_for, session
+from flask import render_template, redirect, request, url_for, session, jsonify
 from flask_login import current_user, login_user, logout_user
-from eduapp import app, dao, login_manager, mail, db
+from eduapp import app, dao, login_manager, mail
 from eduapp.decorators import anonymous_required, giao_vien_required, hoc_vien_required, \
     giao_vien_hoac_hoc_vien_required, tinh_trang_xac_nhan_email_required, login_user_required, quan_ly_required
-from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum
+from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum, QuanLy
 from flask_mail import Message
 
 
@@ -22,9 +21,9 @@ def index():
     return render_template("index.html")
 
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return redirect('/')
+# @app.errorhandler(404)
+# def page_not_found(e):
+#     return redirect('/')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -233,15 +232,12 @@ def change_password():
         elif new_password != re_enter_password:
             err_msg = "Mật khẩu xác nhận không trùng khớp!"
         else:
-            try:
-                hashed_new_password = str(hashlib.md5(new_password.encode('utf-8')).hexdigest())
-                current_user.mat_khau = hashed_new_password
-                db.session.commit()
+            thuc_thi = dao.update_password(current_user.ten_dang_nhap,
+                                           str(hashlib.md5(new_password.encode('utf-8')).hexdigest()))
+            if thuc_thi:
                 return redirect('/')
-            except Exception as e:
-                db.session.rollback()
-                print(f"Lỗi đổi pass: {e}")
-                err_msg = "Lỗi hệ thống, vui lòng thử lại sau."
+            else:
+                err_msg = 'Lỗi hệ thống vui lòng thử lại'
     return render_template("change_password.html", err_msg=err_msg)
 
 
@@ -277,13 +273,11 @@ def verify_page():
             return render_template("verify.html", wait_time=0)
         saved_otp = user_otp_data.get('otp')
         if user_input_otp == saved_otp:
-            try:
-                current_user.tinh_trang_xac_nhan_email = True
-                db.session.commit()
+            thuc_hien = dao.update_tinh_trang_email(email)
+            if thuc_hien:
                 otp_storage.pop(email, None)
                 return redirect('/')
-            except Exception as e:
-                db.session.rollback()
+            else:
                 return render_template("verify.html", wait_time=0, warn_msg="Lỗi hệ thống khi kích hoạt.")
         else:
             wait_time_left = math.ceil(otp_lifetime - elapsed_time)
@@ -332,19 +326,31 @@ def verify_page():
     return render_template("verify.html", wait_time=wait_time)
 
 
+@app.route('/update-email-verify', methods=['POST'])
+@login_user_required
+def update_email_verify():
+    new_email = request.form.get('new_email')
+    if not new_email:
+        return redirect(url_for('verify_page', warn_msg="Vui lòng nhập địa chỉ email."))
+    existing_user = dao.get_by_email(email=new_email)
+    if existing_user and existing_user.ma_nguoi_dung != current_user.ma_nguoi_dung:
+        return redirect(url_for('verify_page', warn_msg="Email này đã được sử dụng."))
+    if dao.update_email(current_user.email, new_email):
+        return redirect(url_for('verify_page', action='resend'))
+    else:
+        return redirect(url_for('verify_page', warn_msg="Lỗi hệ thống, không thể đổi email."))
+
+
 @app.route('/update_avatar', methods=['GET', 'POST'])
 def update_avatar():
     if request.method == 'GET':
         return redirect('/')
     avatar = request.files.get('avatar')
     if avatar:
-        try:
-            res = cloudinary.uploader.upload(avatar)
-            avatar_url = res.get('secure_url')
-            current_user.anh_chan_dung = avatar_url
-            db.session.commit()
-        except Exception as e:
-            print(e)
+        if dao.update_avatar(current_user.ten_dang_nhap, avatar):
+            return redirect(url_for('profile'))
+        else:
+            print("Lỗi update ảnh!")
     return redirect(url_for('profile'))
 
 
@@ -358,13 +364,9 @@ def update_parent_phone():
         return redirect(url_for('profile', user_id=target_user_id, status='denied'))
     user_to_update = dao.get_by_id(target_user_id)
     if user_to_update:
-        try:
-            user_to_update.so_dien_thoai_phu_huynh = parent_phone
-            db.session.commit()
+        if dao.update_parent_phone(current_user.ten_dang_nhap, parent_phone):
             return redirect(url_for('profile', user_id=target_user_id, status='success'))
-        except Exception as e:
-            db.session.rollback()
-            print(e)
+        else:
             return redirect(url_for('profile', user_id=target_user_id, status='failed'))
     return redirect(url_for('profile', user_id=target_user_id))
 
@@ -591,10 +593,8 @@ def manager_reset_password_page(ma_nguoi_dung):
         elif mat_khau_moi != xac_nhan_mk:
             err_msg = "Mật khẩu xác nhận không khớp."
         else:
-            hashed_password = hashlib.md5(mat_khau_moi.encode('utf-8')).hexdigest()
-            user.mat_khau = hashed_password
-            db.session.commit()
-            success_msg = f"Đã đặt lại mật khẩu cho {user.ho_va_ten} thành công!"
+            if dao.update_password(user.ten_dang_nhap, mat_khau_moi):
+                success_msg = f"Đã đặt lại mật khẩu cho {user.ho_va_ten} thành công!"
     return render_template('manager/reset_password.html', user=user, err_msg=err_msg, success_msg=success_msg,
                            back_url=back_url)
 
@@ -990,6 +990,23 @@ def thay_doi_trang_thai(ma_nd):
 def delete_course(ma_kh):
     dao.xoa_khoa_hoc_dao(ma_kh)
     return redirect(request.referrer or url_for('manager_course_list'))
+
+
+@app.route('/api/kiem-tra-pin-admin', methods=['POST'])
+def kiem_tra_pin_admin():
+    data = request.get_json()
+    pin_nhap = data.get('pin')
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'message': 'Vui lòng đăng nhập.'}), 401
+    if not isinstance(current_user, QuanLy):
+        return jsonify({'success': False, 'message': 'Bạn không có quyền truy cập.'}), 403
+    if str(current_user.ma_pin) == str(pin_nhap):
+        return jsonify({
+            'success': True,
+            'redirect_url': '/admin'
+        })
+    else:
+        return jsonify({'success': False, 'message': 'Mã PIN không chính xác.'}), 200
 
 
 if __name__ == '__main__':

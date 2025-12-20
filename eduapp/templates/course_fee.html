@@ -12,7 +12,7 @@
 {% if ds_hoa_don %}
 <div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4">
     <div class="table-responsive">
-        <table class="table table-bordered mb-0 align-middle" style="min-width: 800px;">
+        <table class="table table-bordered mb-0 align-middle" style="min-width: 900px;">
             <thead class="bg-primary text-white">
             <tr>
                 <th class="text-center py-3" style="width: 50px;">#</th>
@@ -20,13 +20,16 @@
                 <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1 text-center">Hạn đóng</th>
                 <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1 text-end">Số tiền</th>
                 <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1 text-center"
-                    style="width: 180px;">Trạng thái
+                    style="width: 150px;">Trạng thái
+                </th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75 letter-spacing-1 text-center"
+                    style="width: 140px;">Hành động
                 </th>
             </tr>
             </thead>
             <tbody>
             {% for hd in ds_hoa_don %}
-            <tr>
+            <tr class="{{ 'bg-light' if hd.trang_thai.value == 2 else '' }}">
                 <td class="text-center text-muted small">{{ loop.index }}</td>
                 <td>
                     <div class="d-flex flex-column">
@@ -35,10 +38,10 @@
                         </span>
                         <div class="small text-muted">
                             <span class="badge bg-light text-dark border me-1">
-                                <i class="bi bi-upc-scan me-1"></i>{{ hd.ma_khoa_hoc }}
+                                <i class="bi bi-upc-scan me-1"></i>{{ hd.ma_hoa_don }}
                             </span>
                             <span class="ms-1">
-                                <i class="bi bi-calendar-plus me-1"></i>Tạo ngày: {{ hd.ngay_tao.strftime('%d/%m/%Y') }}
+                                <i class="bi bi-calendar-plus me-1"></i>Tạo: {{ hd.ngay_tao.strftime('%d/%m/%Y') }}
                             </span>
                         </div>
                     </div>
@@ -60,17 +63,25 @@
                 <td class="text-center">
                     {% if hd.trang_thai.value == 2 %}
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2">
-                            <i class="bi bi-check-circle-fill me-1"></i>Đã thanh toán
+                            <i class="bi bi-check-circle-fill me-1"></i>Đã xong
                         </span>
-                    {% if hd.ngay_nop %}
-                    <div class="text-muted fst-italic mt-1" style="font-size: 0.75rem;">
-                        Vào: {{ hd.ngay_nop.strftime('%d/%m/%Y') }}
-                    </div>
-                    {% endif %}
                     {% else %}
                     <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2 text-dark">
-                            <i class="bi bi-hourglass-split me-1"></i>Chưa thanh toán
+                            <i class="bi bi-hourglass-split me-1"></i>Chưa đóng
                         </span>
+                    {% endif %}
+                </td>
+
+                <td class="text-center">
+                    {% if hd.trang_thai.value == 1 %}
+                    <a href="#"
+                       class="btn btn-sm btn-primary shadow-sm fw-bold px-3">
+                        <i class="bi bi-credit-card me-1"></i>Thanh toán
+                    </a>
+                    {% else %}
+                    <button class="btn btn-sm btn-outline-secondary opacity-50 border-0" disabled>
+                        <i class="bi bi-lock-fill"></i>
+                    </button>
                     {% endif %}
                 </td>
             </tr>
@@ -86,16 +97,10 @@
                         {{ "{:,.0f}".format(tong_tien) }} ₫
                     </span>
                 </td>
-                <td></td>
+                <td colspan="2"></td>
             </tr>
             </tfoot>
         </table>
-    </div>
-</div>
-<div class="d-flex justify-content-end text-muted small fst-italic">
-    <div>
-        <i class="bi bi-info-circle me-1"></i>
-        Hóa đơn chưa thanh toán sẽ tự động hủy sau ngày hết hạn.
     </div>
 </div>
 {% else %}
@@ -105,7 +110,6 @@
         <i class="bi bi-wallet2 fs-1 opacity-50"></i>
     </div>
     <h5 class="text-muted fw-normal">Chưa có dữ liệu học phí.</h5>
-    <p class="text-secondary small">Bạn chưa đăng ký khóa học nào hoặc chưa có hóa đơn được tạo.</p>
 </div>
 {% endif %}
 {% endblock %}

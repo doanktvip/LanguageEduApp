@@ -1,56 +1,25 @@
 {% extends 'layout/base.html' %}
 
-{# 1. Override Title #}
-{% block title %}Hệ thống Quản trị{% endblock %}
-
-{# 2. Chặn CSS mặc định của Flask-Admin nếu cần, nhưng quan trọng là để block header trống rỗng #}
-{# Lưu ý: Flask-Admin sẽ cố chèn header của nó vào, ta dùng layout/base.html nên header của bạn đã có sẵn rồi #}
-
-{# 3. Đưa nội dung Admin vào đúng vị trí content của trang web bạn #}
-{% block content %}
-
-    {# CSS tùy chỉnh nhỏ để bảng biểu Admin đẹp hơn trên nền Bootstrap 5 #}
-    <style>
-        /* Ẩn các thành phần thừa của Flask-Admin nếu còn sót */
-        .navbar-dark.bg-dark { display: none !important; }
-
-        /* Chỉnh lại padding cho nội dung */
-        .admin-content-wrapper {
-            padding: 20px;
-            width: 100%;
-        }
-
-        /* Làm đẹp các action buttons trong bảng */
-        .action-row a {
-            margin-right: 5px;
-            text-decoration: none;
-        }
-    </style>
-
-    <div class="admin-content-wrapper">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                {# Nếu đang ở trang Dashboard thì hiện nội dung dashboard, nếu ở trang List thì hiện bảng #}
-                {% block body %}{% endblock %}
-            </div>
-        </div>
-    </div>
+{# --- 1. Tiêu đề Tab trình duyệt --- #}
+{% block title %}
+{% if admin_view.name %}{{ admin_view.name }} - Quản Trị{% else %}Hệ Thống Quản Trị{% endif %}
 {% endblock %}
 
-{# 4. VÔ HIỆU HÓA CÁC BLOCK MẶC ĐỊNH CỦA FLASK-ADMIN #}
-{# Các dòng này cực quan trọng: nó xóa bỏ thanh menu đen/xám mặc định #}
-{% block main_menu %}{% endblock %}
-{% block menu_links %}{% endblock %}
-{% block brand %}{% endblock %}
-{% block access_control %}{% endblock %}
+{# --- 2. CSS bổ sung cho Admin --- #}
+{% block head %}
+{{ super() }}
+<link href="{{url_for('static', filename='css/admin.css')}}" rel="stylesheet">
+{% endblock %}
+
+{# --- 3. Header của Card (Tiêu đề trang) --- #}
+{% block card_header %}
+
+{% endblock %}
+
+{% block card_body %}
+
+{# Đây là nơi Flask-Admin sẽ render nội dung (Index, List, Edit...) #}
+<div class="admin-content-wrapper">
+    {% block body %}{% endblock %}
+</div>
+{% endblock %}

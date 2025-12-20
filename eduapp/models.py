@@ -75,6 +75,9 @@ class NguoiDung(db.Model, UserMixin):
         'polymorphic_on': vai_tro
     }
 
+    def __str__(self):
+        return self.ho_va_ten
+
     def get_id(self):
         return self.ma_nguoi_dung
 
@@ -103,6 +106,7 @@ class NguoiDung(db.Model, UserMixin):
 
 class QuanLy(NguoiDung):
     __tablename__ = "quan_ly"
+    ma_pin = Column(Integer, default=123456)
     ma_nguoi_dung = Column(String(20), ForeignKey('nguoi_dung.ma_nguoi_dung'), primary_key=True)
     __mapper_args__ = {'polymorphic_identity': NguoiDungEnum.QUAN_LY}
 
@@ -148,6 +152,9 @@ class LoaiKhoaHoc(db.Model):
     hoc_phi = Column(Float, nullable=False)
     nhung_khoa_hoc = relationship('KhoaHoc', backref='loai_khoa_hoc', lazy=True)
 
+    def __str__(self):
+        return self.ten_loai_khoa_hoc
+
 
 class KhoaHoc(db.Model):
     __tablename__ = "khoa_hoc"
@@ -175,6 +182,9 @@ class KhoaHoc(db.Model):
 
     # Proxy: Giúp gọi khoa_hoc.ds_hoc_vien trực tiếp
     ds_hoc_vien = association_proxy('ds_dang_ky', 'hoc_vien')
+
+    def __str__(self):
+        return self.ten_khoa_hoc
 
     # Trong class KhoaHoc (models.py)
     @classmethod

@@ -1,47 +1,54 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary"
-     style="z-index: 9999; height: var(--header-height); position: relative;">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm"
+     style="z-index: 1030; height: var(--header-height); position: relative;">
     <div class="container-fluid">
-        <button class="btn btn-outline-light me-3 d-md-none" type="button" data-bs-toggle="collapse"
+        <button class="btn btn-outline-light d-md-none me-2 border-0" type="button" data-bs-toggle="collapse"
                 data-bs-target="#sidebarMenu" aria-expanded="false" aria-controls="sidebarMenu">
-            <i class="bi bi-list-ul"></i>
+            <i class="bi bi-list fs-4"></i>
         </button>
-        <div class="d-flex align-items-center ms-auto">
-            {%if current_user.is_authenticated%}
-            <div class="d-flex dropdown">
-                <a class="nav-link dropdown-toggle text-light" href="#" role="button"
-                   data-bs-toggle="dropdown"
-                   aria-expanded="false" style="padding:0 16px 0 0">
-                    <img src="{{current_user.anh_chan_dung}}" class="rounded-circle border border-light"
-                         alt="..."
+        <a class="navbar-brand fw-bold d-none d-sm-block fs-5" href="/">EDU APP</a>
+        <div class="flex-grow-1"></div>
+        <div class="d-flex align-items-center gap-2 gap-md-3">
+            <form class="d-flex position-relative" role="search">
+                <div class="input-group">
+                    <input class="form-control form-control-sm border-0 search-responsive"
+                           type="search" placeholder="Tìm kiếm..." aria-label="Search">
+                    <button class="btn btn-sm btn-light text-primary fw-bold" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+            {% if current_user.is_authenticated %}
+            <div class="dropdown">
+                <a class="d-flex align-items-center text-decoration-none dropdown-toggle text-light"
+                   href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img src="{{current_user.anh_chan_dung}}"
+                         class="rounded-circle border border-2 border-white shadow-sm"
+                         alt="Avatar"
                          style="width: 35px; height: 35px; object-fit: cover;">
                 </a>
-                <ul class="dropdown-menu dropdown-menu-start">
-                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard-fill me-2"></i>Họ
-                        và tên: {{current_user.ho_va_ten}}</a></li>
-                    <li><a class="dropdown-item" href="javascript:void(0);"><i class="bi bi-person-vcard me-2"></i>Mã
-                        {{current_user.ten_vai_tro}}: {{ current_user.ma_nguoi_dung }}</a></li>
-                    <li><a href="/profile" class="dropdown-item"><i class="bi bi-person-fill me-2"></i>Thông tin cá
-                        nhân</a></li>
-                    <li><a class="dropdown-item" href="/change_password"><i class="bi bi-unlock-fill me-2"></i>Đổi mật
-                        khẩu</a>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 rounded-3">
+                    <li class="px-3 py-2 border-bottom bg-light rounded-top">
+                        <div class="fw-bold text-primary text-truncate" style="max-width: 200px;">
+                            {{current_user.ho_va_ten}}
+                        </div>
+                        <div class="small text-muted">{{ current_user.ma_nguoi_dung }}</div>
                     </li>
-                    {%if current_user.vai_tro.value==1 and current_user.tinh_trang_xac_nhan_email==False%}
-                    <li><a class="dropdown-item" href="/verify"><i class="bi bi-envelope-check-fill me-2"></i>Xác nhận
-                        email</a></li>
-                    {%endif%}
+                    <li><a class="dropdown-item py-2" href="/profile"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
+                    <li><a class="dropdown-item py-2" href="/change_password"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a>
+                    </li>
+                    {% if current_user.vai_tro.value==1 and current_user.tinh_trang_xac_nhan_email==False %}
+                    <li><a class="dropdown-item py-2 text-warning" href="/verify"><i
+                            class="bi bi-exclamation-circle me-2"></i>Xác thực Email</a></li>
+                    {% endif %}
                     <li>
-                        <hr class="dropdown-divider">
+                        <hr class="dropdown-divider my-1">
                     </li>
-                    <li><a class="dropdown-item" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a>
-                    </li>
+                    <li><a class="dropdown-item py-2 text-danger fw-bold" href="/logout"><i
+                            class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
                 </ul>
             </div>
-            {%endif%}
-            <form class="d-flex" role="search">
-                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search"/>
-                <button class="btn btn-outline-light" type="submit"><i class="bi bi-search"></i>
-                </button>
-            </form>
+            {% endif %}
+
         </div>
     </div>
 </nav>
