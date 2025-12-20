@@ -43,5 +43,13 @@
 {%block footer%}
 {%include 'layout/footer.html'%}
 {%endblock%}
+<div id="loading-overlay"
+     class="position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-none d-flex flex-column justify-content-center align-items-center"
+     style="z-index: 1060;">
+    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <div class="mt-3 fw-semibold text-primary"><p class="fw-bold">Đang tải...</p></div>
+</div>
 </body>
 </html>

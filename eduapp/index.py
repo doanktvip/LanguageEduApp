@@ -3,12 +3,16 @@ import time
 import random
 import math
 import datetime
+from datetime import timedelta
+
 import cloudinary.uploader
 import json
 from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from eduapp import app, dao, login_manager, mail, db
-from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum
+from eduapp.decorators import anonymous_required, giao_vien_required, hoc_vien_required, \
+    giao_vien_hoac_hoc_vien_required, tinh_trang_xac_nhan_email_required, login_user_required, quan_ly_required
+from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum
 from flask_mail import Message
 
 
@@ -23,9 +27,8 @@ def page_not_found(e):
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@anonymous_required
 def login():
-    if current_user.is_authenticated:
-        return redirect('/')
     err_msg = None
     if request.method == 'POST':
         username = request.form.get('username')
@@ -34,7 +37,7 @@ def login():
         if user:
             if not user.tinh_trang_hoat_dong:
                 err_msg = f'''<strong>Tài khoản của bạn đã bị khóa!</strong><br>
-                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="alert-link fw-bold">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
+                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="link-danger">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
                 return render_template("login.html", err_msg=err_msg)
             login_user(user)
             next_page = request.args.get('next')
@@ -56,9 +59,8 @@ def load_user(user_id):
 
 
 @app.route('/register', methods=['GET', 'POST'])
+@anonymous_required
 def register():
-    if current_user.is_authenticated:
-        return redirect('/')
     if request.method == 'GET':
         session.pop('register_info', None)
         return render_template("register.html", data={}, show_step2=False)
@@ -130,9 +132,8 @@ def register():
 
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
+@anonymous_required
 def forgot_password():
-    if current_user.is_authenticated:
-        return redirect('/')
     if request.method == "GET":
         session.pop('reset_info', None)
         return render_template("forgot_password.html", show_step2=False, data={})
@@ -218,9 +219,8 @@ def forgot_password():
 
 
 @app.route('/change_password', methods=['GET', 'POST'])
+@login_user_required
 def change_password():
-    if not current_user.is_authenticated:
-        return redirect('/')
     err_msg = None
     if request.method == 'POST':
         old_password = request.form.get('old_password')
@@ -248,9 +248,10 @@ otp_storage = {}
 
 
 @app.route('/verify', methods=['GET', 'POST'])
+@login_user_required
+@hoc_vien_required
+@tinh_trang_xac_nhan_email_required
 def verify_page():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN or current_user.tinh_trang_xac_nhan_email:
-        return redirect('/')
     email = current_user.email
     current_time = time.time()
     otp_lifetime = app.config.get("OTP_LIFETIME", 60)
@@ -312,16 +313,17 @@ def verify_page():
                 'blocked_until': 0
             }
             # chức năng gửi mail
-            # msg = Message(
-            #     subject="Xin chào.",
-            #     recipients=[email],
-            #     html=f"""<p>Chào bạn {current_user.ho_va_ten},</p>
-            #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ xác nhận email từ bạn.<br>Bạn hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
-            #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
-            #     <small>Lưu ý mã này có thời gian hiệu lực là 1 phút!</small>
-            #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
-            # )
-            # mail.send(msg)
+            msg = Message(
+                subject="Xin chào.",
+                recipients=[email],
+                html=f"""<p>Chào bạn {current_user.ho_va_ten},</p>
+                <p>Chúng mình nhận được tín hiệu cần hỗ trợ xác nhận email từ bạn.</p>
+                <br><p>Bạn hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
+                <p style="font-size: 24px;">Mã xác nhận:<b> {new_otp}</b></p>
+                <small>Lưu ý mã này có thời gian hiệu lực là 1 phút!</small>
+                <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
+            )
+            mail.send(msg)
             print(f"DEBUG OTP: {new_otp}")
             return redirect(url_for('verify_page'))
         except Exception as e:
@@ -368,9 +370,8 @@ def update_parent_phone():
 
 @app.route('/profile', defaults={'user_id': None})
 @app.route('/profile/<user_id>')
+@login_user_required
 def profile(user_id):
-    if not current_user.is_authenticated:
-        return redirect('/')
     if user_id:
         user_to_show = dao.get_by_id(user_id)
         if not user_to_show:
@@ -381,10 +382,9 @@ def profile(user_id):
 
 
 @app.route('/schedule', methods=['GET'])
+@login_user_required
+@giao_vien_hoac_hoc_vien_required
 def schedule():
-    if not current_user.is_authenticated or current_user.vai_tro not in [NguoiDungEnum.HOC_VIEN,
-                                                                         NguoiDungEnum.GIAO_VIEN]:
-        return redirect('/')
     cac_thu = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
     ds_khoa_hoc = []
     is_teacher = False
@@ -393,49 +393,54 @@ def schedule():
     elif current_user.vai_tro == NguoiDungEnum.GIAO_VIEN:
         ds_khoa_hoc = current_user.nhung_khoa_hoc
         is_teacher = True
-    ds_ma_hop_le = [kh.ma_khoa_hoc for kh in ds_khoa_hoc]
-    ma_khoa_hoc_dang_chon = request.args.get('course_id')
-    if not ma_khoa_hoc_dang_chon or ma_khoa_hoc_dang_chon not in ds_ma_hop_le:
-        if ds_khoa_hoc:
-            ma_mac_dinh = ds_khoa_hoc[0].ma_khoa_hoc
-            return redirect(url_for('schedule', course_id=ma_mac_dinh))
-        else:
-            return render_template('schedule.html', ma_khoa_hoc_hien_tai=None, ds_khoa_hoc=[], is_teacher=is_teacher)
-    course = next((kh for kh in ds_khoa_hoc if kh.ma_khoa_hoc == ma_khoa_hoc_dang_chon), None)
-    tuan_duoc_chon = None
-    current_index = 0
-    tong_so_tuan = 0
+    try:
+        offset = int(request.args.get('offset', 0))
+    except ValueError:
+        offset = 0
+    today = datetime.datetime.now()
+    start_of_week_current = today - timedelta(days=today.weekday())
+    start_of_target_week = start_of_week_current + timedelta(weeks=offset)
+    target_year, target_week_iso, _ = start_of_target_week.isocalendar()
+    tuan_hien_thi = {
+        "week": target_week_iso,
+        "year": target_year,
+        "days": [],
+        "full_dates": [],
+        "schedule": {
+            "CA_SANG": [[] for _ in range(7)],
+            "CA_CHIEU": [[] for _ in range(7)]
+        }
+    }
+    for i in range(7):
+        current_date = start_of_target_week + timedelta(days=i)
+        tuan_hien_thi["days"].append(current_date.strftime("%d/%m"))
+        tuan_hien_thi["full_dates"].append(current_date)
+    for khoa_hoc in ds_khoa_hoc:
+        ngay_cuoi_tuan_target = start_of_target_week + timedelta(days=6)
+        if khoa_hoc.ngay_bat_dau.date() <= ngay_cuoi_tuan_target.date() and khoa_hoc.ngay_ket_thuc.date() >= start_of_target_week.date():
+            for lich in khoa_hoc.lich_hoc:
+                day_index = lich.thu.value
+                specific_date_of_week = tuan_hien_thi["full_dates"][day_index]
+                if khoa_hoc.ngay_bat_dau.date() <= specific_date_of_week.date() <= khoa_hoc.ngay_ket_thuc.date():
+                    ca_key = lich.ca_hoc.name
+                    buoi_hoc_info = {
+                        "khoa_hoc": khoa_hoc,
+                        "phong_hoc": lich.phong_hoc,
+                        "gio_bat_dau": 7 if lich.ca_hoc == CaHocEnum.CA_SANG else 13,
+                        "gio_ket_thuc": 11 if lich.ca_hoc == CaHocEnum.CA_SANG else 17
+                    }
+                    tuan_hien_thi["schedule"][ca_key][day_index].append(buoi_hoc_info)
     today_index = -1
-    if course:
-        danh_sach_hoc = course.lay_danh_sach_tuan_hoc()
-        tong_so_tuan = len(danh_sach_hoc)
-        if danh_sach_hoc:
-            today = datetime.datetime.now()
-            nam_hien_tai, tuan_hien_tai, thu_hien_tai = today.isocalendar()
-            index_tham_so = request.args.get('index', type=int)
-            if index_tham_so is not None:
-                current_index = max(0, min(index_tham_so, tong_so_tuan - 1))
-            else:
-                found = False
-                for i, tuan in enumerate(danh_sach_hoc):
-                    if tuan['week'] == tuan_hien_tai and tuan['year'] == nam_hien_tai:
-                        current_index = i
-                        found = True
-                        break
-                if not found:
-                    current_index = 0
-            tuan_duoc_chon = danh_sach_hoc[current_index]
-            if tuan_duoc_chon['week'] == tuan_hien_tai and tuan_duoc_chon['year'] == nam_hien_tai:
-                today_index = thu_hien_tai - 1
-    return render_template('schedule.html', ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon, cac_thu=cac_thu,
-                           tuan_duoc_chon=tuan_duoc_chon, current_index=current_index, tong_so_tuan=tong_so_tuan,
-                           ds_khoa_hoc=ds_khoa_hoc, is_teacher=is_teacher, today_index=today_index)
+    if offset == 0:
+        today_index = today.weekday()
+    return render_template('schedule.html', cac_thu=cac_thu, tuan_hien_thi=tuan_hien_thi, offset=offset,
+                           is_teacher=is_teacher, today_index=today_index)
 
 
 @app.route('/scoreboard', methods=['GET'])
+@login_user_required
+@hoc_vien_required
 def scoreboard():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN:
-        return redirect('/')
     ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
     if not ds_khoa_hoc_cua_hv:
         return render_template('scoreboard.html', ma_khoa_hoc_hien_tai=None, ds_khoa_hoc=[])
@@ -456,20 +461,19 @@ def scoreboard():
 
 
 @app.route('/course_fee')
+@login_user_required
+@hoc_vien_required
 def course_fee():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.HOC_VIEN:
-        return redirect('/')
     ds_hoa_don = list(current_user.nhung_hoa_don)
     ds_hoa_don.sort(key=lambda x: x.ngay_tao, reverse=True)
     tong_tien = sum(hd.so_tien for hd in ds_hoa_don if hd.trang_thai.value == 2)
     return render_template('course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
 
 
-# chưa xử lý logic truy vẫn của các người dùng khác nhau
 @app.route("/register_course", methods=['GET', 'POST'])
+@login_user_required
+@hoc_vien_required
 def register_course():
-    if not current_user.is_authenticated:
-        return redirect('/')
     msg = None
     if request.method == 'POST':
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
@@ -490,9 +494,9 @@ def register_course():
 
 
 @app.route('/grading', methods=['GET', 'POST'])
+@login_user_required
+@giao_vien_required
 def grading():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
-        return redirect('/')
     msg = None
     msg_type = None
     ds_khoa_hoc = current_user.nhung_khoa_hoc
@@ -528,9 +532,9 @@ def grading():
 
 
 @app.route('/attendance', methods=['GET', 'POST'])
+@login_user_required
+@giao_vien_required
 def attendance():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.GIAO_VIEN:
-        return redirect('/')
     ds_khoa_hoc_raw = current_user.nhung_khoa_hoc
     ds_khoa_hoc = sorted(ds_khoa_hoc_raw, key=lambda x: x.ngay_bat_dau, reverse=True)
     course_id = request.args.get('course_id') or request.form.get('course_id')
@@ -556,9 +560,9 @@ def attendance():
 
 
 @app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_profile_user(ma_nguoi_dung):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     user_to_show = dao.get_by_id(ma_nguoi_dung)
     if not user_to_show:
         return redirect(url_for('manager_course_list'))
@@ -566,9 +570,9 @@ def manager_profile_user(ma_nguoi_dung):
 
 
 @app.route('/manager/reset_password/<ma_nguoi_dung>', methods=['GET', 'POST'])
+@login_user_required
+@quan_ly_required
 def manager_reset_password_page(ma_nguoi_dung):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     user = dao.get_by_id(ma_nguoi_dung)
     if not user:
         return redirect(url_for('manager_course_list'))
@@ -595,9 +599,9 @@ def manager_reset_password_page(ma_nguoi_dung):
 
 
 @app.route('/manager/courses', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_course_list():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     dao.cap_nhat_database_tinh_trang_khoa_hoc()
     page = request.args.get('page', 1, type=int)
     search_params = {
@@ -611,9 +615,9 @@ def manager_course_list():
 
 
 @app.route('/manager/course/<string:ma_khoa_hoc>', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_course_detail(ma_khoa_hoc):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     khoa_hoc = dao.get_by_course_id(ma_khoa_hoc)
     if not khoa_hoc:
         return redirect(url_for('manager_course_list', error_msg=f"Không tìm thấy khóa học {ma_khoa_hoc}"))
@@ -634,9 +638,9 @@ def manager_course_detail(ma_khoa_hoc):
 
 
 @app.route('/manager/create_course', methods=['GET', 'POST'])
+@login_user_required
+@quan_ly_required
 def manager_create_course():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     msg = None
     msg_type = None
     form_data = {}
@@ -703,9 +707,9 @@ def manager_create_course():
 
 
 @app.route('/manager/employees', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_employee_list():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     page = request.args.get('page', 1, type=int)
     kw = request.args.get('kw')
     status = request.args.get('status')
@@ -722,9 +726,9 @@ def manager_employee_list():
 
 
 @app.route('/manager/students', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_student_list():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     kw = request.args.get('kw', '')
     status = request.args.get('status')
     nam_sinh = request.args.get('nam_sinh')
@@ -742,9 +746,9 @@ def manager_student_list():
 
 
 @app.route('/manager/teachers', methods=['GET'])
+@login_user_required
+@quan_ly_required
 def manager_teacher_list():
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     kw = request.args.get('kw', '')
     status = request.args.get('status')
     from_date = request.args.get('from_date')
@@ -761,9 +765,9 @@ def manager_teacher_list():
 
 
 @app.route('/manager/edit_enrollment/<ma_khoa_hoc>', methods=['GET', 'POST'])
+@login_user_required
+@quan_ly_required
 def manager_edit_enrollment(ma_khoa_hoc):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     msg = None
     msg_type = None
     kh = None
@@ -812,9 +816,9 @@ def manager_edit_enrollment(ma_khoa_hoc):
 
 
 @app.route('/manager/edit_tuition/<ma_khoa_hoc>', methods=['GET', 'POST'])
+@login_user_required
+@quan_ly_required
 def manager_edit_tuition(ma_khoa_hoc):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     msg = None
     msg_type = None
     kh = None
@@ -860,9 +864,9 @@ def manager_edit_tuition(ma_khoa_hoc):
 
 
 @app.route('/manager/add_user/<role_type>', methods=['GET', 'POST'])
+@login_user_required
+@quan_ly_required
 def manager_add_user(role_type):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     ROLE_MAP = {
         'HOC_VIEN': {
             'enum': NguoiDungEnum.HOC_VIEN,
@@ -971,18 +975,18 @@ def manager_add_user(role_type):
 
 
 @app.route('/thay_doi_trang_thai/<string:ma_nd>')
+@login_user_required
+@quan_ly_required
 def thay_doi_trang_thai(ma_nd):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     dao.update_trang_thai_nguoi_dung(ma_nd)
     next_url = request.referrer or '/'
     return redirect(next_url)
 
 
 @app.route('/manager/course/delete/<string:ma_kh>')
+@login_user_required
+@quan_ly_required
 def delete_course(ma_kh):
-    if not current_user.is_authenticated or current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect('/')
     dao.xoa_khoa_hoc_dao(ma_kh)
     return redirect(request.referrer or url_for('manager_course_list'))
 

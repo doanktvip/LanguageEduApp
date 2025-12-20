@@ -31,7 +31,7 @@ def add_user(loai_nguoi_dung, **kwargs):
             try:
                 kwargs['ma_nguoi_dung'] = NguoiDung.tao_ma_nguoi_dung(loai_nguoi_dung)
             except Exception as e:
-                return f"Lỗi tạo mã người dùng: {str(e)}"
+                print(f"Lỗi tạo mã người dùng: {str(e)}")
         if 'mat_khau' in kwargs:
             kwargs['mat_khau'] = str(hashlib.md5(kwargs['mat_khau'].strip().encode('utf-8')).hexdigest())
 
@@ -294,7 +294,7 @@ def save_attendance_sheet(course_id, form_data):
 
 
 def kiem_tra_trung_lich_hoc_vien(ma_hoc_vien, ma_khoa_hoc_moi):
-    kh_moi = KhoaHoc.query.get(ma_khoa_hoc_moi)
+    kh_moi = get_by_course_id(ma_khoa_hoc_moi)
     if not kh_moi:
         return False, "Khóa học không tồn tại"
     ds_khoa_hoc_da_dang_ky = KhoaHoc.query.join(BangDiem).filter(
