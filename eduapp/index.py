@@ -996,15 +996,8 @@ def delete_course(ma_kh):
 def kiem_tra_pin_admin():
     data = request.get_json()
     pin_nhap = data.get('pin')
-    if not current_user.is_authenticated:
-        return jsonify({'success': False, 'message': 'Vui lòng đăng nhập.'}), 401
-    if not isinstance(current_user, QuanLy):
-        return jsonify({'success': False, 'message': 'Bạn không có quyền truy cập.'}), 403
     if str(current_user.ma_pin) == str(pin_nhap):
-        return jsonify({
-            'success': True,
-            'redirect_url': '/admin'
-        })
+        return jsonify({'success': True, 'redirect_url': '/admin'})
     else:
         return jsonify({'success': False, 'message': 'Mã PIN không chính xác.'}), 200
 

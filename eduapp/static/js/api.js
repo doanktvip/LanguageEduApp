@@ -21,6 +21,7 @@ function xuLyKiemTraPin() {
             pinInput.value = '';
             pinInput.focus();
         }
+        pinInput.value = '';
     }).catch(error => {
         console.error('Lỗi:', error);
         alert("Lỗi kết nối server!");
