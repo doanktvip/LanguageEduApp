@@ -97,3 +97,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+document.addEventListener("DOMContentLoaded", function() {
+    const loader = document.getElementById('loading-overlay');
+    const showLoader = () => {
+        if (loader) {
+            loader.classList.remove('d-none');
+            loader.classList.add('d-flex');
+        }
+    };
+    const hideLoader = () => {
+        if (loader) {
+            loader.classList.add('d-none');
+            loader.classList.remove('d-flex');
+        }
+    };
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (form.checkValidity() && !form.target) {
+                showLoader();
+            }
+        });
+    });
+    document.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            const target = this.getAttribute('target');
+            if (href &&
+                !href.startsWith('#') &&
+                !href.startsWith('javascript:') &&
+                target !== '_blank') {
+                showLoader();
+            }
+        });
+    });
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            hideLoader();
+        }
+    });
+});

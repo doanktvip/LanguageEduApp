@@ -1,0 +1,31 @@
+<div class="card mb-1 border-0 border-start border-3 {{ 'border-primary' if buoi.gio_bat_dau == 7 else 'border-success' }} shadow-sm bg-white hover-shadow transition-all"
+     role="button"
+     data-bs-toggle="popover"
+     data-bs-trigger="hover focus"
+     data-bs-html="true"
+     title="<span class='{{ 'text-primary' if buoi.gio_bat_dau == 7 else 'text-success' }} fw-bold'>{{ buoi.khoa_hoc.ten_khoa_hoc }}</span>"
+     data-bs-content="<div class='small'>
+         <div><i class='bi bi-upc-scan me-2'></i>{{ buoi.khoa_hoc.ma_khoa_hoc }}</div>
+         <div><i class='bi bi-person-badge me-2'></i>{{ buoi.khoa_hoc.giao_vien.ho_va_ten }}</div>
+         <div><i class='bi bi-people me-2'></i>{{ buoi.khoa_hoc.si_so_hien_tai }}/{{ buoi.khoa_hoc.si_so_toi_da }}</div>
+     </div>">
+    <div class="card-body p-2">
+        <div class="mb-1">
+            <span class="badge {{ 'bg-primary' if buoi.gio_bat_dau == 7 else 'bg-success' }} bg-opacity-10 {{ 'text-primary' if buoi.gio_bat_dau == 7 else 'text-success' }} border border-opacity-10"
+                  style="font-size: 0.7rem;">
+                {{ buoi.khoa_hoc.loai_khoa_hoc.ten_loai_khoa_hoc }}
+            </span>
+        </div>
+        <div class="fw-bold text-dark small lh-sm mb-1 text-truncate-2">
+            {{ buoi.khoa_hoc.ten_khoa_hoc }}
+        </div>
+        <div class="small text-muted border-top pt-1 mt-1 d-flex justify-content-between align-items-center">
+            <span class="text-danger fw-bold" style="font-size: 0.75rem;">
+                <i class="bi bi-geo-alt-fill"></i> {{ buoi.phong_hoc.ten_phong_hoc }}
+            </span>
+            <span style="font-size: 0.75rem;">
+                {{ buoi.gio_bat_dau }}h-{{ buoi.gio_ket_thuc }}h
+            </span>
+        </div>
+    </div>
+</div>
