@@ -61,7 +61,7 @@
                 {% set is_today = (day == today_index) %}
                 <td class="align-top p-1 {{ 'table-warning' if is_today else '' }}" style="height: 150px;">
                     {% for buoi in list_buoi_hoc %}
-                        {% include 'components/schedule_card.html' %}
+                        {% include 'schedule_card.html' %}
                     {% endfor %}
                 </td>
                 {% endfor %}

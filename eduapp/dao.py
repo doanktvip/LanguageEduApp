@@ -1,4 +1,5 @@
 import hashlib
+import cloudinary.uploader
 from datetime import datetime, date, timedelta
 from sqlalchemy import and_, or_, extract, func
 from eduapp import db, app
@@ -157,11 +158,12 @@ def dang_ky_khoa_hoc(ma_hoc_vien, ma_khoa_hoc):
         return True
     except Exception:
         db.session.rollback()
+        return False
 
 
 def update_password(username, new_hashed_password):
     try:
-        user = NguoiDung.query.filter_by(ten_dang_nhap=username).first()
+        user = get_by_username(username=username)
         if user:
             user.mat_khau = new_hashed_password
             db.session.commit()
@@ -170,6 +172,65 @@ def update_password(username, new_hashed_password):
             return False
     except Exception:
         db.session.rollback()
+        return False
+
+
+def update_tinh_trang_email(username):
+    try:
+        user = get_by_username(username=username)
+        if user:
+            user.tinh_trang_xac_nhan_email = True
+            db.session.commit()
+            return True
+        else:
+            return False
+    except Exception:
+        db.session.rollback()
+        return False
+
+
+def update_email(username, new_email):
+    try:
+        user = get_by_username(username=username)
+        if user:
+            user.email = new_email
+            db.session.commit()
+            return True
+        else:
+            return False
+    except Exception:
+        db.session.rollback()
+        return False
+
+
+def update_avatar(username, new_avatar):
+    try:
+        user = get_by_username(username=username)
+        if user:
+            res = cloudinary.uploader.upload(new_avatar)
+            avatar_url = res.get('secure_url')
+            user.anh_chan_dung = avatar_url
+            db.session.commit()
+            return True
+        else:
+            return False
+    except Exception:
+        db.session.rollback()
+        return False
+
+
+def update_parent_phone(username, parent_phone):
+    try:
+        user = get_by_username(username=username)
+        if user:
+            user.so_dien_thoai_phu_huynh = parent_phone
+            db.session.commit()
+            return True
+        else:
+            return False
+    except Exception:
+        db.session.rollback()
+        return False
 
 
 def get_attendance_sheet_data(course):

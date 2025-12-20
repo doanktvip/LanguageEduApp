@@ -1,6 +1,6 @@
 :root {
     --header-height: 56px;
-    --sidebar-width: 20vw;
+    --sidebar-width: 25vw;
     --color-primary: #0d6efd;
     --bg-today: #fff9e6;
     --bg-today-header: #ffc107;
@@ -69,6 +69,7 @@
     min-width: 250px;
     max-width: 250px;
     background-color: #fff;
+}
 
 .col-fix-right {
     right: 0;
@@ -131,10 +132,6 @@ thead .sticky-cell {
 }
 
 @media (max-width: 768px) {
-    :root {
-        --sidebar-width: 40vw;
-    }
-
     .container-aside {
         min-width: calc(100vw - var(--sidebar-width));
     }

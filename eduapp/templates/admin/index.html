@@ -1,114 +1,157 @@
 {% extends 'admin/master.html' %}
-
+{% block card_header %}
+<div class="row p-3 d-flex justify-content-between align-items-center">
+    <div class="col-md-6 col-12 mb-3 mb-md-0">
+        <span class="fw-bold text-uppercase"><i class="bi bi-speedometer2 me-2"></i>Quản lý hệ thống</span>
+    </div>
+    <div class="col-md-6 col-12 d-flex justify-content-md-end justify-content-between align-items-center">
+        <div class="text-end">
+            <small class="text-muted d-block" style="font-size: 0.7rem;">Thời gian hiện tại</small>
+            <span id="live-time" class="fw-bold text-dark font-monospace">--:--:--</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
 {% block body %}
-<div class="container-fluid">
+<div class="container-fluid p-0">
 
-    <div class="row mt-4 mb-4">
-        <div class="col-md-12">
-            <h2 class="text-center">Bảng Điều Khiển Quản Trị</h2>
-            <hr>
-        </div>
-    </div>
+    <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-xl-4">
 
-    <div class="row">
-
-        <div class="col-md-3">
-            <div class="card text-white bg-primary mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">HỌC VIÊN</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Quản lý hồ sơ</h5>
-                        <p class="card-text">Xem danh sách, thêm mới hoặc sửa thông tin học viên.</p>
-                    </div>
-                    <a href="/admin/hocvien" class="btn btn-light btn-block text-primary font-weight-bold">Truy cập</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card text-white bg-success mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">GIÁO VIÊN</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Đội ngũ giảng dạy</h5>
-                        <p class="card-text">Quản lý thông tin và lịch dạy của giáo viên.</p>
-                    </div>
-                    <a href="/admin/giaovien" class="btn btn-light btn-block text-success font-weight-bold">Truy cập</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card text-white bg-info mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">NHÂN VIÊN</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Nhân sự hành chính</h5>
-                        <p class="card-text">Quản lý tài khoản nhân viên tư vấn.</p>
-                    </div>
-                    <a href="/admin/nhanvien" class="btn btn-light btn-block text-info font-weight-bold">Truy cập</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="card text-white bg-dark mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">ADMIN</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Tài khoản Admin</h5>
-                        <p class="card-text">Quản lý các tài khoản cấp cao.</p>
-                    </div>
-                    <a href="/admin/quanly" class="btn btn-light btn-block text-dark font-weight-bold">Truy cập</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-3">
-
-        <div class="col-md-4">
-            <div class="card text-white bg-warning mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">KHÓA HỌC</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Chương trình đào tạo</h5>
-                        <p class="card-text">Tạo khóa học mới, xếp lớp và lên lịch.</p>
-                    </div>
-                    <a href="/admin/khoahoc" class="btn btn-light btn-block text-warning font-weight-bold">Quản lý Khóa học</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card text-white bg-secondary mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">PHÒNG HỌC & LOẠI KHÓA</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Cơ sở vật chất</h5>
-                        <p class="card-text">Quản lý danh sách phòng và danh mục.</p>
-                    </div>
-                    <div class="btn-group w-100">
-                        <a href="/admin/phonghoc" class="btn btn-light text-secondary font-weight-bold">Phòng</a>
-                        <a href="/admin/loaikhoahoc" class="btn btn-dark text-white font-weight-bold">Loại Khóa</a>
+        <div class="col">
+            <a href="{{ url_for('hoadon.index_view', flt0_0='DA_THANH_TOAN') }}"
+               class="stats-card-link">
+                <div class="card bg-primary text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Doanh Thu Thực</div>
+                            <div class="card-value">{{ tong_doanh_thu }}</div>
+                            <small class="opacity-75"><i class="bi bi-check-circle"></i> Đã thanh toán</small>
+                        </div>
+                        <i class="bi bi-currency-dollar card-icon-bg"></i>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
-        <div class="col-md-4">
-            <div class="card text-white bg-danger mb-3" style="height: 200px;">
-                <div class="card-header font-weight-bold">TÀI CHÍNH</div>
-                <div class="card-body d-flex flex-column justify-content-between">
-                    <div>
-                        <h5 class="card-title">Hóa đơn & Doanh thu</h5>
-                        <p class="card-text">Theo dõi tình trạng đóng học phí.</p>
+        <div class="col">
+            <a href="{{ url_for('hoadon.index_view', flt0_0='CHUA_THANH_TOAN') }}"
+               class="stats-card-link">
+                <div class="card bg-danger text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Hóa Đơn Treo</div>
+                            <div class="card-value">{{ so_hoa_don_no }}</div>
+                            <small class="opacity-75"><i class="bi bi-exclamation-triangle"></i> Chưa thanh toán</small>
+                        </div>
+                        <i class="bi bi-receipt-cutoff card-icon-bg"></i>
                     </div>
-                    <a href="/admin/hoadon" class="btn btn-light btn-block text-danger font-weight-bold">Xem Hóa Đơn</a>
                 </div>
-            </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('khoahoc.index_view', flt0_0='DANG_TUYEN_SINH') }}"
+               class="stats-card-link">
+                <div class="card bg-warning text-dark h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Đang Tuyển Sinh</div>
+                            <div class="card-value">{{ khoa_dang_tuyen }}</div>
+                            <small class="opacity-75"><i class="bi bi-megaphone"></i> Khóa sắp mở</small>
+                        </div>
+                        <i class="bi bi-bullseye card-icon-bg"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('khoahoc.index_view', flt0_0='DUNG_TUYEN_SINH') }}"
+               class="stats-card-link">
+                <div class="card bg-secondary text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Lớp Đang Dạy</div>
+                            <div class="card-value">{{ lop_dang_hoc }}</div>
+                            <small class="opacity-75"><i class="bi bi-journal-bookmark"></i> Đang hoạt động</small>
+                        </div>
+                        <i class="bi bi-easel2 card-icon-bg"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('hocvien.index_view') }}" class="stats-card-link">
+                <div class="card bg-success text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Tổng Học Viên</div>
+                            <div class="card-value">{{ so_hoc_vien }}</div>
+                            <small class="opacity-75"><i class="bi bi-people"></i> Sinh viên</small>
+                        </div>
+                        <i class="bi bi-backpack2 card-icon-bg"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('giaovien.index_view') }}" class="stats-card-link">
+                <div class="card bg-info text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Giáo Viên</div>
+                            <div class="card-value">{{ so_giao_vien }}</div>
+                            <small class="opacity-75"><i class="bi bi-person-video3"></i> Giảng dạy</small>
+                        </div>
+                        <i class="bi bi-mortarboard card-icon-bg"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('nhanvien.index_view') }}" class="stats-card-link">
+                <div class="card bg-dark text-white h-100 border-0 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text">Nhân Sự</div>
+                            <div class="card-value">{{ so_nhan_vien }}</div>
+                            <small class="opacity-75"><i class="bi bi-headset"></i> Tư vấn & Admin</small>
+                        </div>
+                        <i class="bi bi-person-badge card-icon-bg"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{{ url_for('phonghoc.index_view') }}" class="stats-card-link">
+                <div class="card border-secondary text-secondary bg-white h-100 shadow-sm rounded-3">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="card-title-text text-dark">Phòng Học</div>
+                            <div class="card-value text-dark">{{ so_phong_hoc }}</div>
+                            <small class="text-muted"><i class="bi bi-geo-alt"></i> Cơ sở vật chất</small>
+                        </div>
+                        <i class="bi bi-building card-icon-bg text-secondary"></i>
+                    </div>
+                </div>
+            </a>
         </div>
 
     </div>
 </div>
+{% endblock %}
+{% block javascript %}
+<script>
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('vi-VN', { hour12: false });
+        document.getElementById('live-time').innerText = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+</script>
 {% endblock %}

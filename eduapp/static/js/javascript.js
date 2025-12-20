@@ -114,6 +114,8 @@ document.addEventListener("DOMContentLoaded", function() {
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
         form.addEventListener('submit', function(e) {
+            const action = form.getAttribute('action') || "";
+            if (action.includes('export')) return;
             if (form.checkValidity() && !form.target) {
                 showLoader();
             }
@@ -123,6 +125,16 @@ document.addEventListener("DOMContentLoaded", function() {
         link.addEventListener('click', function(e) {
             const href = this.getAttribute('href');
             const target = this.getAttribute('target');
+            if (href) {
+                const lowerHref = href.toLowerCase();
+                if (lowerHref.includes('export') ||
+                    lowerHref.includes('download') ||
+                    lowerHref.includes('.csv') ||
+                    lowerHref.includes('.xlsx')) {
+                    return;
+                }
+            }
+
             if (href &&
                 !href.startsWith('#') &&
                 !href.startsWith('javascript:') &&
