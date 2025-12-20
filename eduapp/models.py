@@ -134,9 +134,9 @@ class HocVien(NguoiDung):
     ngay_sinh = Column(DateTime)
 
     # Quan hệ
-    ds_lop_hoc = relationship('BangDiem', backref='hoc_vien', lazy=True)
-    nhung_hoa_don = relationship('HoaDon', backref='hoc_vien', lazy=True)
-    nhung_lan_diem_danh = relationship('ChiTietDiemDanh', backref='hoc_vien', lazy=True)
+    ds_lop_hoc = relationship('BangDiem', backref='hoc_vien', lazy=True, cascade="all, delete-orphan")
+    nhung_hoa_don = relationship('HoaDon', backref='hoc_vien', lazy=True, cascade="all, delete-orphan")
+    nhung_lan_diem_danh = relationship('ChiTietDiemDanh', backref='hoc_vien', lazy=True, cascade="all, delete-orphan")
 
     __mapper_args__ = {'polymorphic_identity': NguoiDungEnum.HOC_VIEN}
 
@@ -236,6 +236,9 @@ class PhongHoc(db.Model):
     ten_phong_hoc = Column(String(20), nullable=False)
     nhung_lich_hoc = relationship('LichHoc', backref='phong_hoc', lazy=True)
 
+    def __str__(self):
+        return self.ten_phong_hoc
+
 
 class LichHoc(db.Model):
     __tablename__ = "lich_hoc"
@@ -263,7 +266,7 @@ class DiemDanh(db.Model):
     ngay_diem_danh = Column(DateTime, default=datetime.now())
 
     # Chi tiết: Buổi này ai đi, ai vắng
-    chi_tiet = relationship('ChiTietDiemDanh', backref='buoi_diem_danh', lazy=True)
+    chi_tiet = relationship('ChiTietDiemDanh', backref='buoi_diem_danh', lazy=True, cascade="all, delete-orphan")
 
 
 class ChiTietDiemDanh(db.Model):
@@ -287,7 +290,7 @@ class CauTrucDiem(db.Model):
     ten_loai_diem = Column(String(100), nullable=False)
     trong_so = Column(Float, nullable=False)  # VD: 0.3
 
-    ds_diem_chi_tiet = relationship('ChiTietDiem', backref='cau_truc_diem', lazy=True)
+    ds_diem_chi_tiet = relationship('ChiTietDiem', backref='cau_truc_diem', lazy=True, cascade="all, delete-orphan")
 
 
 class BangDiem(db.Model):
@@ -305,7 +308,7 @@ class BangDiem(db.Model):
     xep_loai = Column(String(20))
     ket_qua = Column(Boolean, default=False)
 
-    ds_diem_thanh_phan = relationship('ChiTietDiem', backref='bang_diem', lazy=True)
+    ds_diem_thanh_phan = relationship('ChiTietDiem', backref='bang_diem', lazy=True, cascade="all, delete-orphan")
 
     # Ràng buộc: 1 Học viên chỉ có 1 Bảng điểm trong 1 Khóa học
     __table_args__ = (UniqueConstraint('ma_khoa_hoc', 'ma_hoc_vien', name='_enrollment_uc'),)

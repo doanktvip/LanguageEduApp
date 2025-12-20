@@ -1,24 +1,20 @@
 {% extends 'layout/base.html' %}
 
-{# --- 1. Tiêu đề Tab trình duyệt --- #}
 {% block title %}
 {% if admin_view.name %}{{ admin_view.name }} - Quản Trị{% else %}Hệ Thống Quản Trị{% endif %}
 {% endblock %}
 
-{# --- 2. CSS bổ sung cho Admin --- #}
 {% block head %}
 {{ super() }}
 <link href="{{url_for('static', filename='css/admin.css')}}" rel="stylesheet">
 {% endblock %}
 
-{# --- 3. Header của Card (Tiêu đề trang) --- #}
 {% block card_header %}
 
 {% endblock %}
 
 {% block card_body %}
 
-{# Đây là nơi Flask-Admin sẽ render nội dung (Index, List, Edit...) #}
 <div class="admin-content-wrapper">
     {% block body %}{% endblock %}
 </div>

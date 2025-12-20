@@ -3,166 +3,212 @@
 {% import 'admin/model/layout.html' as model_layout with context %}
 
 {% block body %}
-{# --- 1. Toolbar --- #}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<div class="container-fluid px-0">
+    {# --- Header & Actions --- #}
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('admin.index') }}" class="btn btn-outline-dark shadow-sm" title="Quay lại">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            {% if admin_view.can_create %}
+            <a href="{{ get_url('.create_view', url=return_url) }}" class="btn btn-primary shadow-sm">
+                <i class="bi bi-plus-circle me-1"></i> Tạo Mới
+            </a>
+            {% endif %}
+            {% if admin_view.can_export %}
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Xuất
+                </button>
+                <ul class="dropdown-menu">
+                    {{ model_layout.export_options() }}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
 
-    <div class="d-flex gap-2">
-
-        {# Nút Quay lại Dashboard #}
-        <a href="{{ url_for('admin.index') }}" class="btn btn-outline-dark shadow-sm" title="Quay lại trang chủ">
-            <i class="bi bi-arrow-left"></i>
-        </a>
-
-        {# Nút Tạo Mới #}
-        {% if admin_view.can_create %}
-        <a href="{{ get_url('.create_view', url=return_url) }}" class="btn btn-primary shadow-sm">
-            <i class="bi bi-plus-circle me-1"></i> Tạo Mới
-        </a>
-        {% endif %}
-
-        {# Nút Xuất File #}
-        {% if admin_view.can_export %}
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="bi bi-download"></i> Xuất File
-            </button>
-            <ul class="dropdown-menu">
-                {{ model_layout.export_options() }}
-            </ul>
+        {% if search_supported %}
+        <div class="w-100 w-md-auto" style="max-width: 400px;">
+            <form method="GET" action="{{ return_url }}" class="search-form input-group shadow-sm">
+                <input type="text" name="search" value="{{ search or '' }}" class="form-control"
+                       placeholder="Tìm kiếm...">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if search %}
+                <a href="{{ clear_search_url }}" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </form>
         </div>
         {% endif %}
     </div>
 
-    {% if search_supported %}
-    <div class="w-100 w-md-auto" style="max-width: 400px;">
-        <form method="GET" action="{{ return_url }}" class="search-form input-group shadow-sm">
-            <input type="text" name="search" value="{{ search or '' }}" class="form-control" placeholder="Tìm kiếm...">
-            <button class="btn btn-primary" type="submit">
-                <i class="bi bi-search"></i>
-            </button>
-            {% if search %}
-            <a href="{{ clear_search_url }}" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
-                <i class="bi bi-x-lg"></i>
-            </a>
-            {% endif %}
-        </form>
-    </div>
-    {% endif %}
-</div>
-
-{# --- 2. Bảng dữ liệu --- #}
-<div class="card shadow-sm border-0">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle mb-0" style="min-width: 800px;">
-                <thead class="bg-light text-secondary">
-                <tr>
-                    {% if actions %}
-                    <th class="list-checkbox-column py-3 ps-3" style="width: 40px;">
-                        <input type="checkbox" name="rowtoggle" class="action-rowtoggle form-check-input"
-                               title="Chọn tất cả"/>
-                    </th>
-                    {% endif %}
-
-                    {% for c, name in list_columns %}
-                    <th class="py-3 {{ 'text-center' if c == 'anh_chan_dung' else '' }}">
-                        {% if admin_view.is_sortable(c) %}
-                        {% if sort_column == c %}
-                        <a href="{{ sort_url(c, True) }}" title="Sắp xếp"
-                           class="text-decoration-none text-dark fw-bold">
-                            {{ name }}
-                            <i class="bi bi-arrow-{{ 'up' if sort_desc else 'down' }}"></i>
-                        </a>
-                        {% else %}
-                        <a href="{{ sort_url(c) }}" title="Sắp xếp"
-                           class="text-decoration-none text-secondary fw-semibold">
-                            {{ name }}
-                        </a>
-                        {% endif %}
-                        {% else %}
-                        <span class="text-secondary fw-semibold">{{ name }}</span>
-                        {% endif %}
-                    </th>
-                    {% endfor %}
-
-                    <th class="text-end py-3 pe-3" style="width: 120px;">Hành Động</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for row in data %}
-                <tr>
-                    {% if actions %}
-                    <td class="ps-3">
-                        <input type="checkbox" name="rowid" class="action-checkbox form-check-input"
-                               value="{{ get_pk_value(row) }}" title="Chọn dòng này"/>
-                    </td>
-                    {% endif %}
-
-                    {% for c, name in list_columns %}
-                    <td class="{{ 'text-center' if c == 'anh_chan_dung' else '' }}">
+    {# --- Mobile View (Card List) --- #}
+    <div class="d-md-none">
+        {% for row in data %}
+        {% set row_id = get_pk_value(row) %}
+        <div class="card shadow-sm mb-3 border-0">
+            <div class="card-body">
+                {% for c, name in list_columns %}
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom last-border-0">
+                    <span class="text-muted small text-uppercase fw-bold">{{ name }}</span>
+                    <span class="text-end text-break ps-3">
                         {% if admin_view.is_editable(c) %}
-                        {{ lib.render_inline_field(row, c) }}
+                            {{ lib.render_inline_field(row, c) }}
                         {% else %}
-                        {{ get_value(row, c) }}
+                            {{ get_value(row, c) }}
                         {% endif %}
-                    </td>
-                    {% endfor %}
+                    </span>
+                </div>
+                {% endfor %}
 
-                    <td class="text-end pe-3">
-                        <div class="d-flex justify-content-end">
-                            {% if admin_view.can_view_details %}
-                            <a href="{{ get_url('.details_view', id=get_pk_value(row), url=return_url) }}"
-                               class="admin-action-icon text-info" title="Xem chi tiết">
-                                <i class="bi bi-eye-fill"></i>
-                            </a>
+                <div class="d-flex justify-content-end gap-3 mt-3 pt-2 border-top">
+                    {% if admin_view.can_view_details %}
+                    <a href="{{ get_url('.details_view', id=row_id, url=return_url) }}"
+                       class="text-info text-decoration-none fw-bold">
+                        <i class="bi bi-eye-fill"></i> Chi tiết
+                    </a>
+                    {% endif %}
+
+                    {% if admin_view.can_edit %}
+                    <a href="{{ get_url('.edit_view', id=row_id, url=return_url) }}"
+                       class="text-warning text-decoration-none fw-bold">
+                        <i class="bi bi-pencil-square"></i> Sửa
+                    </a>
+                    {% endif %}
+
+                    {% if admin_view.can_delete %}
+                    <button type="button" class="btn btn-link p-0 text-danger text-decoration-none fw-bold"
+                            data-bs-toggle="modal" data-bs-target="#deleteModal-{{ row_id }}">
+                        <i class="bi bi-trash-fill"></i> Xóa
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-light text-center shadow-sm">Không có dữ liệu</div>
+        {% endfor %}
+    </div>
+
+    {# --- Desktop View (Table) --- #}
+    <div class="card shadow-sm border-0 d-none d-md-block">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered text-nowrap text-center align-middle mb-0">
+                    <thead class="bg-light text-secondary">
+                    <tr>
+                        {% for c, name in list_columns %}
+                        <th class="py-3">
+                            {% if admin_view.is_sortable(c) %}
+                            {% if sort_column == c %}
+                            <a href="{{ sort_url(c, True) }}" class="text-dark fw-bold text-decoration-none">{{ name }}
+                                <i class="bi bi-arrow-{{ 'up' if sort_desc else 'down' }}"></i></a>
+                            {% else %}
+                            <a href="{{ sort_url(c) }}" class="text-secondary fw-semibold text-decoration-none">{{ name
+                                }}</a>
                             {% endif %}
-
-                            {% if admin_view.can_edit %}
-                            <a href="{{ get_url('.edit_view', id=get_pk_value(row), url=return_url) }}"
-                               class="admin-action-icon text-warning" title="Chỉnh sửa">
-                                <i class="bi bi-pencil-square"></i>
-                            </a>
+                            {% else %}
+                            {{ name }}
                             {% endif %}
-
-                            {% if admin_view.can_delete %}
-                            <form class="icon" method="POST" action="{{ get_url('.delete_view') }}">
-                                {{ delete_form.id(value=get_pk_value(row)) }}
-                                {{ delete_form.url(value=return_url) }}
-                                {% if delete_form.csrf_token %}
-                                {{ delete_form.csrf_token }}
+                        </th>
+                        {% endfor %}
+                        <th class="text-end py-3 pe-3" style="width: 120px;">Hành Động</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for row in data %}
+                    {% set row_id = get_pk_value(row) %}
+                    <tr>
+                        {% for c, name in list_columns %}
+                        <td>
+                            {% if admin_view.is_editable(c) %}
+                            {{ lib.render_inline_field(row, c) }}
+                            {% else %}
+                            {{ get_value(row, c) }}
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td class="pe-3">
+                            <div class="d-flex justify-content-center">
+                                {% if admin_view.can_view_details %}
+                                <a href="{{ get_url('.details_view', id=row_id, url=return_url) }}"
+                                   class="admin-action-icon text-info" title="Xem"><i class="bi bi-eye-fill"></i></a>
                                 {% endif %}
-                                <button onclick="return confirm('Bạn có chắc chắn muốn xóa không?');"
-                                        class="btn btn-link p-0 border-0 admin-action-icon text-danger" title="Xóa">
+
+                                {% if admin_view.can_edit %}
+                                <a href="{{ get_url('.edit_view', id=row_id, url=return_url) }}"
+                                   class="admin-action-icon text-warning" title="Sửa"><i
+                                        class="bi bi-pencil-square"></i></a>
+                                {% endif %}
+
+                                {% if admin_view.can_delete %}
+                                <button type="button" class="btn btn-link p-0 border-0 admin-action-icon text-danger"
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal-{{ row_id }}" title="Xóa">
                                     <i class="bi bi-trash-fill"></i>
                                 </button>
-                            </form>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="99" class="text-center py-5 text-muted">
-                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                        Không có dữ liệu nào
-                    </td>
-                </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="99" class="text-center py-5 text-muted">Không có dữ liệu nào</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     {% if num_pages > 1 %}
-    <div class="card-footer bg-white py-3">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <div class="small text-muted mb-2 mb-md-0">
-                Hiển thị {{ page_size }} dòng / trang. Tổng số: {{ count }} bản ghi.
+    <div class="card shadow-sm border-0 mt-3">
+        <div class="card-footer bg-white py-3">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <div class="small text-muted">Hiển thị {{ page_size }} / {{ count }} bản ghi.</div>
+                {{ lib.pager(page, num_pages, pager_url) }}
             </div>
-            {{ lib.pager(page, num_pages, pager_url) }}
         </div>
     </div>
     {% endif %}
+
+    {# --- MODAL LOOP --- #}
+    {% if admin_view.can_delete %}
+    {% for row in data %}
+    {% set row_id = get_pk_value(row) %}
+    <div class="modal fade admin-modal-fix" id="deleteModal-{{ row_id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fs-6">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>CẢNH BÁO XÓA
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Bạn có chắc chắn muốn xóa: <strong>{{ row }}</strong>?<br>
+                    <p class="mt-2 mb-0 text-muted small">Dữ liệu đã xóa sẽ không thể khôi phục.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <form method="POST" action="{{ get_url('.delete_view') }}">
+                        {{ delete_form.id(value=row_id) }}
+                        {{ delete_form.url(value=return_url) }}
+                        {% if delete_form.csrf_token %}
+                        {{ delete_form.csrf_token }}
+                        {% endif %}
+                        <button type="submit" class="btn btn-sm btn-danger">Đồng ý xóa</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
 </div>
 
 {% if actions %}
@@ -171,4 +217,12 @@
     <input type="hidden" id="action" name="action"/>
 </form>
 {% endif %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var modals = document.querySelectorAll('.admin-modal-fix');
+        modals.forEach(function(modal) {
+            document.body.appendChild(modal);
+        });
+    });
+</script>
 {% endblock %}

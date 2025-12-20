@@ -12,6 +12,12 @@ from eduapp.models import (NguoiDungEnum, HocVien, GiaoVien, NhanVien, QuanLy, L
 # ==============================================================================
 # 1. CÁC HÀM FORMATTER (ĐỊNH DẠNG HIỂN THỊ DỮ LIỆU)
 # ==============================================================================
+def format_du_lieu_trong(view, context, model, name):
+    val = getattr(model, name)
+    if val is None or val == "":
+        return "--"
+    return val
+
 
 def format_tien_te(view, context, model, name):
     value = getattr(model, name)
@@ -35,6 +41,13 @@ def format_trang_thai_hd(view, context, model, name):
     return Markup(f'<span class="badge bg-danger text-white">Chưa thanh toán</span>')
 
 
+def format_trang_thai_hoat_dong(view, context, model, name):
+    trang_thai = getattr(model, name)
+    if trang_thai:
+        return Markup('<span class="badge bg-success text-white" style="padding: 5px 10px;">Đang hoạt động</span>')
+    return Markup('<span class="badge bg-danger text-white" style="padding: 5px 10px;">Ngưng hoạt động</span>')
+
+
 def format_tinh_trang_khoa(view, context, model, name):
     tt = getattr(model, name)
     colors = {
@@ -49,6 +62,13 @@ def format_tinh_trang_khoa(view, context, model, name):
         TinhTrangKhoaHocEnum.DA_KET_THUC: 'Kết Thúc'
     }
     return Markup(f'<span class="badge bg-{color} text-white">{ten_hien_thi.get(tt, tt.name)}</span>')
+
+
+def format_xac_nhan_email(view, context, model, name):
+    val = getattr(model, name)
+    if val:
+        return Markup(f'<span class="badge bg-success text-white"><i class="bi bi-check me-1"></i>Đã xác nhận</span>')
+    return Markup(f'<span class="badge bg-danger text-white"><i class="bi bi-x me-1"></i>Chưa xác nhận</span>')
 
 
 # ==============================================================================
@@ -69,9 +89,26 @@ class AuthenticatedView(ModelView):
 
 class UserBaseView(AuthenticatedView):
     column_exclude_list = ['mat_khau', 'vai_tro']
+    common_columns = ['anh_chan_dung', 'ma_nguoi_dung', 'ho_va_ten', 'ten_dang_nhap', 'email', 'so_dien_thoai',
+                      'ngay_tao', 'tinh_trang_hoat_dong']
     column_formatters = {
-        'anh_chan_dung': format_anh_dai_dien
+        'anh_chan_dung': format_anh_dai_dien,
+        'tinh_trang_hoat_dong': format_trang_thai_hoat_dong,
+        'so_dien_thoai': format_du_lieu_trong,
+        'email': format_du_lieu_trong,
+        'ten_dang_nhap': format_du_lieu_trong
     }
+    column_labels = dict(
+        ma_nguoi_dung='Mã người dùng',
+        ho_va_ten='Họ và tên',
+        ten_dang_nhap='Tên đăng nhập',
+        email='Email',
+        so_dien_thoai='SĐT',
+        tinh_trang_hoat_dong='Trạng thái',
+        ngay_tao='Ngày tạo',
+        anh_chan_dung='Ảnh'
+    )
+    form_excluded_columns = ['ngay_tao', 'vai_tro']
 
 
 # ==============================================================================
@@ -79,57 +116,49 @@ class UserBaseView(AuthenticatedView):
 # ==============================================================================
 
 class HocVienView(UserBaseView):
-    column_list = ['anh_chan_dung', 'ma_nguoi_dung', 'ho_va_ten', 'email', 'so_dien_thoai', 'so_dien_thoai_phu_huynh']
-    column_searchable_list = ['ho_va_ten', 'ma_nguoi_dung', 'so_dien_thoai', 'email']
+    column_list = UserBaseView.common_columns + ['ngay_sinh', 'so_dien_thoai_phu_huynh', 'tinh_trang_xac_nhan_email']
 
-    column_labels = dict(
-        ma_nguoi_dung='Mã Học Viên',
-        ho_va_ten='Họ và Tên',
-        anh_chan_dung='Ảnh',
-        so_dien_thoai='SĐT Cá Nhân',
-        so_dien_thoai_phu_huynh='SĐT Phụ Huynh',
-        email='Email',
-        ngay_sinh='Ngày Sinh',
-        ngay_tao='Ngày Tạo'
-    )
-    form_columns = ['ho_va_ten', 'email', 'mat_khau', 'so_dien_thoai', 'so_dien_thoai_phu_huynh', 'ngay_sinh',
-                    'anh_chan_dung', 'tinh_trang_hoat_dong']
+    column_searchable_list = ['ho_va_ten', 'ma_nguoi_dung', 'so_dien_thoai', 'email', 'so_dien_thoai_phu_huynh']
+
+    column_labels = dict(UserBaseView.column_labels, **{
+        'ngay_sinh': 'Ngày sinh',
+        'so_dien_thoai_phu_huynh': 'SĐT phụ huynh',
+        'tinh_trang_xac_nhan_email': 'Xác thực Email'
+    })
+
+    column_formatters = dict(UserBaseView.column_formatters, **{
+        'so_dien_thoai_phu_huynh': format_du_lieu_trong,
+        'tinh_trang_xac_nhan_email': format_xac_nhan_email
+    })
+
+    form_columns = ['ho_va_ten', 'email', 'ten_dang_nhap', 'mat_khau', 'so_dien_thoai', 'so_dien_thoai_phu_huynh',
+                    'ngay_sinh', 'anh_chan_dung', 'tinh_trang_hoat_dong']
 
 
 class GiaoVienView(UserBaseView):
-    column_list = ['anh_chan_dung', 'ma_nguoi_dung', 'ho_va_ten', 'email', 'nam_kinh_nghiem']
-    column_searchable_list = ['ho_va_ten', 'email']
-
-    column_labels = dict(
-        ma_nguoi_dung='Mã Giáo Viên',
-        ho_va_ten='Họ và Tên',
-        anh_chan_dung='Ảnh',
-        email='Email',
-        nam_kinh_nghiem='Kinh Nghiệm (Năm)',
-        nhung_khoa_hoc='Các Khóa Dạy'
-    )
-    form_columns = ['ho_va_ten', 'email', 'mat_khau', 'so_dien_thoai', 'nam_kinh_nghiem', 'anh_chan_dung',
-                    'tinh_trang_hoat_dong']
+    column_list = UserBaseView.common_columns + ['nam_kinh_nghiem']
+    column_searchable_list = ['ho_va_ten', 'email', 'ma_nguoi_dung']
+    column_labels = dict(UserBaseView.column_labels, **{
+        'nam_kinh_nghiem': 'Kinh nghiệm (Năm)'
+    })
+    column_formatters = dict(UserBaseView.column_formatters, **{
+        'nam_kinh_nghiem': format_du_lieu_trong
+    })
+    form_columns = ['ho_va_ten', 'email', 'ten_dang_nhap', 'mat_khau', 'so_dien_thoai', 'nam_kinh_nghiem',
+                    'anh_chan_dung', 'tinh_trang_hoat_dong']
 
 
 class NhanVienView(UserBaseView):
-    column_list = ['ma_nguoi_dung', 'ho_va_ten', 'email', 'tinh_trang_hoat_dong']
-
-    column_labels = dict(
-        ma_nguoi_dung='Mã Nhân Viên',
-        ho_va_ten='Họ và Tên',
-        email='Email',
-        tinh_trang_hoat_dong='Trạng Thái'
-    )
+    column_list = UserBaseView.common_columns
+    column_searchable_list = ['ho_va_ten', 'email', 'ma_nguoi_dung']
+    form_columns = ['ho_va_ten', 'email', 'ten_dang_nhap', 'mat_khau', 'so_dien_thoai',
+                    'anh_chan_dung', 'tinh_trang_hoat_dong']
 
 
 class QuanLyView(UserBaseView):
-    column_list = ['ma_nguoi_dung', 'ho_va_ten', 'email']
-    column_labels = dict(
-        ma_nguoi_dung='Mã Quản Lý',
-        ho_va_ten='Họ Tên',
-        email='Email'
-    )
+    column_list = UserBaseView.common_columns
+    form_columns = ['ho_va_ten', 'email', 'ten_dang_nhap', 'mat_khau', 'so_dien_thoai',
+                    'ma_pin', 'anh_chan_dung', 'tinh_trang_hoat_dong']
 
 
 class KhoaHocView(AuthenticatedView):
