@@ -5,6 +5,7 @@ import math
 import datetime
 import cloudinary.uploader
 import json
+import admin
 from flask import render_template, redirect, request, url_for, session
 from flask_login import current_user, login_user, logout_user
 from eduapp import app, dao, login_manager, mail, db
@@ -924,6 +925,8 @@ def manager_add_user(role_type):
                     show_step2 = True
     return render_template("manager/add_user.html", err_msg=err_msg, msg=msg, data=data, show_step2=show_step2,
                            role_title=config['title'], role_name=role_type, back_url=back_url)
+
+
 
 
 if __name__ == '__main__':

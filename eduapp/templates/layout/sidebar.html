@@ -2,17 +2,46 @@
     <aside id="sidebarMenu" class="collapse collapse-horizontal sidebar-custom sticky-top d-md-block">
         <div class="card card-body border-0 container-aside">
             <div class="list-group list-group-flush">
+                {% if admin_view is defined %}
+                {% for item in admin_view.admin.menu() %}
+                {% if item.is_category() %}
+                <a href="#submenu-{{ loop.index }}"
+                   data-bs-toggle="collapse"
+                   aria-expanded="{% if item.is_active(admin_view) %}true{% else %}false{% endif %}"
+                   class="list-group-item list-group-item-action fw-bold bg-light mt-2 d-flex justify-content-between align-items-center">
+                    {{ item.name }}
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+
+                <div class="collapse {% if item.is_active(admin_view) %}show{% endif %}" id="submenu-{{ loop.index }}">
+                    {% for child in item.get_children() %}
+                    <a href="{{ child.get_url() }}"
+                       class="list-group-item list-group-item-action ps-4 border-0 small
+                   {% if child.is_active(admin_view) %}text-primary fw-bold bg-white{% else %}bg-light{% endif %}">
+                        Chỉnh sửa CSDL {{ child.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                {% if item.is_accessible() and item.is_visible() %}
+                <a href="{{ item.get_url() }}" class="list-group-item list-group-item-action mt-1
+               {% if item.is_active(admin_view) %}active{% endif %}">
+                    <i class="bi bi-circle-fill me-2 small"></i> {{ item.name }}
+                </a>
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+
+                {% else %}
                 <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill me-2"></i>Trang
                     chủ</a>
                 {%if current_user.is_authenticated%}
                 {%if current_user.vai_tro.value==1%}
                 <a href="/course_fee" class="list-group-item list-group-item-action"><i
-                        class="bi bi-cash-stack me-2"></i>Xem
-                    học
-                    phí</a>
+                        class="bi bi-cash-stack me-2"></i>Xem học phí</a>
                 <a href="/register_course" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-plus-fill me-2"></i>Đăng
-                    ký
+                        class="bi bi-calendar-plus-fill me-2"></i>Đăng ký
                     khóa
                     học</a>
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
@@ -37,7 +66,7 @@
                         class="bi bi-journal-bookmark-fill me-2"></i>Xem thống kê</a>
                 <a href="/" class="list-group-item list-group-item-action"><i
                         class="bi bi-journal-bookmark-fill me-2"></i>Xem báo cáo</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-database me-2"></i>Quản lý cơ
+                <a href="/admin" class="list-group-item list-group-item-action"><i class="bi bi-database me-2"></i>Quản lý cơ
                     sở dữ liệu</a>
                 {%elif current_user.vai_tro.value==3%}
                 <a href="/grading" class="list-group-item list-group-item-action"><i
@@ -56,6 +85,7 @@
                     nhập</a>
                 <a href="/register" class="list-group-item list-group-item-action"><i
                         class="bi bi-person-plus-fill me-2"></i>Đăng ký</a>
+                {%endif%}
                 {%endif%}
             </div>
         </div>
