@@ -65,6 +65,16 @@ def quan_ly_required(f):
     return decorated_func
 
 
+def quan_ly_hoac_nhan_vien_required(f):
+    @wraps(f)
+    def decorated_func(*args, **kwargs):
+        if current_user.vai_tro not in [NguoiDungEnum.QUAN_LY, NguoiDungEnum.NHAN_VIEN]:
+            return redirect("/")
+        return f(*args, **kwargs)
+
+    return decorated_func
+
+
 def giao_vien_hoac_hoc_vien_required(f):
     @wraps(f)
     def decorated_func(*args, **kwargs):

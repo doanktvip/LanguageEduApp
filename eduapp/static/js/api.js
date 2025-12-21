@@ -1,5 +1,5 @@
 function xuLyKiemTraPin() {
-    const pinInput = document.getElementById('verify');
+    const pinInput = document.getElementById('verifypin');
     const errorMsg = document.getElementById('pinErrorMsg');
     const pinValue = pinInput.value;
     if (!pinValue || pinValue.length < 6) {

@@ -106,7 +106,7 @@ class NguoiDung(db.Model, UserMixin):
 
 class QuanLy(NguoiDung):
     __tablename__ = "quan_ly"
-    ma_pin = Column(Integer, default=123456)
+    ma_pin = Column(String(50), default='e10adc3949ba59abbe56e057f20f883e')
     ma_nguoi_dung = Column(String(20), ForeignKey('nguoi_dung.ma_nguoi_dung'), primary_key=True)
     __mapper_args__ = {'polymorphic_identity': NguoiDungEnum.QUAN_LY}
 
@@ -198,6 +198,37 @@ class KhoaHoc(db.Model):
             new_number = 1
         return f"{prefix}{new_number:03d}"
 
+    def lay_danh_sach_tuan_hoc(self):
+        tuan_map = {}
+        days_to_subtract = self.ngay_bat_dau.weekday()
+        start_date = self.ngay_bat_dau - timedelta(days=days_to_subtract)
+        days_to_add = 6 - self.ngay_ket_thuc.weekday()
+        end_date = self.ngay_ket_thuc + timedelta(days=days_to_add)
+        current_date = start_date
+        while current_date <= end_date:
+            nam_iso, tuan_iso, _ = current_date.isocalendar()
+            key = (nam_iso, tuan_iso)
+            if key not in tuan_map:
+                tuan_map[key] = {
+                    "week": tuan_iso,
+                    "year": nam_iso,
+                    "days": [],
+                    "schedule": {
+                        "CA_SANG": [None] * 7,
+                        "CA_CHIEU": [None] * 7,
+                    }
+                }
+            tuan_map[key]["days"].append(current_date.strftime("%d/%m"))
+            if self.ngay_bat_dau.date() <= current_date.date() <= self.ngay_ket_thuc.date():
+                weekday = current_date.weekday()
+                for lh in self.lich_hoc:
+                    if lh.thu.value == weekday:
+                        ca_key = lh.ca_hoc.name
+                        if ca_key in tuan_map[key]["schedule"]:
+                            tuan_map[key]["schedule"][ca_key][weekday] = lh
+            current_date += timedelta(days=1)
+        return list(tuan_map.values())
+
     def to_dict_tuyen_sinh(self):
         return {
             'Mã khóa học': self.ma_khoa_hoc,
@@ -226,7 +257,6 @@ class KhoaHoc(db.Model):
             self.tinh_trang = TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH
         else:
             self.tinh_trang = TinhTrangKhoaHocEnum.DA_KET_THUC
-
         return self.tinh_trang
 
 

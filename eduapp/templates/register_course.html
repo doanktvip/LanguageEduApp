@@ -14,6 +14,7 @@
         background-image: none !important;
     }
 </style>
+
 {% if thong_bao %}
 <div class="alert alert-light border border-secondary border-opacity-25 shadow-sm mb-4">
     <div class="d-flex align-items-center mb-2">
@@ -21,14 +22,14 @@
         <span class="fw-bold text-dark">Kết quả xử lý:</span>
     </div>
     <ul class="list-group list-group-flush">
-        {% for msg in thong_bao %}
+        {% for item in thong_bao %}
         <li class="list-group-item bg-transparent py-1 border-0 ps-0">
-            {% if '✅' in msg %}
-            <span class="text-success fw-medium">{{ msg }}</span>
-            {% elif '❌' in msg %}
-            <span class="text-danger fw-medium">{{ msg }}</span>
+            {% if item.type == 'success' %}
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <span class="text-success fw-medium">{{ item.content }}</span>
             {% else %}
-            <span class="text-secondary">{{ msg }}</span>
+            <i class="bi bi-x-circle-fill text-danger me-2"></i>
+            <span class="text-danger fw-medium">{{ item.content }}</span>
             {% endif %}
         </li>
         {% endfor %}
@@ -67,16 +68,16 @@
                     </td>
                     <td>
                         <div class="d-flex flex-column">
-                                <span class="fw-bold fs-6 {{ 'text-secondary' if het_cho else 'text-primary' }}">
-                                    {{ kh.ten_khoa_hoc }}
-                                </span>
+                            <span class="fw-bold fs-6 {{ 'text-secondary' if het_cho else 'text-primary' }}">
+                                {{ kh.ten_khoa_hoc }}
+                            </span>
                             <div class="small text-muted mt-1">
-                                    <span class="badge bg-light text-dark border me-1">
-                                        <i class="bi bi-upc-scan me-1"></i>{{ kh.ma_khoa_hoc }}
-                                    </span>
+                                <span class="badge bg-light text-dark border me-1">
+                                    <i class="bi bi-upc-scan me-1"></i>{{ kh.ma_khoa_hoc }}
+                                </span>
                                 <span class="badge bg-light text-dark border">
-                                        {{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}
-                                    </span>
+                                    {{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}
+                                </span>
                             </div>
                         </div>
                     </td>
@@ -95,13 +96,13 @@
                     <td>
                         {% if het_cho %}
                         <span class="badge bg-secondary w-100 py-2">
-                                    <i class="bi bi-lock-fill me-1"></i>Đã đầy
-                                </span>
+                            <i class="bi bi-lock-fill me-1"></i>Đã đầy
+                        </span>
                         {% else %}
                         <div class="d-flex align-items-center justify-content-between small mb-1 fw-bold">
-                                    <span class="{{ 'text-danger' if kh.si_so_hien_tai >= kh.si_so_toi_da - 2 else 'text-success' }}">
-                                        {{ kh.si_so_hien_tai }}
-                                    </span>
+                            <span class="{{ 'text-danger' if kh.si_so_hien_tai >= kh.si_so_toi_da - 2 else 'text-success' }}">
+                                {{ kh.si_so_hien_tai }}
+                            </span>
                             <span class="text-muted">/ {{ kh.si_so_toi_da }}</span>
                         </div>
                         {% set percent = (kh.si_so_hien_tai / kh.si_so_toi_da * 100)|int %}

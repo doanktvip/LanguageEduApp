@@ -4,6 +4,8 @@
     --color-primary: #0d6efd;
     --bg-today: #fff9e6;
     --bg-today-header: #ffc107;
+    --header-stats: 350px;
+    --header-stats-hv: 250px;
 }
 
 .table-responsive::-webkit-scrollbar {
@@ -63,7 +65,9 @@
 }
 
 .col-fix-left {
+    position: sticky;
     left: 0;
+    z-index: 1;
     border-right: 2px solid #dee2e6 !important;
     width: 250px;
     min-width: 250px;
@@ -94,9 +98,6 @@
     background-color: var(--color-primary);
 }
 
-tr:hover td {
-    background-color: #f8f9fa;
-}
 tr:hover td.col-fix-left,
 tr:hover td.col-fix-right {
     background-color: #f8f9fa;
@@ -132,15 +133,20 @@ thead .sticky-cell {
 }
 
 @media (max-width: 768px) {
+    :root {
+        --header-stats: 200px;
+        --header-stats-hv: 150px;
+    }
+
     .container-aside {
         min-width: calc(100vw - var(--sidebar-width));
     }
 
-    header:has(button[aria-expanded="true"]) {
+    header:has(#sidebarToggle[aria-expanded="true"]) {
         min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
     }
 
-    body:has(button[aria-expanded="true"]) footer {
+    body:has(#sidebarToggle[aria-expanded="true"]) footer {
         min-width: calc(100vw + calc(100vw - var(--sidebar-width)));
     }
 

@@ -1,0 +1,146 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Thanh toán học phí{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <div class="d-flex align-items-center justify-content-between">
+        <h5 class="mb-0 text-uppercase fw-bold">
+            <i class="bi bi-cash-coin me-2"></i>Quản lý học phí
+        </h5>
+        <a href="{{ url_for('manager_student_list') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<div class="bg-light p-3 rounded mb-4 border">
+    <div class="row">
+        <div class="col-md-6">
+            <small class="text-muted fw-bold text-uppercase">Học viên</small>
+            <h4 class="fw-bold text-primary mb-0">{{ hoc_vien.ho_va_ten }}</h4>
+            <span class="badge bg-secondary font-monospace">{{ hoc_vien.ma_nguoi_dung }}</span>
+        </div>
+        <div class="col-md-6 text-md-end mt-2 mt-md-0">
+            <div class="small text-muted"><i class="bi bi-telephone me-1"></i>SĐT: {{ hoc_vien.so_dien_thoai }}</div>
+            <div class="small text-muted"><i class="bi bi-people me-1"></i>PH: {{ hoc_vien.so_dien_thoai_phu_huynh or
+                '---' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+        <thead class="table-light small text-uppercase text-muted">
+        <tr>
+            <th class="text-center">Mã HĐ</th>
+            <th>Khóa học</th>
+            <th class="text-end">Số tiền (VNĐ)</th>
+            <th class="text-center">Hạn đóng</th>
+            <th class="text-center">Trạng thái</th>
+            <th class="text-center">Người thu</th>
+            <th class="text-center" width="120">Hành động</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if ds_hoa_don %}
+        {% for hd in ds_hoa_don %}
+        <tr>
+            <td class="text-center fw-bold text-muted">#{{ hd.ma_hoa_don }}</td>
+            <td>
+                <div class="fw-bold">{{ hd.khoa_hoc.ten_khoa_hoc }}</div>
+                <small class="text-muted fst-italic">{{ hd.khoa_hoc.ma_khoa_hoc }}</small>
+            </td>
+            <td class="text-end fw-bold text-danger">
+                {{ "{:,.0f}".format(hd.so_tien) }} đ
+            </td>
+            <td class="text-center small">
+                {{ hd.ngay_han.strftime('%d/%m/%Y') }}
+            </td>
+            <td class="text-center">
+                {% if hd.trang_thai.value == 1 %} <span
+                    class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                <i class="bi bi-exclamation-circle me-1"></i>Chưa đóng
+                            </span>
+                {% else %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-check-circle-fill me-1"></i>Đã đóng
+                            </span>
+                <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                    {{ hd.ngay_nop.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+                {% endif %}
+            </td>
+            <td class="text-center small text-muted">
+                {% if hd.nhan_vien %}
+                {{ hd.nhan_vien.ho_va_ten }}
+                {% else %}
+                --
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if hd.trang_thai.value == 1 %}
+                <button class="btn btn-primary btn-sm w-100" data-bs-toggle="modal"
+                        data-bs-target="#modalPay{{ hd.ma_hoa_don }}">
+                    <i class="bi bi-wallet2 me-1"></i>Thu tiền
+                </button>
+
+                <div class="modal fade" id="modalPay{{ hd.ma_hoa_don }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h6 class="modal-title fw-bold">Xác nhận thu học phí</h6>
+                                <button type="button" class="btn-close btn-close-white"
+                                        data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-start">
+                                <p class="mb-2">Bạn có chắc chắn muốn xác nhận thanh toán cho hóa đơn này?</p>
+                                <ul class="list-group list-group-flush bg-light rounded mb-3">
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span>Khóa học:</span>
+                                        <span class="fw-bold">{{ hd.khoa_hoc.ten_khoa_hoc }}</span>
+                                    </li>
+                                    <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                        <span>Số tiền:</span>
+                                        <span class="fw-bold text-danger">{{ "{:,.0f}".format(hd.so_tien) }} đ</span>
+                                    </li>
+                                </ul>
+                                <div class="alert alert-warning small mb-0">
+                                    <i class="bi bi-info-circle me-1"></i>Hành động này không thể hoàn tác.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy
+                                </button>
+                                <form action="{{ url_for('confirm_payment', ma_hoa_don=hd.ma_hoa_don) }}" method="POST">
+                                    <button type="submit" class="btn btn-primary btn-sm fw-bold">
+                                        Xác nhận đã thu tiền
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <button class="btn btn-light btn-sm w-100 border" disabled>
+                    <i class="bi bi-printer me-1"></i>In HĐ
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+                <i class="bi bi-folder-check fs-3 d-block mb-2"></i>
+                Học viên này chưa đăng ký khóa học nào.
+            </td>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

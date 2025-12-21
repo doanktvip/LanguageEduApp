@@ -27,50 +27,40 @@
                 {% if item.is_accessible() and item.is_visible() %}
                 <a href="{{ item.get_url() }}" class="list-group-item list-group-item-action mt-1
                {% if item.is_active(admin_view) %}active{% endif %}">
-                    <i class="bi bi-circle-fill me-2 small"></i> {{ item.name }}
+                    <i class="bi bi-house-gear-fill me-2"></i> {{ item.name }}
                 </a>
                 {% endif %}
                 {% endif %}
                 {% endfor %}
-                <a href="/" class="list-group-item list-group-item-action">
-                    <i class="bi bi-house-door-fill me-2"></i> Quay về trang chủ
+                <a href="/admin/exit" class="list-group-item list-group-item-action">
+                    <i class="bi bi-arrow-left me-2"></i> Quay về trang chủ chính
                 </a>
                 {% else %}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-house-door-fill me-2"></i>Trang
+                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi bi-house-fill me-2"></i>Trang
                     chủ</a>
                 {%if current_user.is_authenticated%}
                 {%if current_user.vai_tro.value==1%}
                 <a href="/course_fee" class="list-group-item list-group-item-action"><i
                         class="bi bi-cash-stack me-2"></i>Xem học phí</a>
                 <a href="/register_course" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-plus-fill me-2"></i>Đăng ký
-                    khóa
-                    học</a>
+                        class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học</a>
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-week-fill me-2"></i>Thời
-                    khóa
-                    biểu</a>
+                        class="bi bi-calendar-week-fill me-2"></i>Thời khóa biểu</a>
                 <a href="/scoreboard" class="list-group-item list-group-item-action"><i
-                        class="bi bi-bar-chart-fill me-2"></i>Xem
-                    điểm</a>
+                        class="bi bi-bar-chart-fill me-2"></i>Xem điểm</a>
                 {%elif current_user.vai_tro.value==2%}
                 <a href="/manager/employees" class="list-group-item list-group-item-action"><i
-                        class="bi bi-briefcase-fill me-2"></i>Quản
-                    lý nhân viên</a>
+                        class="bi bi-briefcase-fill me-2"></i>Quản lý nhân viên</a>
                 <a href="/manager/teachers" class="list-group-item list-group-item-action"><i
-                        class="bi bi-pen-fill me-2"></i>Quản
-                    lý giáo viên</a>
+                        class="bi bi-pen-fill me-2"></i>Quản lý giáo viên</a>
                 <a href="/manager/students" class="list-group-item list-group-item-action"><i
                         class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
                 <a href="/manager/courses" class="list-group-item list-group-item-action"><i
                         class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-graph-up-arrow me-2"></i>Xem
-                    thống kê</a>
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi-file-earmark-text me-2"></i>Xem
-                    báo cáo</a>
+                <a href="/stats" class="list-group-item list-group-item-action"><i
+                        class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
                 <a href="javascript:;" class="list-group-item list-group-item-action"
-                   data-bs-toggle="modal"
-                   data-bs-target="#modalCheckPin">
+                   onclick="chuyenCheDoVaMoModal(event)">
                     <i class="bi bi-database-lock me-2"></i>Quản lý cơ sở dữ liệu
                 </a>
                 {%elif current_user.vai_tro.value==3%}
@@ -82,7 +72,8 @@
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
                         class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>
                 {%elif current_user.vai_tro.value==4%}
-                <a href="/" class="list-group-item list-group-item-action">Thống kê</a>
+                <a href="/manager/students" class="list-group-item list-group-item-action"><i
+                        class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
                 <a href="/" class="list-group-item list-group-item-action">Báo cáo</a>
                 {%endif%}
                 {%else%}
@@ -95,30 +86,4 @@
             </div>
         </div>
     </aside>
-</div>
-<div class="modal fade" id="modalCheckPin" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fs-6"><i class="bi bi-shield-lock me-2"></i>Bảo mật Admin</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <label for="verify" class="form-label fw-bold mb-3">Nhập mã PIN xác thực</label>
-
-                <input type="text" class="form-control text-center fw-bold text-primary fs-4"
-                       id="verify" name="verify" placeholder="######"
-                       maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
-                       style="letter-spacing: 0.5em; font-family: monospace;"
-                       oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                <div id="pinErrorMsg" class="text-danger small mt-2 d-none">
-                    <i class="bi bi-x-circle me-1"></i>Mã PIN không đúng
-                </div>
-            </div>
-            <div class="modal-footer justify-content-center border-0 pt-0">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary btn-sm px-4" onclick="xuLyKiemTraPin()">Truy cập</button>
-            </div>
-        </div>
-    </div>
 </div>

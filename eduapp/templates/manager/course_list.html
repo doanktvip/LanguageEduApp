@@ -3,28 +3,38 @@
 {% block title %}Danh sách khóa học{% endblock %}
 
 {% block card_header %}
-<div class="d-flex justify-content-between align-items-center p-3">
-    <span><i class="bi bi-list-ul me-2"></i>QUẢN LÝ KHÓA HỌC</span>
-    <a href="{{ url_for('manager_create_course') }}" class="btn btn-primary btn-sm shadow-sm fw-bold">
-        <i class="bi bi-plus-circle me-1"></i> Thêm khóa học mới
-    </a>
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                <i class="bi bi-list-ul me-2"></i>QUẢN LÝ KHÓA HỌC
+            </span>
+        </div>
+
+        <div class="col-12 col-sm-auto">
+            <a href="{{ url_for('manager_create_course') }}"
+               class="btn btn-sm btn-outline-primary w-100 d-block d-sm-inline-block">
+                <i class="bi bi-plus-circle me-1"></i>Thêm khóa học mới
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block card_body %}
 <style>
-    input {
-        background-image: none !important;
-    }
+    input { background-image: none !important; }
+    /* CSS phụ trợ để card mobile đẹp hơn */
+    .mobile-card-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; }
 </style>
+
 <div class="bg-light p-3 rounded mb-4 border shadow-sm">
     <form method="GET" action="{{ url_for('manager_course_list') }}" class="row g-2">
         <div class="col-lg-3 col-md-12">
             <label class="form-label small fw-bold text-secondary mb-1">Từ khóa</label>
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" name="kw" class="form-control"
-                       placeholder="Mã hoặc tên..."
+                <input type="text" name="kw" class="form-control" placeholder="Mã hoặc tên..."
                        value="{{ request.args.get('kw', '') }}">
             </div>
         </div>
@@ -44,26 +54,24 @@
             <label class="form-label small fw-bold text-secondary mb-1">Ngày bắt đầu (Từ - Đến)</label>
             <div class="input-group input-group-sm">
                 <input type="date" name="from_date" class="form-control"
-                       value="{{ request.args.get('from_date', '') }}" placeholder="Từ ngày">
+                       value="{{ request.args.get('from_date', '') }}">
                 <span class="input-group-text bg-white px-2"><i class="bi bi-arrow-right-short"></i></span>
-                <input type="date" name="to_date" class="form-control"
-                       value="{{ request.args.get('to_date', '') }}" placeholder="Đến ngày">
+                <input type="date" name="to_date" class="form-control" value="{{ request.args.get('to_date', '') }}">
             </div>
         </div>
         <div class="col-lg-2 col-md-12 d-flex align-items-end mt-3 mt-lg-0">
             <div class="d-flex w-100 gap-2">
-                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold">
-                    <i class="bi bi-funnel-fill me-1"></i>Lọc
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold"><i
+                        class="bi bi-funnel-fill me-1"></i>Lọc
                 </button>
-                <a href="{{ url_for('manager_course_list') }}" class="btn btn-outline-secondary btn-sm"
-                   title="Xóa bộ lọc">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </a>
+                <a href="{{ url_for('manager_course_list') }}" class="btn btn-outline-secondary btn-sm"><i
+                        class="bi bi-arrow-counterclockwise"></i></a>
             </div>
         </div>
     </form>
 </div>
-<div class="table-responsive">
+
+<div class="table-responsive d-none d-md-block">
     <table class="table table-hover table-bordered align-middle text-nowrap bg-white border-top">
         <thead class="table-light text-secondary small text-uppercase fw-bold">
         <tr>
@@ -73,7 +81,7 @@
             <th class="bg-light">Giảng viên</th>
             <th class="text-center bg-light">Thời gian</th>
             <th class="text-center bg-light">Sĩ số</th>
-            <th class="text-end bg-light">học phí</th>
+            <th class="text-end bg-light">Học phí</th>
             <th class="text-center bg-light">Trạng thái</th>
             <th class="text-center bg-light" style="text-transform: none;">
                 <div class="dropdown">
@@ -101,10 +109,8 @@
         {% if pagination.items %}
         {% for kh in pagination.items %}
         <tr>
-            <td class="text-center fw-bold text-muted">
-                {{ (pagination.page - 1) * pagination.per_page + loop.index }}
+            <td class="text-center fw-bold text-muted">{{ (pagination.page - 1) * pagination.per_page + loop.index }}
             </td>
-
             <td><span class="badge bg-light text-dark border font-monospace">{{ kh.ma_khoa_hoc }}</span></td>
             <td style="min-width: 250px; white-space: normal;">
                 <div class="fw-bold text-primary">{{ kh.ten_khoa_hoc }}</div>
@@ -120,9 +126,7 @@
             </td>
             <td class="text-center">{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</td>
             <td class="text-end">
-                <div class="fw-bold font-monospace fs-6 text-dark">
-                    {{ "{:,.0f}".format(kh.hoc_phi) }} ₫
-                </div>
+                <div class="fw-bold font-monospace fs-6 text-dark">{{ "{:,.0f}".format(kh.hoc_phi) }} ₫</div>
             </td>
             <td class="text-center">
                 {% if kh.tinh_trang.name == 'DANG_TUYEN_SINH' %}
@@ -135,37 +139,24 @@
             </td>
             <td class="text-center">
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
-                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
-                        <li>
-                            <a class="dropdown-item"
-                               href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}">
-                                <i class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số tối đa
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item"
-                               href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}">
-                                <i class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item"
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số</a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí</a></li>
+                        <li><a class="dropdown-item"
                                href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
-                                    class="bi bi-people-fill me-2 text-info"></i>Xem danh sách học viên
-                            </a>
-                        </li>
+                                class="bi bi-people-fill me-2 text-info"></i>Học viên</a></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li>
-                            <a href="javascript:;" class="dropdown-item text-danger" data-bs-toggle="modal"
-                               data-bs-target="#modalDelete{{ kh.ma_khoa_hoc }}">
-                                <i class="bi bi-trash me-2"></i>Xóa khóa học
-                            </a>
+                        <li><a href="javascript:;" class="dropdown-item text-danger" data-bs-toggle="modal"
+                               data-bs-target="#modalDelete{{ kh.ma_khoa_hoc }}"><i class="bi bi-trash me-2"></i>Xóa</a>
                         </li>
                     </ul>
                 </div>
@@ -173,20 +164,16 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header bg-danger text-white">
-                                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>CẢNH BÁO XÓA
-                                </h5>
+                                <h5 class="modal-title">CẢNH BÁO XÓA</h5>
                                 <button type="button" class="btn-close btn-close-white"
                                         data-bs-dismiss="modal"></button>
                             </div>
-                            <div class="modal-body text-start" style="white-space: normal;">
-                                Bạn sắp xóa khóa học: <strong>{{ kh.ten_khoa_hoc }}</strong> ({{ kh.ma_khoa_hoc }}).<br>
-                                <p class="mt-2 mb-0 text-muted small">Lưu ý: Hành động này sẽ xóa sạch dữ liệu điểm,
-                                    danh sách học viên và hóa đơn liên quan.</p>
+                            <div class="modal-body text-start">
+                                Bạn muốn xóa khóa: <strong>{{ kh.ten_khoa_hoc }}</strong>?
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                                <a href="{{ url_for('delete_course', ma_kh=kh.ma_khoa_hoc) }}" class="btn btn-danger">Đồng
-                                    ý xóa</a>
+                                <a href="{{ url_for('delete_course', ma_kh=kh.ma_khoa_hoc) }}" class="btn btn-danger">Xóa</a>
                             </div>
                         </div>
                     </div>
@@ -196,19 +183,111 @@
         {% endfor %}
         {% else %}
         <tr>
-            <td colspan="8" class="text-center py-5">Không có dữ liệu</td>
+            <td colspan="9" class="text-center py-5">Không có dữ liệu</td>
         </tr>
         {% endif %}
         </tbody>
     </table>
 </div>
+
+<div class="d-block d-md-none">
+    {% if pagination.items %}
+    {% for kh in pagination.items %}
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h6 class="fw-bold text-primary mb-1">{{ kh.ten_khoa_hoc }}</h6>
+                    <span class="badge bg-light text-dark border font-monospace">{{ kh.ma_khoa_hoc }}</span>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số</a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí</a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
+                                class="bi bi-people-fill me-2 text-info"></i>Xem học viên</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a href="javascript:;" class="dropdown-item text-danger" data-bs-toggle="modal"
+                               data-bs-target="#modalDeleteMobile{{ kh.ma_khoa_hoc }}"><i class="bi bi-trash me-2"></i>Xóa
+                            khóa học</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <hr class="my-2 dashed">
+
+            <div class="small">
+                <div class="mb-1">
+                    <span class="mobile-card-label">Giảng viên:</span>
+                    <span class="text-dark">{{ kh.giao_vien.ho_va_ten if kh.giao_vien else "Chưa có" }}</span>
+                </div>
+                <div class="mb-1">
+                    <span class="mobile-card-label">Sĩ số:</span>
+                    <span>{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</span>
+                </div>
+                <div class="mb-1">
+                    <span class="mobile-card-label">Học phí:</span>
+                    <span class="fw-bold text-success">{{ "{:,.0f}".format(kh.hoc_phi) }} ₫</span>
+                </div>
+                <div class="mb-2">
+                    <span class="mobile-card-label">Thời gian:</span>
+                    <span class="text-muted">{{ kh.ngay_bat_dau.strftime('%d/%m') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div>
+                    {% if kh.tinh_trang.name == 'DANG_TUYEN_SINH' %}
+                    <span class="badge bg-success-subtle text-success w-100 py-2"><i
+                            class="bi bi-check-circle me-1"></i>Đang tuyển sinh</span>
+                    {% elif kh.tinh_trang.name == 'DUNG_TUYEN_SINH' %}
+                    <span class="badge bg-warning-subtle text-warning w-100 py-2"><i
+                            class="bi bi-pause-circle me-1"></i>Ngừng tuyển</span>
+                    {% else %}
+                    <span class="badge bg-danger-subtle text-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i>Đã kết thúc</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalDeleteMobile{{ kh.ma_khoa_hoc }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">CẢNH BÁO XÓA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">Bạn xóa khóa: <strong>{{ kh.ten_khoa_hoc }}</strong>?</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <a href="{{ url_for('delete_course', ma_kh=kh.ma_khoa_hoc) }}" class="btn btn-danger">Xóa ngay</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox fs-1"></i><br>Không tìm thấy dữ liệu
+    </div>
+    {% endif %}
+</div>
+
 {% if pagination.pages > 1 %}
 <nav aria-label="Page navigation" class="mt-4">
     <ul class="pagination justify-content-center">
         <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
             <a class="page-link"
-               href="{{ url_for('manager_course_list', page=pagination.prev_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}"
-               aria-label="Previous">
+               href="{{ url_for('manager_course_list', page=pagination.prev_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}">
                 <span aria-hidden="true">&laquo;</span>
             </a>
         </li>
@@ -216,9 +295,8 @@
         {% if page_num %}
         <li class="page-item {{ 'active' if page_num == pagination.page }}">
             <a class="page-link"
-               href="{{ url_for('manager_course_list', page=page_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}">
-                {{ page_num }}
-            </a>
+               href="{{ url_for('manager_course_list', page=page_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}">{{
+                page_num }}</a>
         </li>
         {% else %}
         <li class="page-item disabled"><span class="page-link">...</span></li>
@@ -226,12 +304,12 @@
         {% endfor %}
         <li class="page-item {{ 'disabled' if not pagination.has_next }}">
             <a class="page-link"
-               href="{{ url_for('manager_course_list', page=pagination.next_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}"
-               aria-label="Next">
+               href="{{ url_for('manager_course_list', page=pagination.next_num, kw=request.args.get('kw'), status=request.args.get('status'), from_date=request.args.get('from_date'), to_date=request.args.get('to_date')) }}">
                 <span aria-hidden="true">&raquo;</span>
             </a>
         </li>
     </ul>
 </nav>
 {% endif %}
+
 {% endblock %}

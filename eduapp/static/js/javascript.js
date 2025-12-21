@@ -88,15 +88,24 @@ function setupPasswordToggle(triggerId, inputId, iconId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const fixedDropdowns = document.querySelectorAll('.js-dropdown-fixed');
-    fixedDropdowns.forEach(function(dropdownToggleEl) {
-        new bootstrap.Dropdown(dropdownToggleEl, {
-            popperConfig: function (defaultBsPopperConfig) {
-                return { ...defaultBsPopperConfig, strategy: 'fixed' };
+    var dropdownToggles = document.querySelectorAll('.js-dropdown-fixed');
+    dropdownToggles.forEach(function(toggle) {
+        if (typeof bootstrap !== 'undefined') {
+            var instance = bootstrap.Dropdown.getInstance(toggle);
+            if (instance) {
+                instance.dispose();
             }
-        });
+            new bootstrap.Dropdown(toggle, {
+                popperConfig: function(defaultConfig) {
+                    var newConfig = Object.assign({}, defaultConfig);
+                    newConfig.strategy = 'fixed';
+                    return newConfig;
+                }
+            });
+        }
     });
 });
+
 document.addEventListener("DOMContentLoaded", function() {
     const loader = document.getElementById('loading-overlay');
     const showLoader = () => {
@@ -149,3 +158,20 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 });
+
+function chuyenCheDoVaMoModal(event) {
+    if (event) event.preventDefault();
+    var toggleBtn = document.getElementById('sidebarToggle');
+    var isExpanded = toggleBtn && toggleBtn.getAttribute('aria-expanded') === 'true';
+    if (isExpanded) {
+        toggleBtn.click();
+    }
+    setTimeout(function() {
+        var modalElement = document.getElementById('modalCheckPin');
+        var bsModal = bootstrap.Modal.getInstance(modalElement);
+        if (!bsModal) {
+            bsModal = new bootstrap.Modal(modalElement);
+        }
+        bsModal.show();
+    }, 350);
+}
