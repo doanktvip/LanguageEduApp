@@ -8,13 +8,12 @@
         <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
             <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
                 {% if khoa_hoc %}
-            <i class="bi bi-people-fill me-2"></i>ĐIỀU CHỈNH SĨ SỐ (ĐƠN LẺ)
-        {% else %}
-            <i class="bi bi-layers-fill me-2"></i>ĐIỀU CHỈNH SĨ SỐ (HÀNG LOẠT)
-        {% endif %}
+                    <i class="bi bi-people-fill me-2"></i>ĐIỀU CHỈNH SĨ SỐ (ĐƠN LẺ)
+                {% else %}
+                    <i class="bi bi-layers-fill me-2"></i>ĐIỀU CHỈNH SĨ SỐ (HÀNG LOẠT)
+                {% endif %}
             </span>
         </div>
-
         <div class="col-12 col-sm-auto">
             <a href="{{ url_for('manager_course_list') }}"
                class="btn btn-sm btn-outline-secondary w-100 d-block d-sm-inline-block">
@@ -31,7 +30,7 @@
     .course-avatar {
         width: 80px; height: 80px;
         background-color: #e9ecef;
-        color: #0d6efd; /* Primary */
+        color: #0d6efd;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         margin: 0 auto;
@@ -39,33 +38,15 @@
     }
     .course-avatar.is-batch {
         background-color: #e0cffc;
-        color: #6610f2; /* Indigo */
+        color: #6610f2;
         border: 2px dashed #6610f2;
     }
 </style>
 
 <div class="row justify-content-center mt-4">
     <div class="col-md-8 col-lg-6">
-
-        {% if msg %}
-        <div class="alert alert-{{ msg_type }} shadow-sm border-0 mb-4 fade show">
-            {% if msg_type == 'success' %}
-            <i class="bi bi-check-circle-fill me-2"></i> {{ msg }}
-            <div class="mt-2">
-                <a href="{{ url_for('manager_course_list') }}" class="btn btn-success btn-sm fw-bold">
-                    <i class="bi bi-arrow-return-left me-1"></i> Quay về danh sách
-                </a>
-            </div>
-            {% else %}
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ msg }}
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% if (msg is none) or (msg_type != 'success') %}
         <div class="card shadow-sm border-0 bg-light">
             <div class="card-body p-4 {% if not khoa_hoc %}border border-2 border-indigo-subtle rounded{% endif %}">
-
                 <div class="text-center mb-4">
                     {% if khoa_hoc %}
                     <div class="course-avatar mb-3">
@@ -73,9 +54,7 @@
                     </div>
                     <h5 class="fw-bold text-primary">{{ khoa_hoc.ten_khoa_hoc }}</h5>
                     <span class="badge bg-secondary font-monospace">{{ khoa_hoc.ma_khoa_hoc }}</span>
-                    <p class="text-muted small mt-2">
-                        Điều chỉnh sức chứa cho lớp học này.
-                    </p>
+                    <p class="text-muted small mt-2">Điều chỉnh sức chứa cho lớp học này.</p>
                     {% else %}
                     <div class="course-avatar is-batch mb-3">
                         <i class="bi bi-collection-fill fs-1"></i>
@@ -95,18 +74,13 @@
                     <div class="form-floating mb-3">
                         <input type="text" class="form-control bg-white fw-bold text-secondary" id="current_qty"
                                value="{{ min_limit }} học viên" disabled readonly>
-
                         <label for="current_qty">
-                            {% if khoa_hoc %}
-                            Sĩ số thực tế đang học
-                            {% else %}
-                            Sĩ số của lớp đông nhất hệ thống
-                            {% endif %}
+                            {% if khoa_hoc %} Sĩ số thực tế đang học {% else %} Sĩ số của lớp đông nhất hệ thống {%
+                            endif %}
                         </label>
-
                         {% if not khoa_hoc %}
-                        <div class="form-text text-danger small">
-                            * Đây là mức sàn an toàn. Bạn không thể set thấp hơn số này.
+                        <div class="form-text text-danger small">* Đây là mức sàn an toàn. Bạn không thể set thấp hơn số
+                            này.
                         </div>
                         {% endif %}
                     </div>
@@ -114,18 +88,10 @@
                     <div class="form-floating mb-4">
                         <input type="number"
                                class="form-control fw-bold fs-5 {% if not khoa_hoc %}text-indigo{% else %}text-primary{% endif %}"
-                               id="new_max_qty"
-                               name="si_so_toi_da"
-                               placeholder="Sĩ số tối đa"
-                               required
-                               min="{{ min_limit }}"
+                               id="new_max_qty" name="si_so_toi_da" placeholder="Sĩ số tối đa"
+                               required min="{{ min_limit }}"
                                value="{{ khoa_hoc.si_so_toi_da if khoa_hoc else 30 }}">
-
                         <label for="new_max_qty">Sĩ số tối đa mới</label>
-
-                        <div class="form-text text-muted">
-                            Nhập giới hạn số lượng học viên tối đa.
-                        </div>
                     </div>
 
                     <div class="d-grid">
@@ -142,8 +108,6 @@
                 </form>
             </div>
         </div>
-        {% endif %}
-
     </div>
 </div>
 {% endblock %}

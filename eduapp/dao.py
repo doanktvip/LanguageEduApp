@@ -560,6 +560,10 @@ def get_by_username(username):
     return NguoiDung.query.filter_by(ten_dang_nhap=username).first()
 
 
+def get_hoa_don_by_id(ma_hoa_don):
+    return HoaDon.query.get(ma_hoa_don)
+
+
 def get_by_username_email(username, email):
     return NguoiDung.query.filter_by(ten_dang_nhap=username, email=email).first()
 
@@ -630,15 +634,16 @@ def update_avatar(username, new_avatar_url):
         return False
 
 
-def update_parent_phone(username, parent_phone):
+def update_parent_phone(user_id, parent_phone):
     try:
-        user = get_by_username(username=username)
+        user = get_by_id(user_id)
         if user:
             user.so_dien_thoai_phu_huynh = parent_phone
             db.session.commit()
             return True
         return False
-    except Exception:
+    except Exception as e:
+        print(f"Lỗi: {e}")
         db.session.rollback()
         return False
 
@@ -869,3 +874,27 @@ def tao_khoa_hoc_moi(data, lich_hoc_list):
     except Exception as e:
         db.session.rollback()
         return False, str(e)
+
+
+def get_ds_hoa_don_by_hoc_vien(ma_hoc_vien):
+    return HoaDon.query.filter_by(ma_hoc_vien=ma_hoc_vien) \
+        .order_by(HoaDon.trang_thai.asc(), HoaDon.ngay_tao.desc()).all()
+
+
+def xac_nhan_thanh_toan(ma_hoa_don, ma_nhan_vien):
+    hoa_don = HoaDon.query.get(ma_hoa_don)
+
+    if hoa_don and hoa_don.trang_thai == TrangThaiHoaDonEnum.CHUA_THANH_TOAN:
+        try:
+            hoa_don.trang_thai = TrangThaiHoaDonEnum.DA_THANH_TOAN
+            hoa_don.ngay_nop = datetime.now()
+            hoa_don.ma_nhan_vien = ma_nhan_vien
+
+            db.session.commit()
+            return True, hoa_don
+        except Exception as e:
+            db.session.rollback()
+            print(f"Lỗi khi thanh toán: {e}")
+            return False, hoa_don
+
+    return False, hoa_don

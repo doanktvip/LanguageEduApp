@@ -27,19 +27,6 @@
         background-image: none !important;
     }
 </style>
-{% if msg %}
-<div class="alert alert-{{ msg_type }} alert-dismissible fade show shadow-sm" role="alert">
-    {% if msg_type == 'success' %}
-    <i class="bi bi-check-circle-fill me-2"></i>
-    {% elif msg_type == 'warning' %}
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    {% else %}
-    <i class="bi bi-x-circle-fill me-2"></i>
-    {% endif %}
-    {{ msg }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
 <form method="POST" action="" id="form-create-course">
     <div class="row g-4">
         <div class="col-lg-5">

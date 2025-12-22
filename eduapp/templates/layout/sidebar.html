@@ -57,7 +57,7 @@
                         class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
                 <a href="/manager/courses" class="list-group-item list-group-item-action"><i
                         class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
-                <a href="/stats" class="list-group-item list-group-item-action"><i
+                <a href="/manager/stats" class="list-group-item list-group-item-action"><i
                         class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
                 <a href="javascript:;" class="list-group-item list-group-item-action"
                    onclick="chuyenCheDoVaMoModal(event)">
@@ -67,14 +67,14 @@
                 <a href="/grading" class="list-group-item list-group-item-action"><i
                         class="bi bi-journal-bookmark-fill me-2"></i>Sổ điểm điện tử</a>
                 <a href="/attendance" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-check-fill me-2"></i>Điểm
-                    danh</a>
+                        class="bi bi-calendar-check-fill me-2"></i>Điểm danh</a>
                 <a href="/schedule" class="list-group-item list-group-item-action"><i
                         class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>
                 {%elif current_user.vai_tro.value==4%}
                 <a href="/manager/students" class="list-group-item list-group-item-action"><i
                         class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
-                <a href="/" class="list-group-item list-group-item-action">Báo cáo</a>
+                <a href="/manager/stats" class="list-group-item list-group-item-action"><i
+                        class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
                 {%endif%}
                 {%else%}
                 <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill me-2"></i>Đăng

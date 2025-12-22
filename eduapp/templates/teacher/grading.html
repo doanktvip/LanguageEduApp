@@ -1,0 +1,265 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Quản Lý Điểm Số{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                <i class="bi bi-journal-bookmark-fill me-2"></i>SỔ ĐIỂM ĐIỆN TỬ
+            </span>
+        </div>
+        {% if selected_course %}
+        <div class="col-12 col-sm-auto text-center">
+            <span class="badge bg-light text-primary border shadow-sm px-3 py-2">
+                Mã lớp: <strong>{{ selected_course.ma_khoa_hoc }}</strong>
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    /* CSS bổ trợ để tối ưu trải nghiệm */
+    input { background-image: none !important; }
+    .table-responsive { border-radius: 8px; overflow: hidden; }
+    .input-score:focus { background-color: #fff !important; border-color: #0d6efd; box-shadow: 0 0 0 0.2rem rgba(13,110,253,.15); }
+    .mobile-label { width: 120px; display: inline-block; font-weight: 600; color: #6c757d; font-size: 0.85rem; }
+    .dashed-hr { border-top: 1px dashed #dee2e6; margin: 10px 0; }
+</style>
+
+<div class="bg-light p-3 rounded mb-4 border shadow-sm">
+    <form action="/grading" method="GET" id="form-select-course" class="row g-3">
+        <div class="col-12 col-lg-6">
+            <label class="form-label small fw-bold text-secondary mb-1">Chọn lớp học đang phụ trách</label>
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white text-primary"><i class="bi bi-search"></i></span>
+                <select name="course_id" class="form-select fw-bold border-start-0" onchange="this.form.submit()">
+                    {% for kh in ds_khoa_hoc %}
+                    <option value="{{ kh.ma_khoa_hoc }}" {% if selected_course and kh.ma_khoa_hoc==
+                            selected_course.ma_khoa_hoc %}selected{% endif %}>
+                        {{ kh.ten_khoa_hoc }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6 d-flex align-items-end justify-content-lg-end">
+            {% if selected_course and cau_truc_diem %}
+            <div class="small bg-white p-2 rounded border d-flex gap-3">
+                <span class="text-muted"><i class="bi bi-pencil-square text-secondary me-1"></i>Nháp</span>
+                <span class="text-muted"><i class="bi bi-check-circle-fill text-primary me-1"></i>Đã chốt</span>
+            </div>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{% if selected_course %}
+{% if not cau_truc_diem %}
+<div class="card border-warning shadow-sm">
+    <div class="card-header bg-warning bg-opacity-10 py-3">
+        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-gear-wide-connected me-2"></i>CẤU HÌNH TRỌNG SỐ ĐIỂM</h6>
+    </div>
+    <div class="card-body p-4">
+        <div class="alert alert-info border-0 shadow-sm small mb-4">
+            <i class="bi bi-info-circle-fill me-2"></i>Lớp học mới cần được định nghĩa các thành phần điểm (VD: Chuyên
+            cần 10%, Thi 90%).
+            <strong>Tổng trọng số phải bằng 100%.</strong>
+        </div>
+
+        <form method="POST" action="/grading">
+            <input type="hidden" name="course_id" value="{{ selected_course.ma_khoa_hoc }}">
+            <input type="hidden" name="action_type" value="create_structure">
+
+            <div id="structure-container">
+                <div class="row g-2 mb-3 structure-row align-items-end">
+                    <div class="col-7 col-md-8">
+                        <label class="form-label small text-muted">Tên đầu điểm</label>
+                        <input type="text" name="ten_thanh_phan[]" class="form-control" value="Giữa kỳ" required>
+                    </div>
+                    <div class="col-4 col-md-3">
+                        <label class="form-label small text-muted">Trọng số (%)</label>
+                        <input type="number" name="trong_so[]" class="form-control weight-input" value="30" min="1"
+                               max="100" required oninput="calcTotal()">
+                    </div>
+                    <div class="col-1 col-md-1"></div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4 pt-3 border-top gap-3">
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4" onclick="addRow()">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm cột điểm
+                </button>
+                <div class="d-flex align-items-center gap-4">
+                    <span class="fw-bold h5 mb-0" id="total-display">Tổng: 0%</span>
+                    <button type="submit" id="btn-save-struct" class="btn btn-primary fw-bold px-4 shadow">Lưu cấu
+                        trúc
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<form action="/grading" method="POST">
+    <input type="hidden" name="course_id" value="{{ selected_course.ma_khoa_hoc }}">
+
+    <div class="table-responsive d-none d-md-block shadow-sm border">
+        <table class="table table-hover table-bordered text-nowrap align-middle text-center mb-0 bg-white">
+            <thead class="table-light text-uppercase small fw-bold">
+            <tr>
+                <th class="text-start ps-3 py-3" style="min-width: 200px;">Học viên</th>
+                {% for cot in cau_truc_diem %}
+                <th style="width: 130px;">
+                    {{ cot.ten_loai_diem }}
+                    <div class="badge bg-primary-subtle text-primary rounded-pill mt-1">{{ (cot.trong_so * 100)|int
+                        }}%
+                    </div>
+                </th>
+                {% endfor %}
+                <th class="bg-light" style="width: 100px;">Tổng kết</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for row in bang_diem_data %}
+            <tr>
+                <td class="text-start ps-3">
+                    <div class="fw-bold">{{ row.hoc_vien.ho_va_ten }}</div>
+                    <small class="text-muted font-monospace">{{ row.hoc_vien.ma_nguoi_dung }}</small>
+                </td>
+                {% for cot in cau_truc_diem %}
+                {% set cell = row.diem_so.get(cot.ten_loai_diem) %}
+                {% set is_locked = (cell and cell[0] is not none and not cell[2]) %}
+                <td>
+                    <input type="number" step="0.1" name="diem_{{ row.ma_bang_diem }}_{{ cot.id }}"
+                           value="{{ cell[0] if cell and cell[0] is not none else '' }}"
+                           class="form-control form-control-sm text-center fw-bold input-score {{ 'bg-light border-0' if is_locked else '' }}"
+                           {{ 'readonly' if is_locked else '' }} min="0" max="10">
+                </td>
+                {% endfor %}
+                <td class="fw-bold fs-5">
+                    {% set tk = row.diem_so.get('Tổng kết') %}
+                    {# Kiểm tra tk tồn tại, tk[0] không None và tk[0] là số #}
+                    {% if tk and tk[0] is not none %}
+                    <span class="{{ 'text-success' if tk[0]|float >= 5.0 else 'text-danger' }}">
+                    {{ tk[0] }}
+                    </span>
+                    {% else %}
+                    <span class="text-muted opacity-50">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-md-none">
+        {% for row in bang_diem_data %}
+        <div class="card mb-3 shadow-sm border-0">
+            <div class="card-body">
+                <div class="fw-bold text-primary h6 mb-1">{{ row.hoc_vien.ho_va_ten }}</div>
+                <div class="small text-muted font-monospace mb-3">{{ row.hoc_vien.ma_nguoi_dung }}</div>
+
+                {% for cot in cau_truc_diem %}
+                {% set cell = row.diem_so.get(cot.ten_loai_diem) %}
+                {% set is_locked = (cell and cell[0] is not none and not cell[2]) %}
+                <div class="d-flex align-items-center mb-2">
+                    <span class="mobile-label">{{ cot.ten_loai_diem }} ({{ (cot.trong_so * 100)|int }}%):</span>
+                    <input type="number" step="0.1" name="diem_{{ row.ma_bang_diem }}_{{ cot.id }}"
+                           value="{{ cell[0] if cell and cell[0] is not none else '' }}"
+                           class="form-control form-control-sm w-50 fw-bold text-center {{ 'bg-light border-0' if is_locked else '' }}"
+                           {{ 'readonly' if is_locked else '' }}>
+                </div>
+                {% endfor %}
+
+                <div class="dashed-hr"></div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-secondary">ĐIỂM TỔNG KẾT:</span>
+                    {% set tk = row.diem_so.get('Tổng kết') %}
+                    {% if tk and tk[0] is not none %}
+                    <span class="h5 mb-0 fw-bold {{ 'text-success' if tk[0]|float >= 5.0 else 'text-danger' }}">{{ tk[0] }}</span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex flex-column flex-md-row justify-content-end gap-2 mt-4">
+        <button type="submit" name="action_type" value="save_draft" class="btn btn-outline-secondary px-4 fw-bold">
+            <i class="bi bi-pencil-square me-2"></i>Lưu nháp
+        </button>
+        <button type="submit" name="action_type" value="publish" class="btn btn-primary px-4 fw-bold shadow"
+                onclick="return confirm('Sau khi chốt, điểm sẽ không thể sửa đổi ngay. Bạn chắc chắn chứ?')">
+            <i class="bi bi-check-circle-fill me-2"></i>Chốt điểm & Công bố
+        </button>
+    </div>
+</form>
+{% endif %}
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-journal-x display-1 text-muted opacity-25"></i>
+    <h5 class="text-muted mt-3">Vui lòng chọn một lớp học để quản lý điểm</h5>
+</div>
+{% endif %}
+{% endblock %}
+{% block javascript %}
+<script>
+    function calcTotal() {
+        let total = 0;
+        document.querySelectorAll('.weight-input').forEach(input => {
+            total += parseInt(input.value) || 0;
+        });
+
+        const display = document.getElementById('total-display');
+        const btn = document.getElementById('btn-save-struct');
+
+        if (display) {
+            display.innerText = `Tổng: ${total}%`;
+            if (total === 100) {
+                display.className = 'fw-bold h5 mb-0 text-success';
+                if (btn) btn.disabled = false;
+            } else {
+                display.className = 'fw-bold h5 mb-0 text-danger';
+                if (btn) btn.disabled = true;
+            }
+        }
+    }
+
+    function addRow() {
+        const container = document.getElementById('structure-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'row g-2 mb-3 structure-row align-items-end animate__animated animate__fadeIn';
+
+        newRow.innerHTML = `
+            <div class="col-7 col-md-8">
+                <input type="text" name="ten_thanh_phan[]" class="form-control" placeholder="Tên cột (VD: Cuối kỳ)" required>
+            </div>
+            <div class="col-4 col-md-3">
+                <input type="number" name="trong_so[]" class="form-control weight-input" placeholder="0" min="1" max="100" required oninput="calcTotal()">
+            </div>
+            <div class="col-1 col-md-1 text-center">
+                <button type="button" class="btn btn-outline-danger border-0 p-1" onclick="removeRow(this)">
+                    <i class="bi bi-trash-fill fs-5"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(newRow);
+    }
+    function removeRow(btn) {
+        btn.closest('.structure-row').remove();
+        calcTotal();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        calcTotal();
+    });
+</script>
+{% endblock %}

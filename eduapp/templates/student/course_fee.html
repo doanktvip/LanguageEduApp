@@ -1,0 +1,154 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Xem học phí{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <i class="bi bi-cash-stack me-2"></i>Lịch sử đóng học phí
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    .mobile-label {
+        width: 110px;
+        display: inline-block;
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    .card-mobile {
+        transition: transform 0.2s;
+        border-left: 4px solid #0d6efd;
+    }
+    .card-mobile.paid {
+        border-left-color: #198754;
+    }
+    .font-monospace {
+        font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+</style>
+
+{% if ds_hoa_don %}
+<div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4 d-none d-md-block">
+    <div class="table-responsive">
+        <table class="table table-bordered text-nowrap mb-0 align-middle">
+            <thead class="bg-primary text-white">
+            <tr>
+                <th class="text-center py-3" style="width: 50px;">#</th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75">Thông tin hóa đơn</th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75 text-center">Hạn đóng</th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75 text-end">Số tiền</th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75 text-center" style="width: 150px;">Trạng thái
+                </th>
+                <th class="py-3 text-uppercase small fw-bold opacity-75 text-center" style="width: 140px;">Hành động
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for hd in ds_hoa_don %}
+            <tr class="{{ 'bg-light' if hd.trang_thai.value == 2 else '' }}">
+                <td class="text-center text-muted small">{{ loop.index }}</td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <span class="fw-bold text-primary mb-1">{{ hd.khoa_hoc.ten_khoa_hoc if hd.khoa_hoc else 'Không xác định' }}</span>
+                        <div class="small text-muted">
+                            <span class="badge bg-light text-dark border me-1"><i class="bi bi-upc-scan me-1"></i>{{ hd.ma_hoa_don }}</span>
+                            <span><i class="bi bi-calendar-plus me-1"></i>{{ hd.ngay_tao.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-center">
+                    {% if hd.ngay_han %}
+                    <div class="small fw-medium text-dark bg-light rounded py-1 border d-inline-block px-2">{{
+                        hd.ngay_han.strftime('%d/%m/%Y') }}
+                    </div>
+                    {% else %}<span class="text-muted">-</span>{% endif %}
+                </td>
+                <td class="text-end">
+                    <div class="fw-bold font-monospace fs-6 text-dark">{{ "{:,.0f}".format(hd.so_tien) }} ₫</div>
+                </td>
+                <td class="text-center">
+                    {% if hd.trang_thai.value == 2 %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2 small">
+                            <i class="bi bi-check-circle-fill me-1"></i>Đã xong
+                        </span>
+                    {% else %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2 small">
+                            <i class="bi bi-hourglass-split me-1"></i>Chưa đóng
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if hd.trang_thai.value == 1 %}
+                    <a href="#" class="btn btn-sm btn-primary shadow-sm fw-bold px-3">Thanh toán</a>
+                    {% else %}
+                    <button class="btn btn-sm btn-outline-secondary opacity-50 border-0" disabled><i
+                            class="bi bi-lock-fill"></i></button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-block d-md-none">
+    {% for hd in ds_hoa_don %}
+    <div class="card card-mobile mb-3 shadow-sm border-0 {{ 'paid' if hd.trang_thai.value == 2 else '' }}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold text-primary mb-0">{{ hd.khoa_hoc.ten_khoa_hoc if hd.khoa_hoc else 'Hóa đơn lẻ'
+                    }}</h6>
+                <span class="badge {{ 'bg-success' if hd.trang_thai.value == 2 else 'bg-warning text-dark' }} rounded-pill">
+                        {{ 'Đã xong' if hd.trang_thai.value == 2 else 'Chưa đóng' }}
+                    </span>
+            </div>
+
+            <div class="mb-3">
+                    <span class="badge bg-light text-dark border font-monospace small">
+                        <i class="bi bi-upc-scan me-1"></i>{{ hd.ma_hoa_don }}
+                    </span>
+            </div>
+
+            <div class="small">
+                <div class="mb-1">
+                    <span class="mobile-label">Ngày tạo:</span>
+                    <span class="text-muted">{{ hd.ngay_tao.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="mb-1">
+                    <span class="mobile-label">Hạn đóng:</span>
+                    <span class="text-danger fw-medium">{{ hd.ngay_han.strftime('%d/%m/%Y') if hd.ngay_han else '-' }}</span>
+                </div>
+                <div class="mb-3">
+                    <span class="mobile-label">Số tiền:</span>
+                    <span class="fw-bold text-dark font-monospace fs-6">{{ "{:,.0f}".format(hd.so_tien) }} ₫</span>
+                </div>
+            </div>
+
+            {% if hd.trang_thai.value == 1 %}
+            <a href="#" class="btn btn-primary w-100 fw-bold py-2 mt-2 shadow-sm">
+                <i class="bi bi-credit-card me-2"></i>Thanh toán ngay
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="bg-light p-3 rounded-3 border text-end mb-4 shadow-sm">
+    <span class="text-uppercase fw-bold text-muted me-2 small">Tổng đã thanh toán:</span>
+    <span class="fs-4 fw-bold text-success font-monospace">{{ "{:,.0f}".format(tong_tien) }} ₫</span>
+</div>
+
+{% else %}
+<div class="text-center py-5">
+    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3 text-muted"
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-wallet2 fs-1 opacity-50"></i>
+    </div>
+    <h5 class="text-muted fw-normal">Chưa có dữ liệu học phí.</h5>
+</div>
+{% endif %}
+{% endblock %}

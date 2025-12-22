@@ -13,6 +13,7 @@
     <script src="{{ url_for('static', filename='js/javascript.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/api.js') }}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     {% block head %}
     {% endblock %}
@@ -86,5 +87,25 @@
         </div>
     </div>
 </div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+      {% for category, message in messages %}
+        Swal.fire({
+          title: "{% if category == 'success' %}Thành công!{% elif category == 'danger' or category == 'error' %}Lỗi!{% elif category == 'warning' %}Cảnh báo!{% else %}Thông báo{% endif %}",
+          text: "{{ message }}",
+          icon: "{% if category == 'danger' %}error{% else %}{{ category }}{% endif %}",
+          timer: 5000,
+          showConfirmButton: false,
+          timerProgressBar: true,
+          toast: false,
+          position: 'center'
+        });
+      {% endfor %}
+    });
+</script>
+{% endif %}
+{% endwith %}
 </body>
 </html>
