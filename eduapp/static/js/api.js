@@ -1,5 +1,5 @@
 function xuLyKiemTraPin() {
-    const pinInput = document.getElementById('verify');
+    const pinInput = document.getElementById('verifypin');
     const errorMsg = document.getElementById('pinErrorMsg');
     const pinValue = pinInput.value;
     if (!pinValue || pinValue.length < 6) {
@@ -27,3 +27,16 @@ function xuLyKiemTraPin() {
         alert("Lỗi kết nối server!");
     });
 }
+
+document.getElementById('yearFilter').addEventListener('change', function() {
+    const year = this.value;
+
+    fetch(`/api/revenue-chart?year=${year}`).then(res => res.json()).then(res => {
+        if(res.status === 'success'){
+            revenueChartObj.data.datasets[0].data = res.data;
+            revenueChartObj.update();
+            document.getElementById('displayTotalRevenue').innerHTML = `${res.formatted_total} <small class="text-muted" style="font-size: 0.6em;">VNĐ</small>`;
+            document.getElementById('displayYear').innerText = year;
+        }
+    });
+});

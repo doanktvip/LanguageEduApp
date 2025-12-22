@@ -3,13 +3,21 @@
 {% block title %}Tạo khóa học mới{% endblock %}
 
 {% block card_header %}
-<div class="p-3 d-flex justify-content-between align-items-center">
-    <span class="fw-bold text-uppercase">
-        <i class="bi bi-mortarboard-fill me-2"></i>Tạo khóa học mới
-    </span>
-    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Quay lại
-    </a>
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                <i class="bi bi-mortarboard-fill me-2"></i>Tạo khóa học mới
+            </span>
+        </div>
+
+        <div class="col-12 col-sm-auto">
+            <a href="{{ url_for('manager_course_list') }}"
+               class="btn btn-sm btn-outline-secondary w-100 d-block d-sm-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -19,19 +27,6 @@
         background-image: none !important;
     }
 </style>
-{% if msg %}
-<div class="alert alert-{{ msg_type }} alert-dismissible fade show shadow-sm" role="alert">
-    {% if msg_type == 'success' %}
-    <i class="bi bi-check-circle-fill me-2"></i>
-    {% elif msg_type == 'warning' %}
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    {% else %}
-    <i class="bi bi-x-circle-fill me-2"></i>
-    {% endif %}
-    {{ msg }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
 <form method="POST" action="" id="form-create-course">
     <div class="row g-4">
         <div class="col-lg-5">

@@ -2,15 +2,7 @@
 
 {% block title %}Xác thực tài khoản{% endblock %}
 
-{% block card_header %}
-<div class="d-none"></div>
-{% endblock %}
-
 {% block card_body %}
-<style>
-    input { background-image: none !important; }
-</style>
-
 <div class="row justify-content-center text-center">
     <div class="col-md-8 col-lg-6">
         <div class="mb-4 mt-2">
@@ -19,47 +11,40 @@
                 <i class="bi bi-shield-check fs-1"></i>
             </div>
             <h4 class="fw-bold text-dark">Xác thực Email</h4>
-
             <p class="text-muted small px-3">
-                Nhập mã xác nhận 6 chữ số đã gửi tới email <br>
-                <span class="fw-bold text-dark bg-light px-2 py-1 rounded border">
-                    {{ current_user.email }}
-                </span>
-                <a href="#" class="text-decoration-none ms-1 text-primary"
-                   data-bs-toggle="modal" data-bs-target="#doiEmailModal"
-                   title="Đổi email khác">
-                    <i class="bi bi-pencil-square fs-6"></i>
+                Mã OTP sẽ được gửi đến:
+                <span class="fw-bold text-dark bg-light px-2 py-1 rounded border">{{ current_user.email }}</span>
+                <a href="javascript:;" class="ms-1 text-primary" data-bs-toggle="modal" data-bs-target="#doiEmailModal"
+                   title="Đổi email">
+                    <i class="bi bi-pencil-square"></i>
                 </a>
             </p>
-            </div>
+        </div>
 
         <form method="post">
             <div class="mb-4">
-                <input type="text" class="form-control text-center fw-bold text-primary fs-4"
-                       id="verify" name="verify" placeholder="######"
-                       maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
-                       style="letter-spacing: 0.5em; font-family: monospace;"
+                <input type="text" class="form-control text-center fw-bold text-primary fs-4" id="verify" name="verify"
+                       placeholder="000000" maxlength="6" pattern="[0-9]{6}" required
+                       style="letter-spacing: 0.5em; font-family: monospace; border: 2px solid #dee2e6;"
                        oninput="this.value = this.value.replace(/[^0-9]/g, '')" autofocus>
             </div>
-            <div id="alert-box"
-                 class="alert alert-warning d-flex align-items-center justify-content-center mb-4 shadow-sm"
-                 style="min-height: 54px;">
-                <i class="bi bi-clock-history me-2"></i>
-                <p id="hieu-luc" class="mb-0 fw-bold small">
-                    Đang tải trạng thái...
-                </p>
+
+            <div id="alert-box" class="alert d-flex align-items-center justify-content-center mb-4 shadow-sm"
+                 style="min-height: 58px;">
+                <i id="alert-icon" class="bi bi-info-circle me-2"></i>
+                <p id="alert-text" class="mb-0 fw-bold small">Đang kiểm tra...</p>
             </div>
+
             <div class="d-grid gap-2">
-                <button class="btn btn-primary btn-lg fw-bold shadow-sm" type="submit">
-                    Xác nhận kích hoạt
+                <button id="btn-submit" class="btn btn-primary btn-lg fw-bold shadow-sm" type="submit">Xác nhận kích
+                    hoạt
                 </button>
             </div>
+
             <div class="mt-4">
-                <span class="text-muted small">Bạn chưa nhận được mã?</span>
-                <a href="{{ url_for('verify_page', action='resend') }}"
-                   class="text-decoration-none small fw-bold ms-1">
-                    Gửi lại mã
-                </a>
+                <span class="text-muted small">Chưa nhận được mã?</span>
+                <a id="btn-resend" href="{{ url_for('verify_page', action='resend') }}"
+                   class="text-decoration-none small fw-bold ms-1">Gửi lại mã</a>
             </div>
         </form>
     </div>
@@ -70,24 +55,20 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold fs-6 text-uppercase text-muted">Cập nhật Email mới</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('update_email_verify') }}" method="POST">
                 <div class="modal-body text-start">
                     <div class="mb-3">
-                        <label for="new_email" class="form-label small fw-bold">Nhập địa chỉ Email mới</label>
-                        <input type="email" class="form-control" id="new_email" name="new_email" required
-                               placeholder="vidu@gmail.com">
-                        <div class="form-text small">
-                            Mã xác nhận mới sẽ được gửi ngay lập tức đến email này.
-                        </div>
+                        <label for="new_email" class="form-label small fw-bold">Địa chỉ Email mới</label>
+                        <input type="email" class="form-control" id="new_email" name="new_email"
+                               required placeholder="vidu@gmail.com" value="{{ current_user.email }}">
+                        <div class="form-text small">Hệ thống sẽ gửi mã xác nhận mới ngay sau khi bạn đổi email.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light btn-sm fw-bold" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm fw-bold">
-                        <i class="bi bi-send me-1"></i>Lưu và Gửi mã
-                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold">Cập nhật & Gửi mã</button>
                 </div>
             </form>
         </div>
@@ -98,31 +79,51 @@
 {% block javascript %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        var timeLeft = {{ wait_time | default(0) }};
-        var hasError = {{ 'true' if warn_msg else 'false' }};
-        var msgContent = "{{ warn_msg if warn_msg else '' }}";
-        var isBlocked = {{ 'true' if is_blocked else 'false' }};
-        var blockTime = {{ block_time | default(0) }};
-        var maxResend = {{ max_resend_limit | default(5) }};
-        if (isBlocked) {
-            demNguocGiay(blockTime, "hieu-luc", "alert-box", "Bạn đã gửi mã " + maxResend + " lần. Thử lại sau:", function(){
-                formAlert("hieu-luc", "Đã hết thời gian chặn. Bạn có thể gửi lại mã.", "alert-box");
-            });
-            return;
+        const waitTime = {{ wait_time | default(0) }};
+        const isBlocked = {{ 'true' if is_blocked else 'false' }};
+        const blockTime = {{ block_time | default(0) }};
+
+        const alertBox = document.getElementById("alert-box");
+        const alertText = document.getElementById("alert-text");
+        const alertIcon = document.getElementById("alert-icon");
+        const btnSubmit = document.getElementById("btn-submit");
+        const btnResend = document.getElementById("btn-resend");
+
+        function updateUI(type, text, iconClass) {
+            alertBox.className = `alert alert-${type} d-flex align-items-center justify-content-center mb-4 shadow-sm`;
+            alertText.innerText = text;
+            alertIcon.className = `bi ${iconClass} me-2`;
         }
-        if (timeLeft == 0) {
-            formAlert("hieu-luc", "Vui lòng yêu cầu gửi mã xác nhận mới.", "alert-box");
+
+        function startCountdown(seconds, prefix, type, endText, endType, endIcon, onEnd) {
+            let current = seconds;
+            updateUI(type, `${prefix} ${current}s`, "bi-clock-history");
+
+            const timer = setInterval(() => {
+                current--;
+                if (current < 0) {
+                    clearInterval(timer);
+                    updateUI(endType, endText, endIcon);
+                    if (onEnd) onEnd();
+                    return;
+                }
+                alertText.innerText = `${prefix} ${current}s`;
+            }, 1000);
+        }
+
+        if (isBlocked) {
+            btnSubmit.disabled = true;
+            btnResend.classList.add("disabled", "pointer-events-none");
+            startCountdown(blockTime, "Bạn bị tạm chặn gửi mã. Thử lại sau:", "danger", "Đã hết thời gian chặn. Vui lòng tải lại trang.", "success", "bi-check-circle", () => {
+                location.reload();
+            });
+        } else if (waitTime > 0) {
+            startCountdown(waitTime, "Mã có hiệu lực trong:", "warning", "Mã xác nhận đã hết hiệu lực. Hãy gửi lại mã mới.", "secondary", "bi-exclamation-octagon", () => {
+                btnSubmit.disabled = true;
+            });
         } else {
-            if (!hasError) {
-                demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Mã hiệu lực trong:", function(){
-                    formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi lại.", "alert-box");
-                });
-            } else {
-                const quanLyBoDem = demNguocGiay(timeLeft, "hieu-luc", "alert-box", "Mã hiệu lực trong:", function(){
-                    formAlert("hieu-luc", "Mã xác nhận đã hết hiệu lực. Vui lòng gửi lại.", "alert-box");
-                });
-                quanLyBoDem.kichHoatThongBao(msgContent, 3);
-            }
+            updateUI("info", "Vui lòng nhấn 'Gửi lại mã' để nhận mã xác minh mới.", "bi-envelope-exclamation");
+            btnSubmit.disabled = true;
         }
     });
 </script>

@@ -1,19 +1,18 @@
-import hashlib
 import time
 import random
 import math
-import datetime
 from datetime import timedelta
+import datetime
 import admin
 import cloudinary.uploader
 import json
-from flask import render_template, redirect, request, url_for, session, jsonify
+from flask import render_template, redirect, request, url_for, session, jsonify, flash
 from flask_login import current_user, login_user, logout_user
-from eduapp import app, dao, login_manager, mail
+from eduapp import app, dao, login_manager
 from eduapp.decorators import anonymous_required, giao_vien_required, hoc_vien_required, \
-    giao_vien_hoac_hoc_vien_required, tinh_trang_xac_nhan_email_required, login_user_required, quan_ly_required
-from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum, QuanLy
-from flask_mail import Message
+    giao_vien_hoac_hoc_vien_required, tinh_trang_xac_nhan_email_required, login_user_required, quan_ly_required, \
+    quan_ly_hoac_nhan_vien_required
+from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum
 
 
 @app.route('/')
@@ -21,30 +20,37 @@ def index():
     return render_template("index.html")
 
 
-# @app.errorhandler(404)
-# def page_not_found(e):
-#     return redirect('/')
+@app.errorhandler(404)
+def page_not_found(e):
+    current_path = request.path
+    if current_path.startswith('/admin'):
+        return redirect('/admin')
+    return redirect('/')
 
 
 @app.route('/login', methods=['GET', 'POST'])
 @anonymous_required
 def login():
-    err_msg = None
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         user = dao.login(username, password)
+
         if user:
             if not user.tinh_trang_hoat_dong:
-                err_msg = f'''<strong>Tài khoản của bạn đã bị khóa!</strong><br>
-                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="link-danger">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
-                return render_template("login.html", err_msg=err_msg)
+                msg = f"Tài khoản của bạn đã bị khóa! Vui lòng liên hệ: {app.config['MAIL_USERNAME']} để được hỗ trợ."
+                flash(msg, "danger")
+                return redirect(url_for('login'))
+
             login_user(user)
             next_page = request.args.get('next')
+            flash(f"Chào mừng {user.ho_va_ten} đã quay trở lại!", "success")
             return redirect(next_page or '/')
         else:
-            err_msg = 'Tên tài khoản hoặc mật khẩu không chính xác.'
-    return render_template("login.html", err_msg=err_msg)
+            flash("Tên tài khoản hoặc mật khẩu không chính xác.", "danger")
+            return redirect(url_for('login'))
+
+    return render_template("login.html")
 
 
 @app.route('/logout')
@@ -64,54 +70,61 @@ def register():
     if request.method == 'GET':
         session.pop('register_info', None)
         return render_template("register.html", data={}, show_step2=False)
-    err_msg = None
+
     show_step2 = False
     focus_field = None
     data = session.get('register_info', {})
     form_data = request.form.to_dict()
     data.update(form_data)
     session['register_info'] = data
+
     if 'back_to_step1' in request.form:
-        return render_template("register.html", err_msg=None, data=data, show_step2=False)
+        return render_template("register.html", data=data, show_step2=False)
+
     step = request.form.get('step')
+
     if step == '1':
         password = data.get('password')
         re_enter_password = data.get('re_enter_password')
         username = data.get('username')
+
         if dao.get_by_username(username):
-            err_msg = 'Tài khoản đã tồn tại'
+            flash('Tài khoản đã tồn tại!', 'danger')
             data['username'] = ''
             focus_field = 'username'
         elif not password or password != re_enter_password:
-            err_msg = 'Mật khẩu nhập lại không chính xác'
+            flash('Mật khẩu xác nhận không chính xác!', 'danger')
             data['password'] = ''
             data['re_enter_password'] = ''
             focus_field = 'password'
         else:
             show_step2 = True
+
     elif step == '2':
         email = data.get('email')
-        user_check = dao.get_by_email(email)
-        if user_check:
-            err_msg = 'Email này đã được sử dụng bởi tài khoản khác!'
+        if dao.get_by_email(email):
+            flash('Email này đã được sử dụng bởi tài khoản khác!', 'danger')
+            data['email'] = ''
             show_step2 = True
         else:
             image_file = request.files.get('image')
-            path_image = None
+            path_image = "https://res.cloudinary.com/db4bjqp4f/image/upload/v1765436438/shtnr60mecp057e2uctk.jpg"
             if image_file and image_file.filename != '':
                 try:
                     res = cloudinary.uploader.upload(image_file)
                     path_image = res['secure_url']
                 except Exception as ex:
-                    print(f"Lỗi upload ảnh: {ex}")
+                    print(f"Lỗi upload: {ex}")
+
             dob_val = None
-            if data.get('dob'):
-                try:
+            try:
+                if data.get('dob'):
                     dob_val = datetime.datetime.strptime(data.get('dob'), '%Y-%m-%d')
-                except ValueError:
-                    err_msg = "Định dạng ngày sinh không hợp lệ."
-                    show_step2 = True
-            if not err_msg:
+            except ValueError:
+                flash("Định dạng ngày sinh không hợp lệ.", "danger")
+                show_step2 = True
+
+            if dob_val:
                 is_success = dao.add_user(
                     NguoiDungEnum.HOC_VIEN,
                     ho_va_ten=data.get('name'),
@@ -124,11 +137,13 @@ def register():
                 )
                 if is_success:
                     session.pop('register_info', None)
+                    flash("Đăng ký tài khoản thành công! Vui lòng đăng nhập.", "success")
                     return redirect(url_for('login'))
                 else:
-                    err_msg = 'Đã có lỗi hệ thống xảy ra, vui lòng thử lại sau.'
+                    flash('Đã có lỗi hệ thống xảy ra, vui lòng thử lại sau.', 'danger')
                     show_step2 = True
-    return render_template("register.html", err_msg=err_msg, data=data, show_step2=show_step2, focus_field=focus_field)
+
+    return render_template("register.html", data=data, show_step2=show_step2, focus_field=focus_field)
 
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -137,111 +152,109 @@ def forgot_password():
     if request.method == "GET":
         session.pop('reset_info', None)
         return render_template("forgot_password.html", show_step2=False, data={})
-    err_msg = None
+
     show_step2 = False
     reset_info = session.get('reset_info', {})
     step = request.form.get("step")
+
     if step == "1":
         username = request.form.get("username")
         email = request.form.get("email")
         user = dao.get_by_username_email(username, email)
+
         if not user:
-            err_msg = 'Tên tài khoản hoặc Email không chính xác.'
+            flash('Tên tài khoản hoặc Email không chính xác.', 'danger')
             reset_info = {'username': username, 'email': email}
         else:
             if not user.tinh_trang_hoat_dong:
-                err_msg = f'''<strong>Tài khoản của bạn đã bị khóa!</strong><br>
-                Vui lòng liên hệ: <a href="mailto:{app.config['MAIL_USERNAME']}" class="alert-link fw-bold">{app.config['MAIL_USERNAME']}</a> để được cấp lại.'''
-                return render_template("forgot_password.html", show_step2=False, err_msg=err_msg, data={})
+                msg = f"Tài khoản đã bị khóa! Liên hệ: {app.config['MAIL_USERNAME']} để được hỗ trợ."
+                flash(msg, "danger")
+                return redirect(url_for('forgot_password'))
+
             otp_code = str(random.randint(0, 999999)).zfill(6)
             reset_info = {
                 'username': username,
                 'email': email,
-                'otp_code': otp_code
+                'otp_code': otp_code,
+                'name': user.ho_va_ten
             }
             session['reset_info'] = reset_info
-            # chức năng gửi mail
-            # msg = Message(
-            #     subject="Xin chào.",
-            #     recipients=[email],
-            #     html=f"""<p>Chào bạn {user.ho_va_ten},</p>
-            #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ đổi mật khẩu từ bạn.<br>Đừng lo lắng nhé, hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
-            #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
-            #     <small>Lưu ý mã không có thời gian hiệu lực nhưng mà nếu bạn nhập sai thì mã đó sẽ bị vô hiệu!</small>
-            #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
-            # )
-            # mail.send(msg)
-            print(otp_code)
-            show_step2 = True
+
+            if dao.send_otp_email_forgot_password(email, user.ho_va_ten, otp_code):
+                flash(f"Mã xác nhận đã được gửi đến email {email}", "success")
+                show_step2 = True
+            else:
+                flash("Lỗi gửi email. Vui lòng thử lại sau.", "danger")
+
     elif step == "resend":
-        if not reset_info: return redirect(url_for('forgot_password'))
+        if not reset_info:
+            return redirect(url_for('forgot_password'))
+
         new_otp = str(random.randint(0, 999999)).zfill(6)
-        reset_info['otp_code'] = new_otp  # Cấp mã mới
+        reset_info['otp_code'] = new_otp
         session['reset_info'] = reset_info
-        # chức năng gửi mail
-        # msg = Message(
-        #     subject="Xin chào.",
-        #     recipients=[email],
-        #     html=f"""<p>Chào bạn {user.ho_va_ten},</p>
-        #     <p>Chúng mình nhận được tín hiệu cần hỗ trợ đổi mật khẩu từ bạn.<br>Đừng lo lắng nhé, hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
-        #     <p style="font-size: 24px;">Mã xác nhận:<b> {otp_code}</b></p>
-        #     <small>Lưu ý mã không có thời gian hiệu lực nhưng mà nếu bạn nhập sai thì mã đó sẽ bị vô hiệu!</small>
-        #     <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
-        # )
-        # mail.send(msg)
-        print(f"DEBUG NEW OTP: {new_otp}")
-        err_msg = "Mã xác nhận mới đã được gửi."
+
+        if dao.send_otp_email_forgot_password(reset_info.get('email'), reset_info.get('name'), new_otp):
+            flash("Mã xác nhận mới đã được gửi vào email của bạn.", "info")
+        else:
+            flash("Lỗi hệ thống khi gửi lại mã.", "danger")
         show_step2 = True
+
     elif step == "2":
-        if not reset_info: return redirect(url_for('forgot_password'))
+        if not reset_info:
+            return redirect(url_for('forgot_password'))
+
         user_otp = request.form.get("verify")
         new_password = request.form.get("new_password")
         re_password = request.form.get("re_enter_password")
         real_otp = reset_info.get('otp_code')
         saved_username = reset_info.get('username')
+
         if not real_otp or user_otp != real_otp:
             reset_info.pop('otp_code', None)
             session['reset_info'] = reset_info
-            err_msg = 'Mã xác nhận không chính xác. Mã này đã bị vô hiệu hóa.'
+            flash('Mã xác nhận không chính xác. Mã này đã bị vô hiệu hóa.', 'danger')
             show_step2 = True
         elif new_password != re_password:
-            err_msg = 'Mật khẩu xác nhận không khớp.'
+            flash('Mật khẩu xác nhận không khớp.', 'danger')
             show_step2 = True
         else:
-            hashed_pass = str(hashlib.md5(new_password.encode('utf-8')).hexdigest())
-            if dao.update_password(saved_username, hashed_pass):
+            if dao.update_password(saved_username, new_password):
                 session.pop('reset_info', None)
-                return redirect('/login')
+                flash("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.", "success")
+                return redirect(url_for('login'))
             else:
-                err_msg = "Lỗi hệ thống."
+                flash("Lỗi hệ thống khi cập nhật mật khẩu.", "danger")
                 show_step2 = True
-    return render_template("forgot_password.html", show_step2=show_step2, err_msg=err_msg, data=reset_info)
+
+    return render_template("forgot_password.html", show_step2=show_step2, data=reset_info)
 
 
 @app.route('/change_password', methods=['GET', 'POST'])
 @login_user_required
 def change_password():
-    err_msg = None
     if request.method == 'POST':
         old_password = request.form.get('old_password')
         new_password = request.form.get('new_password')
         re_enter_password = request.form.get('re_enter_password')
-        hashed_old_input = str(hashlib.md5(old_password.encode('utf-8')).hexdigest())
-        if hashed_old_input != current_user.mat_khau:
-            err_msg = "Mật khẩu cũ không chính xác!"
+
+        if dao.hash_password(old_password) != current_user.mat_khau:
+            flash("Mật khẩu cũ không chính xác!", "danger")
+            return redirect(url_for('change_password'))
+
         elif new_password != re_enter_password:
-            err_msg = "Mật khẩu xác nhận không trùng khớp!"
+            flash("Mật khẩu xác nhận không trùng khớp!", "danger")
+            return redirect(url_for('change_password'))
+
         else:
-            thuc_thi = dao.update_password(current_user.ten_dang_nhap,
-                                           str(hashlib.md5(new_password.encode('utf-8')).hexdigest()))
-            if thuc_thi:
+            if dao.update_password(current_user.ten_dang_nhap, new_password):
+                flash("Đổi mật khẩu thành công!", "success")
                 return redirect('/')
             else:
-                err_msg = 'Lỗi hệ thống vui lòng thử lại'
-    return render_template("change_password.html", err_msg=err_msg)
+                flash("Lỗi hệ thống, vui lòng thử lại sau.", "danger")
+                return redirect(url_for('change_password'))
 
-
-otp_storage = {}
+    return render_template("change_password.html")
 
 
 @app.route('/verify', methods=['GET', 'POST'])
@@ -250,124 +263,129 @@ otp_storage = {}
 @tinh_trang_xac_nhan_email_required
 def verify_page():
     email = current_user.email
+    current_uid = str(current_user.ma_nguoi_dung)
     current_time = time.time()
+
     otp_lifetime = app.config.get("OTP_LIFETIME", 60)
     max_resend_limit = app.config.get("MAX_RESEND_LIMIT", 5)
     resend_block_time = app.config.get("RESEND_BLOCK_TIME", 300)
-    user_otp_data = otp_storage.get(email, {})
+
+    user_otp_data = session.get('otp_data', {})
+
+    if str(user_otp_data.get('user_id', '')) != current_uid:
+        user_otp_data = {}
+        session.pop('otp_data', None)
+
     blocked_until = user_otp_data.get('blocked_until', 0)
+
     if current_time < blocked_until:
         if request.args.get('action') == 'resend':
+            flash("Bạn đang bị tạm khóa gửi mã. Vui lòng đợi.", "warning")
             return redirect(url_for('verify_page'))
         wait_time_left = math.ceil(blocked_until - current_time)
-        return render_template("verify.html", block_time=wait_time_left, is_blocked=True,
-                               max_resend_limit=max_resend_limit)
+        return render_template("verify.html", block_time=wait_time_left, is_blocked=True)
+
     if request.method == 'POST':
-        user_input_otp = request.form.get('verify')
+        user_input_otp = request.form.get('verify', '').strip()
+
         if not user_otp_data:
-            return render_template("verify.html", wait_time=0, warn_msg="Vui lòng yêu cầu gửi mã mới.")
+            flash("Vui lòng yêu cầu gửi mã mới.", "danger")
+            return redirect(url_for('verify_page'))
+
         last_sent = user_otp_data.get('last_sent', 0)
-        elapsed_time = current_time - last_sent
-        if elapsed_time > otp_lifetime:
-            otp_storage.pop(email, None)
-            return render_template("verify.html", wait_time=0)
-        saved_otp = user_otp_data.get('otp')
-        if user_input_otp == saved_otp:
-            thuc_hien = dao.update_tinh_trang_email(email)
-            if thuc_hien:
-                otp_storage.pop(email, None)
+        if (current_time - last_sent) > otp_lifetime:
+            session.pop('otp_data', None)
+            flash("Mã xác nhận đã hết hạn.", "warning")
+            return redirect(url_for('verify_page'))
+
+        if user_input_otp == user_otp_data.get('otp'):
+            if dao.update_tinh_trang_email(current_user.ten_dang_nhap):
+                session.pop('otp_data', None)
+                flash("Xác minh thành công!", "success")
                 return redirect('/')
-            else:
-                return render_template("verify.html", wait_time=0, warn_msg="Lỗi hệ thống khi kích hoạt.")
-        else:
-            wait_time_left = math.ceil(otp_lifetime - elapsed_time)
-            return render_template("verify.html", wait_time=wait_time_left, warn_msg="Mã xác nhận không chính xác.")
-    wait_time = 0
-    can_resend = True
-    last_sent = user_otp_data.get('last_sent', 0)
-    if current_time - last_sent < otp_lifetime:
-        wait_time = math.ceil(otp_lifetime - (current_time - last_sent))
-        can_resend = False
-    action = request.args.get('action')
-    if action == 'resend' and not can_resend:
+
+        flash("Mã xác nhận không chính xác.", "danger")
         return redirect(url_for('verify_page'))
-    if action == 'resend' and can_resend:
-        current_attempts = user_otp_data.get('attempts', 0)
+
+    wait_time = 0
+    last_sent = user_otp_data.get('last_sent', 0)
+    if user_otp_data and (current_time - last_sent < otp_lifetime):
+        wait_time = math.ceil(otp_lifetime - (current_time - last_sent))
+
+    action = request.args.get('action')
+    if (action == 'resend' and wait_time == 0) or (not user_otp_data and action != 'resend'):
+        current_attempts = user_otp_data.get('attempts', 0) if user_otp_data else 0
+
         if current_attempts >= max_resend_limit:
             user_otp_data['blocked_until'] = current_time + resend_block_time
-            user_otp_data['attempts'] = 0
-            otp_storage[email] = user_otp_data
-            return render_template("verify.html", block_time=resend_block_time, is_blocked=True,
-                                   max_resend_limit=max_resend_limit)
-        try:
-            new_otp = str(random.randint(0, 999999)).zfill(6)
-            otp_storage[email] = {
-                'otp': new_otp,
-                'last_sent': current_time,
-                'attempts': current_attempts + 1,
-                'blocked_until': 0
-            }
-            # chức năng gửi mail
-            msg = Message(
-                subject="Xin chào.",
-                recipients=[email],
-                html=f"""<p>Chào bạn {current_user.ho_va_ten},</p>
-                <p>Chúng mình nhận được tín hiệu cần hỗ trợ xác nhận email từ bạn.</p>
-                <br><p>Bạn hãy sử dụng mã xác nhận dưới đây để tiếp tục hành trình chinh phục ngoại ngữ của mình:</p>
-                <p style="font-size: 24px;">Mã xác nhận:<b> {new_otp}</b></p>
-                <small>Lưu ý mã này có thời gian hiệu lực là 1 phút!</small>
-                <p>Cảm ơn bạn đã đồng hành cùng Simple Talk</p>"""
-            )
-            mail.send(msg)
-            print(f"DEBUG OTP: {new_otp}")
+            user_otp_data['user_id'] = current_uid
+            session['otp_data'] = user_otp_data
+            flash("Yêu cầu quá nhiều lần. Bạn bị tạm chặn.", "error")
             return redirect(url_for('verify_page'))
-        except Exception as e:
-            return str(e)
+
+        new_otp = str(random.randint(0, 999999)).zfill(6)
+        session['otp_data'] = {
+            'user_id': current_uid, 'otp': new_otp,
+            'last_sent': current_time, 'attempts': current_attempts + 1,
+            'blocked_until': 0
+        }
+        if dao.send_verification_email(email, current_user.ho_va_ten, new_otp):
+            flash(f"Mã mới đã gửi tới {email}", "info")
+            return redirect(url_for('verify_page'))
+        flash("Lỗi gửi mail.", "danger")
+
     return render_template("verify.html", wait_time=wait_time)
 
 
 @app.route('/update-email-verify', methods=['POST'])
 @login_user_required
 def update_email_verify():
-    new_email = request.form.get('new_email')
+    new_email = request.form.get('new_email', '').strip()
+
     if not new_email:
-        return redirect(url_for('verify_page', warn_msg="Vui lòng nhập địa chỉ email."))
+        flash("Vui lòng nhập địa chỉ email hợp lệ.", "warning")
+        return redirect(url_for('verify_page'))
+
     existing_user = dao.get_by_email(email=new_email)
     if existing_user and existing_user.ma_nguoi_dung != current_user.ma_nguoi_dung:
-        return redirect(url_for('verify_page', warn_msg="Email này đã được sử dụng."))
-    if dao.update_email(current_user.email, new_email):
+        flash("Email này đã được sử dụng bởi một tài khoản khác.", "danger")
+        return redirect(url_for('verify_page'))
+
+    if dao.update_email(current_user.ten_dang_nhap, new_email):
+        flash("Cập nhật email thành công! Mã xác minh mới đã được gửi.", "success")
         return redirect(url_for('verify_page', action='resend'))
     else:
-        return redirect(url_for('verify_page', warn_msg="Lỗi hệ thống, không thể đổi email."))
+        flash("Lỗi hệ thống: Không thể cập nhật email lúc này.", "danger")
+        return redirect(url_for('verify_page'))
 
 
-@app.route('/update_avatar', methods=['GET', 'POST'])
+@app.route('/update_avatar', methods=['POST'])
+@login_user_required
 def update_avatar():
-    if request.method == 'GET':
-        return redirect('/')
     avatar = request.files.get('avatar')
     if avatar:
         if dao.update_avatar(current_user.ten_dang_nhap, avatar):
-            return redirect(url_for('profile'))
+            flash("Cập nhật ảnh đại diện thành công!", "success")
         else:
-            print("Lỗi update ảnh!")
-    return redirect(url_for('profile'))
+            flash("Lỗi khi cập nhật ảnh đại diện.", "danger")
+    return redirect(url_for('profile', user_id=current_user.ma_nguoi_dung))
 
 
-@app.route('/update_parent_phone', methods=['GET', 'POST'])
+@app.route('/update_parent_phone', methods=['POST'])
+@login_user_required
 def update_parent_phone():
-    if request.method == 'GET':
-        return redirect('/')
     parent_phone = request.form.get('parent_phone')
     target_user_id = request.form.get('user_id')
-    if current_user.ma_nguoi_dung != target_user_id and current_user.vai_tro != NguoiDungEnum.QUAN_LY:
-        return redirect(url_for('profile', user_id=target_user_id, status='denied'))
-    user_to_update = dao.get_by_id(target_user_id)
-    if user_to_update:
-        if dao.update_parent_phone(current_user.ten_dang_nhap, parent_phone):
-            return redirect(url_for('profile', user_id=target_user_id, status='success'))
-        else:
-            return redirect(url_for('profile', user_id=target_user_id, status='failed'))
+
+    if current_user.ma_nguoi_dung != target_user_id and current_user.vai_tro.name != 'QUAN_LY':
+        flash("Bạn không có quyền thực hiện thay đổi này.", "warning")
+        return redirect(url_for('profile', user_id=target_user_id))
+
+    if dao.update_parent_phone(target_user_id, parent_phone):
+        flash("Cập nhật số điện thoại phụ huynh thành công!", "success")
+    else:
+        flash("Cập nhật thất bại. Vui lòng thử lại.", "danger")
+
     return redirect(url_for('profile', user_id=target_user_id))
 
 
@@ -446,7 +464,7 @@ def schedule():
 def scoreboard():
     ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
     if not ds_khoa_hoc_cua_hv:
-        return render_template('scoreboard.html', ma_khoa_hoc_hien_tai=None, ds_khoa_hoc=[])
+        return render_template('student/scoreboard.html', ma_khoa_hoc_hien_tai=None, ds_khoa_hoc=[])
     ma_khoa_hoc_dang_chon = request.args.get('course_id')
     ds_ma_hop_le = [kh.ma_khoa_hoc for kh in ds_khoa_hoc_cua_hv]
     if not ma_khoa_hoc_dang_chon or ma_khoa_hoc_dang_chon not in ds_ma_hop_le:
@@ -459,7 +477,7 @@ def scoreboard():
         bang_diem = dao.get_by_scoreboard_id(current_user.ma_nguoi_dung, course.ma_khoa_hoc)
         if cau_truc_diem and bang_diem:
             list_bang_diem = bang_diem.lay_chi_tiet_diem(cau_truc_diem)
-    return render_template("scoreboard.html", ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon,
+    return render_template("student/scoreboard.html", ma_khoa_hoc_hien_tai=ma_khoa_hoc_dang_chon,
                            ds_khoa_hoc=ds_khoa_hoc_cua_hv, list_bang_diem=list_bang_diem)
 
 
@@ -470,46 +488,63 @@ def course_fee():
     ds_hoa_don = list(current_user.nhung_hoa_don)
     ds_hoa_don.sort(key=lambda x: x.ngay_tao, reverse=True)
     tong_tien = sum(hd.so_tien for hd in ds_hoa_don if hd.trang_thai.value == 2)
-    return render_template('course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
+    return render_template('student/course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
 
 
 @app.route("/register_course", methods=['GET', 'POST'])
 @login_user_required
 @hoc_vien_required
 def register_course():
-    msg = None
+    list_thong_bao = []
+    khoa_hoc_thanh_cong = []
     if request.method == 'POST':
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
-        ket_qua_xu_ly = []
+        print(ds_ma_khoa_hoc)
         if ds_ma_khoa_hoc:
             for ma_kh in ds_ma_khoa_hoc:
+                kh_obj = dao.get_by_course_id(ma_kh)
+                ten_hien_thi = kh_obj.ten_khoa_hoc if kh_obj else ma_kh
                 hop_le, ly_do = dao.kiem_tra_trung_lich_hoc_vien(current_user.ma_nguoi_dung, ma_kh)
                 if hop_le:
-                    dao.dang_ky_khoa_hoc(current_user.ma_nguoi_dung, ma_kh)
-                    ket_qua_xu_ly.append(f"{ma_kh}: Đăng ký thành công!")
+                    ket_qua = dao.dang_ky_khoa_hoc(current_user.ma_nguoi_dung, ma_kh)
+                    if ket_qua:
+                        khoa_hoc_thanh_cong.append(ten_hien_thi)
+                        list_thong_bao.append({
+                            'type': 'success',
+                            'content': f"Khóa {ten_hien_thi}: Đăng ký thành công."
+                        })
+                    else:
+                        list_thong_bao.append({
+                            'type': 'danger',
+                            'content': f"Khóa {ten_hien_thi}: Lớp đã đầy hoặc lỗi hệ thống."
+                        })
                 else:
-                    ket_qua_xu_ly.append(f"{ma_kh}: {ly_do}")
-            msg = ket_qua_xu_ly
-        ds_khoa_hoc_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
-        return render_template("register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky, thong_bao=msg)
+                    list_thong_bao.append({
+                        'type': 'danger',
+                        'content': f"Khóa {ten_hien_thi}: {ly_do}"
+                    })
+            if len(khoa_hoc_thanh_cong) > 0:
+                dao.send_course_registration_email(current_user.email, current_user.ho_va_ten, khoa_hoc_thanh_cong)
     ds_khoa_hoc_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
-    return render_template("register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky)
+    return render_template("student/register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky,
+                           thong_bao=list_thong_bao)
 
 
 @app.route('/grading', methods=['GET', 'POST'])
 @login_user_required
 @giao_vien_required
 def grading():
-    msg = None
-    msg_type = None
     ds_khoa_hoc = current_user.nhung_khoa_hoc
     selected_course_id = request.args.get('course_id') or request.form.get('course_id')
+
     if not selected_course_id and ds_khoa_hoc:
         selected_course_id = ds_khoa_hoc[0].ma_khoa_hoc
+
     if request.method == 'POST' and selected_course_id:
         action = request.form.get('action_type')
         success = False
         message = ""
+
         if action == 'create_structure':
             ds_ten = request.form.getlist('ten_thanh_phan[]')
             ds_trong_so = request.form.getlist('trong_so[]')
@@ -517,11 +552,16 @@ def grading():
         elif action in ['save_draft', 'publish']:
             is_draft = (action == 'save_draft')
             success, message = dao.luu_bang_diem(selected_course_id, request.form, is_draft)
-        msg = message
-        msg_type = 'success' if success else 'danger'
+
+        category = 'success' if success else 'danger'
+        flash(message, category)
+
+        return redirect(url_for('grading', course_id=selected_course_id))
+
     selected_course = None
     cau_truc_diem = []
     bang_diem_data = []
+
     if selected_course_id:
         selected_course = dao.get_by_course_teacher_id(current_user.ma_nguoi_dung, selected_course_id)
         if selected_course:
@@ -530,8 +570,9 @@ def grading():
                 for bd in selected_course.ds_dang_ky:
                     chi_tiet = bd.lay_chi_tiet_diem(cau_truc_diem)
                     bang_diem_data.append({'hoc_vien': bd.hoc_vien, 'ma_bang_diem': bd.id, 'diem_so': chi_tiet})
-    return render_template("grading.html", ds_khoa_hoc=ds_khoa_hoc, selected_course=selected_course,
-                           cau_truc_diem=cau_truc_diem, bang_diem_data=bang_diem_data, msg=msg, msg_type=msg_type)
+
+    return render_template("teacher/grading.html", ds_khoa_hoc=ds_khoa_hoc, selected_course=selected_course,
+                           cau_truc_diem=cau_truc_diem, bang_diem_data=bang_diem_data)
 
 
 @app.route('/attendance', methods=['GET', 'POST'])
@@ -558,17 +599,19 @@ def attendance():
             return redirect(url_for('attendance', course_id=course_id, status='failed'))
     if course:
         date_columns, student_rows = dao.get_attendance_sheet_data(course)
-    return render_template('attendance.html', ds_khoa_hoc=ds_khoa_hoc, course=course, date_columns=date_columns,
+    return render_template('teacher/attendance.html', ds_khoa_hoc=ds_khoa_hoc, course=course, date_columns=date_columns,
                            student_rows=student_rows, today_str=today_str)
 
 
 @app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
 @login_user_required
-@quan_ly_required
+@quan_ly_hoac_nhan_vien_required
 def manager_profile_user(ma_nguoi_dung):
     user_to_show = dao.get_by_id(ma_nguoi_dung)
     if not user_to_show:
-        return redirect(url_for('manager_course_list'))
+        return redirect('/')
+    if user_to_show.vai_tro != NguoiDungEnum.HOC_VIEN:
+        return redirect(url_for('manager_student_list'))
     return render_template('manager/profile_user.html', user=user_to_show)
 
 
@@ -578,25 +621,30 @@ def manager_profile_user(ma_nguoi_dung):
 def manager_reset_password_page(ma_nguoi_dung):
     user = dao.get_by_id(ma_nguoi_dung)
     if not user:
+        flash("Người dùng không tồn tại!", "danger")
         return redirect(url_for('manager_course_list'))
-    err_msg = None
-    success_msg = None
+
     if request.method == 'GET':
-        back_url = request.referrer
+        back_url = request.referrer or url_for('manager_course_list')
     else:
         back_url = request.form.get('back_url')
+
     if request.method == 'POST':
         mat_khau_moi = request.form.get('new_password')
         xac_nhan_mk = request.form.get('re_enter_password')
+
         if not mat_khau_moi or len(mat_khau_moi) < 6:
-            err_msg = "Mật khẩu phải từ 6 ký tự trở lên."
+            flash("Mật khẩu phải từ 6 ký tự trở lên.", "danger")
         elif mat_khau_moi != xac_nhan_mk:
-            err_msg = "Mật khẩu xác nhận không khớp."
+            flash("Mật khẩu xác nhận không khớp.", "danger")
         else:
             if dao.update_password(user.ten_dang_nhap, mat_khau_moi):
-                success_msg = f"Đã đặt lại mật khẩu cho {user.ho_va_ten} thành công!"
-    return render_template('manager/reset_password.html', user=user, err_msg=err_msg, success_msg=success_msg,
-                           back_url=back_url)
+                flash(f"Đã đặt lại mật khẩu cho {user.ho_va_ten} thành công!", "success")
+                return redirect(back_url)
+            else:
+                flash("Có lỗi xảy ra trong quá trình cập nhật mật khẩu.", "danger")
+
+    return render_template('manager/reset_password.html', user=user, back_url=back_url)
 
 
 @app.route('/manager/courses', methods=['GET'])
@@ -609,8 +657,7 @@ def manager_course_list():
         'kw': request.args.get('kw', '').strip(),
         'status': request.args.get('status'),
         'from_date': request.args.get('from_date'),
-        'to_date': request.args.get('to_date')
-    }
+        'to_date': request.args.get('to_date')}
     pagination = dao.tra_cuu_khoa_hoc(search_params, page=page, page_size=app.config["PAGE_SIZE"])
     return render_template('manager/course_list.html', pagination=pagination, TinhTrangKhoaHocEnum=TinhTrangKhoaHocEnum)
 
@@ -632,8 +679,7 @@ def manager_course_detail(ma_khoa_hoc):
         page_size=app.config["PAGE_SIZE"],
         tu_khoa=tu_khoa,
         nam_sinh=nam_sinh,
-        ket_qua=ket_qua
-    )
+        ket_qua=ket_qua)
     return render_template('manager/course_detail.html', khoa_hoc=khoa_hoc, pagination=pagination, tu_khoa=tu_khoa,
                            nam_sinh=nam_sinh, ket_qua=ket_qua)
 
@@ -642,11 +688,10 @@ def manager_course_detail(ma_khoa_hoc):
 @login_user_required
 @quan_ly_required
 def manager_create_course():
-    msg = None
-    msg_type = None
     form_data = {}
     old_lich_hoc = []
     lich_ban_data = dao.lay_tat_ca_lich_ban()
+
     if request.method == 'POST':
         try:
             raw_hoc_phi = request.form.get('hoc_phi', '0').replace('.', '').replace(',', '')
@@ -660,50 +705,47 @@ def manager_create_course():
                 'ngay_bat_dau': request.form.get('ngay_bat_dau', ''),
                 'ngay_ket_thuc': request.form.get('ngay_ket_thuc', '')
             }
+
             ds_thu = request.form.getlist('thu[]')
             ds_ca = request.form.getlist('ca[]')
             ds_phong = request.form.getlist('phong[]')
+
             lich_hoc_list = []
             seen_slots = set()
             for i in range(len(ds_thu)):
-                item = {
-                    'thu': ds_thu[i],
-                    'ca': ds_ca[i],
-                    'ma_phong': ds_phong[i]
-                }
+                item = {'thu': ds_thu[i], 'ca': ds_ca[i], 'ma_phong': ds_phong[i]}
                 old_lich_hoc.append(item)
-                if not ds_thu[i] or not ds_ca[i] or not ds_phong[i]:
-                    continue
+                if not ds_thu[i] or not ds_ca[i] or not ds_phong[i]: continue
+
                 slot_key = f"{ds_thu[i]}-{ds_ca[i]}"
-                if slot_key in seen_slots:
-                    continue
+                if slot_key in seen_slots: continue
                 seen_slots.add(slot_key)
                 lich_hoc_list.append(item)
+
             so_buoi = len(lich_hoc_list)
             if so_buoi < 3:
-                raise Exception(f"Vui lòng thêm ít nhất 3 buổi học (Hiện tại: {so_buoi}).")
-            is_valid, message = dao.kiem_tra_xung_dot_lich(form_data, lich_hoc_list)
-            if is_valid:
-                res, dao_msg = dao.tao_khoa_hoc_moi(form_data, lich_hoc_list)
-                if res:
-                    msg = dao_msg
-                    msg_type = 'success'
-                    form_data = {}
-                    old_lich_hoc = []
-                else:
-                    msg = f"Lỗi hệ thống: {dao_msg}"
-                    msg_type = 'danger'
+                flash(f"Vui lòng thêm ít nhất 3 buổi học (Hiện tại: {so_buoi}).", "warning")
             else:
-                msg = message
-                msg_type = 'warning'
+                is_valid, message = dao.kiem_tra_xung_dot_lich(form_data, lich_hoc_list)
+                if is_valid:
+                    res, dao_msg = dao.tao_khoa_hoc_moi(form_data, lich_hoc_list)
+                    if res:
+                        flash(dao_msg, "success")
+                        # Chuyển hướng sau khi thành công để reset form
+                        return redirect(url_for('manager_create_course'))
+                    else:
+                        flash(f"Lỗi hệ thống: {dao_msg}", "danger")
+                else:
+                    flash(message, "warning")
         except Exception as e:
-            msg = f"Lỗi dữ liệu: {str(e)}"
-            msg_type = 'danger'
+            flash(f"Lỗi dữ liệu: {str(e)}", "danger")
+
     ds_loai = dao.get_all_loai_khoa_hoc()
     ds_gv = dao.get_all_giao_vien()
     ds_phong = dao.get_all_phong_hoc()
-    return render_template('manager/create_course.html', msg=msg, msg_type=msg_type, loai_kh=ds_loai, ds_gv=ds_gv,
-                           ds_phong=ds_phong, form_data=form_data, old_lich_hoc=old_lich_hoc,
+
+    return render_template('manager/create_course.html', loai_kh=ds_loai, ds_gv=ds_gv, ds_phong=ds_phong,
+                           form_data=form_data, old_lich_hoc=old_lich_hoc,
                            lich_ban_json=json.dumps(lich_ban_data, default=str))
 
 
@@ -728,7 +770,7 @@ def manager_employee_list():
 
 @app.route('/manager/students', methods=['GET'])
 @login_user_required
-@quan_ly_required
+@quan_ly_hoac_nhan_vien_required
 def manager_student_list():
     kw = request.args.get('kw', '')
     status = request.args.get('status')
@@ -769,160 +811,139 @@ def manager_teacher_list():
 @login_user_required
 @quan_ly_required
 def manager_edit_enrollment(ma_khoa_hoc):
-    msg = None
-    msg_type = None
     kh = None
     if ma_khoa_hoc == 'ALL':
         min_limit = dao.lay_si_so_hien_tai_lon_nhat()
-        print(min_limit)
-        if request.method == 'POST':
-            try:
-                new_si_so = int(request.form.get('si_so_toi_da'))
-                if new_si_so < min_limit:
-                    msg = f"Lỗi: Không thể set thấp hơn {min_limit} (Do có lớp đang học với sĩ số này)."
-                    msg_type = 'danger'
-                else:
-                    dao.cap_nhat_si_so_toan_bo(new_si_so)
-                    msg = f"Đã đồng bộ sĩ số tối đa thành {new_si_so} cho TẤT CẢ khóa học."
-                    msg_type = 'success'
-            except ValueError:
-                msg = "Lỗi: Vui lòng nhập số nguyên."
-                msg_type = 'danger'
-            except Exception as e:
-                msg = f"Lỗi hệ thống: {str(e)}"
-                msg_type = 'danger'
     else:
         kh = dao.get_by_course_id(ma_khoa_hoc)
         if not kh:
-            return "Không tìm thấy khóa học", 404
+            flash("Không tìm thấy khóa học", "danger")
+            return redirect(url_for('manager_course_list'))
         min_limit = kh.si_so_hien_tai
-        if request.method == 'POST':
-            try:
-                new_si_so = int(request.form.get('si_so_toi_da'))
-                if new_si_so < min_limit:
-                    msg = f"Lỗi: Không được thấp hơn sĩ số hiện tại ({min_limit})."
-                    msg_type = 'danger'
+
+    if request.method == 'POST':
+        try:
+            new_si_so = int(request.form.get('si_so_toi_da'))
+
+            if new_si_so < min_limit:
+                flash(f"Lỗi: Không thể thiết lập thấp hơn {min_limit} (Do sĩ số thực tế đang học).", "warning")
+            else:
+                if ma_khoa_hoc == 'ALL':
+                    dao.cap_nhat_si_so_toan_bo(new_si_so)
+                    flash(f"Đã đồng bộ sĩ số tối đa thành {new_si_so} cho TẤT CẢ khóa học.", "success")
                 else:
                     dao.cap_nhat_si_so_toi_da(ma_khoa_hoc, new_si_so)
-                    msg = f"Đã cập nhật sĩ số thành {new_si_so}."
-                    msg_type = 'success'
-                    kh.si_so_toi_da = new_si_so
-            except ValueError:
-                msg = "Lỗi nhập liệu."
-                msg_type = 'danger'
-            except Exception as e:
-                msg = f"Lỗi hệ thống: {str(e)}"
-                msg_type = 'danger'
-    return render_template('manager/edit_enrollment.html', khoa_hoc=kh, msg=msg, msg_type=msg_type, min_limit=min_limit)
+                    flash(f"Đã cập nhật sĩ số thành {new_si_so} cho khóa học {kh.ten_khoa_hoc}.", "success")
+
+                return redirect(url_for('manager_course_list'))
+
+        except ValueError:
+            flash("Lỗi: Vui lòng nhập một số nguyên hợp lệ.", "danger")
+        except Exception as e:
+            flash(f"Lỗi hệ thống: {str(e)}", "danger")
+
+    return render_template('manager/edit_enrollment.html', khoa_hoc=kh, min_limit=min_limit)
 
 
 @app.route('/manager/edit_tuition/<ma_khoa_hoc>', methods=['GET', 'POST'])
 @login_user_required
 @quan_ly_required
 def manager_edit_tuition(ma_khoa_hoc):
-    msg = None
-    msg_type = None
     kh = None
     if ma_khoa_hoc == 'ALL':
         if request.method == 'POST':
             try:
                 percent = float(request.form.get('percent_value', 0))
                 if percent <= 0 or percent > 100:
-                    msg = "Lỗi: Phần trăm giảm giá không hợp lệ."
-                    msg_type = 'danger'
+                    flash("Lỗi: Phần trăm giảm giá không hợp lệ.", "danger")
                 else:
                     dao.cap_nhat_hoc_phi_theo_phan_tram(percent)
-                    msg = f"Đã áp dụng giảm giá {int(percent)}% cho TOÀN BỘ khóa học đang hoạt động."
-                    msg_type = 'success'
+                    flash(f"Đã áp dụng giảm giá {int(percent)}% cho TOÀN BỘ khóa học đang hoạt động.", "success")
+                    return redirect(url_for('manager_course_list'))
             except ValueError:
-                msg = "Lỗi dữ liệu nhập."
-                msg_type = 'danger'
+                flash("Lỗi dữ liệu nhập.", "danger")
             except Exception as e:
-                msg = f"Lỗi hệ thống: {str(e)}"
-                msg_type = 'danger'
+                flash(f"Lỗi hệ thống: {str(e)}", "danger")
     else:
         kh = dao.get_by_course_id(ma_khoa_hoc)
         if not kh:
-            return "Không tìm thấy khóa học", 404
+            flash("Không tìm thấy khóa học", "danger")
+            return redirect(url_for('manager_course_list'))
+
         if request.method == 'POST':
             try:
                 new_hoc_phi = float(request.form.get('hoc_phi_moi'))
                 if new_hoc_phi < 0:
-                    msg = "Lỗi: Học phí không được là số âm."
-                    msg_type = 'danger'
+                    flash("Lỗi: Học phí không được là số âm.", "danger")
                 else:
                     dao.cap_nhat_hoc_phi(ma_khoa_hoc, new_hoc_phi)
-                    msg = f"Đã cập nhật học phí thành {int(new_hoc_phi):,} VND."
-                    msg_type = 'success'
-                    kh.hoc_phi = new_hoc_phi
+                    flash(f"Đã cập nhật học phí thành {int(new_hoc_phi):,} VND.", "success")
+                    return redirect(url_for('manager_course_list'))
             except ValueError:
-                msg = "Lỗi: Dữ liệu nhập vào không hợp lệ."
-                msg_type = 'danger'
+                flash("Lỗi: Dữ liệu nhập vào không hợp lệ.", "danger")
             except Exception as e:
-                msg = f"Lỗi hệ thống: {str(e)}"
-                msg_type = 'danger'
-    return render_template('manager/edit_tuition.html', khoa_hoc=kh, msg=msg, msg_type=msg_type)
+                flash(f"Lỗi hệ thống: {str(e)}", "danger")
+
+    return render_template('manager/edit_tuition.html', khoa_hoc=kh)
 
 
 @app.route('/manager/add_user/<role_type>', methods=['GET', 'POST'])
 @login_user_required
-@quan_ly_required
+@quan_ly_hoac_nhan_vien_required
 def manager_add_user(role_type):
+    if current_user.vai_tro == NguoiDungEnum.NHAN_VIEN and role_type != 'HOC_VIEN':
+        return redirect(url_for('manager_add_user', role_type='HOC_VIEN'))
+
     ROLE_MAP = {
-        'HOC_VIEN': {
-            'enum': NguoiDungEnum.HOC_VIEN,
-            'title': 'Thêm Học Viên Mới',
-            'list_route': 'manager_student_list'
-        },
-        'GIAO_VIEN': {
-            'enum': NguoiDungEnum.GIAO_VIEN,
-            'title': 'Thêm Giáo Viên Mới',
-            'list_route': 'manager_teacher_list'
-        },
-        'NHAN_VIEN': {
-            'enum': NguoiDungEnum.NHAN_VIEN,
-            'title': 'Thêm Nhân Viên Mới',
-            'list_route': 'manager_employee_list'
-        },
+        'HOC_VIEN': {'enum': NguoiDungEnum.HOC_VIEN, 'title': 'Thêm Học Viên Mới',
+                     'list_route': 'manager_student_list'},
+        'GIAO_VIEN': {'enum': NguoiDungEnum.GIAO_VIEN, 'title': 'Thêm Giáo Viên Mới',
+                      'list_route': 'manager_teacher_list'},
+        'NHAN_VIEN': {'enum': NguoiDungEnum.NHAN_VIEN, 'title': 'Thêm Nhân Viên Mới',
+                      'list_route': 'manager_employee_list'},
     }
+
     config = ROLE_MAP.get(role_type)
     if not config:
-        print("Loại tài khoản không hợp lệ")
-    try:
-        back_url = url_for(config['list_route'])
-    except:
-        back_url = "#"
+        flash("Loại tài khoản không hợp lệ", "danger")
+        return redirect(url_for('index'))
+
+    back_url = url_for(config['list_route'])
     session_key = f'manager_add_user_{role_type}'
+
     if request.method == 'GET':
         session.pop(session_key, None)
-        return render_template("manager/add_user.html", data={}, show_step2=False, role_title=config['title'],
-                               role_name=role_type, back_url=back_url)
-    err_msg = None
-    msg = None
+        return render_template("manager/add_user.html", data={}, show_step2=False,
+                               role_title=config['title'], role_name=role_type, back_url=back_url)
+
     show_step2 = False
     data = session.get(session_key, {})
     form_data = request.form.to_dict()
     data.update(form_data)
     session[session_key] = data
+
     if 'back_to_step1' in request.form:
-        return render_template("manager/add_user.html", data=data, show_step2=False, role_title=config['title'],
-                               role_name=role_type, back_url=back_url)
+        return render_template("manager/add_user.html", data=data, show_step2=False,
+                               role_title=config['title'], role_name=role_type, back_url=back_url)
+
     step = request.form.get('step')
     if step == '1':
         password = data.get('password')
         re_enter_password = data.get('re_enter_password')
         username = data.get('username')
+
         if dao.get_by_username(username):
-            err_msg = 'Tên đăng nhập đã tồn tại!'
+            flash('Tên đăng nhập đã tồn tại!', 'warning')
             data['username'] = ''
         elif not password or password != re_enter_password:
-            err_msg = 'Mật khẩu xác nhận không khớp!'
+            flash('Mật khẩu xác nhận không khớp!', 'warning')
         else:
             show_step2 = True
+
     elif step == '2':
         email = data.get('email')
         if dao.get_by_email(email):
-            err_msg = 'Email này đã được sử dụng!'
+            flash('Email này đã được sử dụng!', 'warning')
             show_step2 = True
         else:
             image_file = request.files.get('image')
@@ -933,6 +954,7 @@ def manager_add_user(role_type):
                     path_image = res['secure_url']
                 except Exception as ex:
                     print(f"Lỗi upload ảnh: {ex}")
+
             dob_val = None
             if role_type == 'HOC_VIEN':
                 dob_str = data.get('dob')
@@ -940,14 +962,10 @@ def manager_add_user(role_type):
                     try:
                         dob_val = datetime.datetime.strptime(dob_str, '%Y-%m-%d')
                     except ValueError:
-                        err_msg = "Ngày sinh không hợp lệ."
+                        flash("Ngày sinh không hợp lệ.", "danger")
                         show_step2 = True
-                else:
-                    pass
-            exp_str = None
-            if role_type == 'GIAO_VIEN':
-                exp_str = data.get('exp')
-            if not err_msg:
+
+            if not session.get('_flashes'):
                 user_params = {
                     'ho_va_ten': data.get('name'),
                     'ten_dang_nhap': data.get('username'),
@@ -958,20 +976,19 @@ def manager_add_user(role_type):
                 }
                 if role_type == 'HOC_VIEN' and dob_val:
                     user_params['ngay_sinh'] = dob_val
-                elif role_type == 'GIAO_VIEN' and exp_str:
-                    user_params['nam_kinh_nghiem'] = exp_str
+                elif role_type == 'GIAO_VIEN':
+                    user_params['nam_kinh_nghiem'] = data.get('exp')
+
                 is_success = dao.add_user(config['enum'], **user_params)
                 if is_success:
                     session.pop(session_key, None)
-                    msg = f"Đã thêm tài khoản cho {data.get('name')} thành công!"
-                    show_step2 = False
+                    flash(f"Đã thêm tài khoản cho {data.get('name')} thành công!", "success")
+                    return redirect(back_url)
                 else:
-                    if isinstance(is_success, str):
-                        err_msg = f'Lỗi: {is_success}'
-                    else:
-                        err_msg = 'Lỗi hệ thống: Không thể thêm vào cơ sở dữ liệu.'
+                    flash(is_success if isinstance(is_success, str) else 'Lỗi hệ thống.', 'danger')
                     show_step2 = True
-    return render_template("manager/add_user.html", err_msg=err_msg, msg=msg, data=data, show_step2=show_step2,
+
+    return render_template("manager/add_user.html", data=data, show_step2=show_step2,
                            role_title=config['title'], role_name=role_type, back_url=back_url)
 
 
@@ -979,8 +996,22 @@ def manager_add_user(role_type):
 @login_user_required
 @quan_ly_required
 def thay_doi_trang_thai(ma_nd):
-    dao.update_trang_thai_nguoi_dung(ma_nd)
-    next_url = request.referrer or '/'
+    user = dao.get_by_id(ma_nd)
+
+    if user:
+        ten_nd = user.ho_va_ten
+        dang_hoat_dong = user.tinh_trang_hoat_dong
+        thanh_cong = dao.update_trang_thai_nguoi_dung(ma_nd)
+        if thanh_cong:
+            if dang_hoat_dong:
+                flash(f"Đã khóa tài khoản của học viên {ten_nd} thành công!", "success")
+            else:
+                flash(f"Đã kích hoạt lại tài khoản cho học viên {ten_nd} thành công!", "success")
+        else:
+            flash("Lỗi hệ thống: Không thể cập nhật trạng thái vào cơ sở dữ liệu.", "danger")
+    else:
+        flash("Lỗi: Không tìm thấy thông tin người dùng này.", "danger")
+    next_url = request.referrer or url_for('manager_student_list')
     return redirect(next_url)
 
 
@@ -988,18 +1019,133 @@ def thay_doi_trang_thai(ma_nd):
 @login_user_required
 @quan_ly_required
 def delete_course(ma_kh):
-    dao.xoa_khoa_hoc_dao(ma_kh)
+    if dao.xoa_khoa_hoc_dao(ma_kh):
+        flash(f"Đã xóa khóa học {ma_kh} thành công!", "success")
+    else:
+        flash("Lỗi hệ thống: Không thể xóa được khóa học này.", "danger")
     return redirect(request.referrer or url_for('manager_course_list'))
+
+
+@app.route('/admin/exit')
+def exit_admin():
+    session.pop('admin_unlocked', None)
+    return redirect('/')
 
 
 @app.route('/api/kiem-tra-pin-admin', methods=['POST'])
 def kiem_tra_pin_admin():
     data = request.get_json()
     pin_nhap = data.get('pin')
-    if str(current_user.ma_pin) == str(pin_nhap):
+    if dao.check_admin_pin(current_user, pin_nhap):
+        session['admin_unlocked'] = True
         return jsonify({'success': True, 'redirect_url': '/admin'})
     else:
         return jsonify({'success': False, 'message': 'Mã PIN không chính xác.'}), 200
+
+
+@app.route('/manager/stats')
+@login_user_required
+@quan_ly_hoac_nhan_vien_required
+def stats_view():
+    raw_data_khoa_hoc = dao.thong_ke_hoc_vien_va_ket_qua()
+    du_lieu_khoa_hoc_full = []
+    for item in raw_data_khoa_hoc:
+        ten = item.ten_khoa_hoc
+        tong = float(item.tong_hv or 0)
+        dat = float(item.so_dat or 0)
+        chua_co_diem = float(item.chua_co_diem or 0)
+        rot = tong - dat - chua_co_diem
+        if tong > 0:
+            ty_le_dat = round(dat / tong * 100, 2)
+            ty_le_chua_kq = round(chua_co_diem / tong * 100, 2)
+            ty_le_rot = round(100 - ty_le_dat - ty_le_chua_kq, 2)
+        else:
+            ty_le_dat = 0
+            ty_le_rot = 0
+            ty_le_chua_kq = 0
+        du_lieu_khoa_hoc_full.append({
+            'ten_khoa_hoc': ten,
+            'so_luong_hv': int(tong),
+            'ty_le_dat': ty_le_dat,
+            'ty_le_rot': ty_le_rot,
+            'ty_le_chua_kq': ty_le_chua_kq
+        })
+    current_year = datetime.datetime.now().year
+    ds_nam = dao.get_ds_nam_co_hoa_don()
+
+    if current_year not in ds_nam:
+        ds_nam.insert(0, current_year)
+
+    raw_data_doanh_thu = dao.thong_ke_doanh_thu_theo_nam(current_year)
+    data_doanh_thu = [0] * 12
+    for item in raw_data_doanh_thu:
+        data_doanh_thu[int(item.thang) - 1] = float(item.tong_tien or 0)
+
+    tong_doanh_thu_nam = sum(data_doanh_thu)
+    tong_hoc_vien_he_thong = sum(item['so_luong_hv'] for item in du_lieu_khoa_hoc_full)
+
+    return render_template(
+        'manager/stats.html',
+        du_lieu_khoa_hoc_full=du_lieu_khoa_hoc_full,
+        data_doanh_thu=data_doanh_thu,
+        tong_doanh_thu_nam=tong_doanh_thu_nam,
+        tong_hoc_vien_he_thong=tong_hoc_vien_he_thong,
+        current_year=current_year,
+        ds_nam=ds_nam
+    )
+
+
+@app.route('/api/revenue-chart')
+def revenue_chart_api():
+    try:
+        selected_year = request.args.get('year', default=datetime.datetime.now().year, type=int)
+
+        raw_data = dao.thong_ke_doanh_thu_theo_nam(selected_year)
+
+        data_response = [0] * 12
+        for item in raw_data:
+            data_response[int(item.thang) - 1] = float(item.tong_tien or 0)
+
+        return jsonify({
+            'status': 'success',
+            'data': data_response,
+            'total': sum(data_response),
+            'formatted_total': "{:,.0f}".format(sum(data_response)).replace(",", ".")  # Format sẵn từ server
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@app.route('/staff/payment/<ma_hoc_vien>', methods=['GET'])
+@login_user_required
+def staff_student_payment(ma_hoc_vien):
+    if current_user.vai_tro != NguoiDungEnum.NHAN_VIEN:
+        return redirect(url_for('home'))
+
+    hoc_vien = dao.get_by_id(ma_hoc_vien)
+
+    ds_hoa_don = dao.get_ds_hoa_don_by_hoc_vien(ma_hoc_vien)
+
+    return render_template('staff/payment_detail.html', hoc_vien=hoc_vien, ds_hoa_don=ds_hoa_don)
+
+
+@app.route('/staff/payment/confirm/<int:ma_hoa_don>', methods=['POST'])
+@login_user_required
+def confirm_payment(ma_hoa_don):
+    if current_user.vai_tro != NguoiDungEnum.NHAN_VIEN:
+        return redirect(url_for('home'))
+
+    ket_qua, hoa_don = dao.xac_nhan_thanh_toan(ma_hoa_don, current_user.ma_nguoi_dung)
+
+    if ket_qua:
+        flash(f'Đã xác nhận thanh toán thành công cho hóa đơn #{ma_hoa_don}.', 'success')
+    else:
+        flash('Thanh toán thất bại. Hóa đơn không tồn tại hoặc đã được thanh toán.', 'danger')
+
+    if not hoa_don:
+        return redirect("/")
+
+    return redirect(url_for('staff_student_payment', ma_hoc_vien=hoa_don.ma_hoc_vien))
 
 
 if __name__ == '__main__':

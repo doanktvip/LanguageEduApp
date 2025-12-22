@@ -3,51 +3,67 @@
 {% block title %}Danh sách học viên{% endblock %}
 
 {% block card_header %}
-<div class="p-3 d-flex justify-content-between align-items-center">
-    <span><i class="bi bi-people-fill me-2"></i>DANH SÁCH HỌC VIÊN</span>
-    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Quay lại
-    </a>
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                <i class="bi bi-people-fill me-2"></i>DANH SÁCH HỌC VIÊN
+            </span>
+        </div>
+
+        <div class="col-12 col-sm-auto">
+            <a href="{{ url_for('manager_course_list') }}"
+               class="btn btn-sm btn-outline-secondary w-100 d-block d-sm-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block card_body %}
 <style>
-    input {
-        background-image: none !important;
-    }
+    input { background-image: none !important; }
+    /* CSS căn chỉnh nhãn cho Card Mobile */
+    .mobile-card-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; }
 </style>
-<div class="alert alert-info border-0 bg-info bg-opacity-10 rounded-3 p-3">
+
+<div class="alert alert-info border-0 bg-info bg-opacity-10 rounded-3 p-3 mb-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
         <div>
-            <h5 class="fw-bold mb-2 text-primary d-flex align-items-center gap-2">
-                <i class="bi bi-bookmark-star-fill"></i> {{ khoa_hoc.ten_khoa_hoc }}
-                <span class="badge bg-primary fs-6">{{ khoa_hoc.ma_khoa_hoc }}</span>
+            <h5 class="fw-bold mb-2 text-primary d-flex align-items-center flex-wrap gap-2">
+                <span><i class="bi bi-bookmark-star-fill"></i> {{ khoa_hoc.ten_khoa_hoc }}</span>
+                <span class="badge bg-primary fs-6 font-monospace">{{ khoa_hoc.ma_khoa_hoc }}</span>
             </h5>
             <div class="small text-muted d-flex flex-column flex-sm-row gap-1 gap-sm-4">
-                <span><i class="bi bi-calendar-event me-2"></i>{{ khoa_hoc.ngay_bat_dau.strftime('%d/%m/%Y') }}</span>
-                <span><i class="bi bi-person-video3 me-2"></i>{{ khoa_hoc.giao_vien.ho_va_ten if khoa_hoc.giao_vien else "Chưa xếp" }}</span>
+                <span><i class="bi bi-calendar-event me-2"></i>Khai giảng: {{ khoa_hoc.ngay_bat_dau.strftime('%d/%m/%Y') }}</span>
+                <span><i class="bi bi-person-video3 me-2"></i>GV: {{ khoa_hoc.giao_vien.ho_va_ten if khoa_hoc.giao_vien else "Chưa xếp" }}</span>
             </div>
         </div>
-        <div class="text-end">
-            <div class="fs-4 fw-bold lh-1">{{ khoa_hoc.si_so_hien_tai }}/{{ khoa_hoc.si_so_toi_da }}</div>
+        <div class="text-md-end border-top border-md-0 pt-2 pt-md-0 border-info border-opacity-25">
+            <div class="small text-uppercase text-secondary fw-bold">Sĩ số lớp</div>
+            <div class="fs-4 fw-bold lh-1 text-primary">
+                {{ khoa_hoc.si_so_hien_tai }}<span class="text-muted fs-6 fw-normal mx-1">/</span>{{
+                khoa_hoc.si_so_toi_da }}
+            </div>
         </div>
     </div>
 </div>
+
 <div class="card mb-4 border-0 shadow-sm bg-light">
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-center">
-            <div class="col-md-4">
+            <div class="col-lg-4 col-md-12">
                 <input type="text" name="tu_khoa" class="form-control"
                        placeholder="Tìm theo tên hoặc mã HV..."
                        value="{{ tu_khoa }}">
             </div>
-            <div class="col-md-2">
+            <div class="col-lg-2 col-md-4">
                 <input type="number" name="nam_sinh" class="form-control"
                        placeholder="Năm sinh"
                        value="{{ nam_sinh }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-lg-3 col-md-4">
                 <select name="ket_qua" class="form-select">
                     <option value="">-- Tất cả kết quả --</option>
                     <option value="dau" {% if ket_qua==
@@ -58,21 +74,23 @@
                     'chua_xet' %}selected{% endif %}>Chưa tổng kết</option>
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel-fill me-1"></i>Lọc</button>
+            <div class="col-lg-3 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="bi bi-funnel-fill me-1"></i>Lọc
+                </button>
                 <a href="{{ url_for('manager_course_detail', ma_khoa_hoc=khoa_hoc.ma_khoa_hoc) }}"
-                   class="btn btn-outline-secondary">
+                   class="btn btn-outline-secondary" title="Xóa bộ lọc">
                     <i class="bi bi-arrow-counterclockwise"></i>
                 </a>
             </div>
         </form>
     </div>
 </div>
-<div class="table-responsive">
+
+<div class="table-responsive d-none d-md-block">
     <table class="table table-hover text-nowrap table-bordered align-middle bg-white">
         <thead class="table-light text-secondary small text-uppercase fw-bold">
         <tr>
-            <th class="text-center">STT</th>
+            <th class="text-center" style="width: 50px;">STT</th>
             <th>Mã HV</th>
             <th>Họ và tên</th>
             <th>Liên hệ</th>
@@ -87,7 +105,8 @@
         <tr>
             <td class="text-center fw-bold text-muted">{{ (pagination.page - 1) * pagination.per_page + loop.index }}
             </td>
-            <td><span class="badge bg-light text-dark border">{{ item.hoc_vien.ma_nguoi_dung }}</span></td>
+            <td><span class="badge bg-light text-dark border font-monospace">{{ item.hoc_vien.ma_nguoi_dung }}</span>
+            </td>
             <td>
                 <div class="fw-bold text-primary">{{ item.hoc_vien.ho_va_ten }}</div>
                 <small class="text-muted d-block mt-1">
@@ -103,7 +122,7 @@
             </td>
             <td>{{ item.hoc_vien.ngay_sinh.strftime('%d/%m/%Y') if item.hoc_vien.ngay_sinh else '--' }}</td>
             <td class="text-center">
-                {% if item.diem_trung_binh %}
+                {% if item.diem_trung_binh is not none %}
                 {% if item.ket_qua %}
                 <span class="badge bg-success">ĐẬU ({{ item.diem_trung_binh }})</span>
                 {% else %}
@@ -115,23 +134,21 @@
             </td>
             <td class="text-center">
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
-                            data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="z-index: 9999;">
-                        <li><a class="dropdown-item" href="{{ url_for('manager_profile_user', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
-                            <i class="bi bi-pencil-square me-2 text-warning"></i>Xem thông tin
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_profile_user', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                            <i class="bi bi-person-lines-fill me-2 text-warning"></i>Xem hồ sơ
                         </a></li>
-
-                        <li><a class="dropdown-item" href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
                             <i class="bi bi-key me-2 text-info"></i>Đặt lại mật khẩu
                         </a></li>
-
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-
                         {% if item.hoc_vien.tinh_trang_hoat_dong %}
                         <li><a class="dropdown-item text-danger" href="#">
                             <i class="bi bi-lock-fill me-2"></i>Khóa tài khoản
@@ -148,15 +165,91 @@
         {% endfor %}
         {% else %}
         <tr>
-            <td colspan="6" class="text-center py-5 text-muted">
-                <i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>
-                Không tìm thấy học viên nào phù hợp với bộ lọc.
+            <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>Không tìm thấy học viên nào phù hợp.
             </td>
         </tr>
         {% endif %}
         </tbody>
     </table>
 </div>
+
+<div class="d-block d-md-none">
+    {% if pagination.items %}
+    {% for item in pagination.items %}
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h6 class="fw-bold text-primary mb-1">{{ item.hoc_vien.ho_va_ten }}</h6>
+                    <span class="badge bg-light text-dark border font-monospace">{{ item.hoc_vien.ma_nguoi_dung }}</span>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_profile_user', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                            <i class="bi bi-person-lines-fill me-2 text-warning"></i>Xem hồ sơ
+                        </a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=item.hoc_vien.ma_nguoi_dung) }}">
+                            <i class="bi bi-key me-2 text-info"></i>Đặt lại mật khẩu
+                        </a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        {% if item.hoc_vien.tinh_trang_hoat_dong %}
+                        <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-lock-fill me-2"></i>Khóa tài
+                            khoản</a></li>
+                        {% else %}
+                        <li><a class="dropdown-item text-success" href="#"><i class="bi bi-unlock-fill me-2"></i>Kích
+                            hoạt lại</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <hr class="my-2 dashed">
+
+            <div class="small">
+                <div class="mb-1">
+                    <span class="mobile-card-label">User:</span>
+                    <span class="text-dark fw-bold">{{ item.hoc_vien.ten_dang_nhap }}</span>
+                </div>
+                <div class="mb-1">
+                    <span class="mobile-card-label">Ngày sinh:</span>
+                    <span class="text-muted">{{ item.hoc_vien.ngay_sinh.strftime('%d/%m/%Y') if item.hoc_vien.ngay_sinh else '--' }}</span>
+                </div>
+                <div class="mb-2">
+                    <span class="mobile-card-label">Liên hệ:</span>
+                    <span class="text-muted">{{ item.hoc_vien.so_dien_thoai }}</span>
+                </div>
+
+                <div class="bg-light p-2 rounded border d-flex align-items-center justify-content-between">
+                    <span class="fw-bold text-secondary">Kết quả:</span>
+                    {% if item.diem_trung_binh is not none %}
+                    {% if item.ket_qua %}
+                    <span class="badge bg-success">ĐẬU ({{ item.diem_trung_binh }})</span>
+                    {% else %}
+                    <span class="badge bg-danger">RỚT ({{ item.diem_trung_binh }})</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-muted fst-italic">-- Chưa tổng kết --</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-search fs-1"></i><br>Không tìm thấy học viên nào
+    </div>
+    {% endif %}
+</div>
+
 {% if pagination.pages > 1 %}
 <nav aria-label="Page navigation" class="mt-4">
     <ul class="pagination justify-content-center">

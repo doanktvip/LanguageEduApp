@@ -1,0 +1,246 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Thanh toán học phí{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                <i class="bi bi-cash-coin me-2"></i>Quản lý học phí
+            </span>
+        </div>
+        <div class="col-12 col-sm-auto">
+            <a href="{{ url_for('manager_student_list') }}" class="btn btn-sm btn-outline-secondary w-100">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    .mobile-card-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; }
+    .dashed { border-top: 1px dashed #ddd; }
+</style>
+<div class="bg-light p-3 rounded mb-4 border shadow-sm">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <small class="text-muted fw-bold text-uppercase">Học viên thanh toán</small>
+            <h4 class="fw-bold text-primary mb-0">{{ hoc_vien.ho_va_ten }}</h4>
+            <span class="badge bg-light text-dark border font-monospace mt-1">{{ hoc_vien.ma_nguoi_dung }}</span>
+        </div>
+        <div class="col-md-6 text-md-end mt-2 mt-md-0">
+            <div class="small text-muted mb-1"><i class="bi bi-telephone me-2"></i>SĐT: {{ hoc_vien.so_dien_thoai }}
+            </div>
+            <div class="small text-muted"><i class="bi bi-people me-2"></i>Phụ huynh: {{
+                hoc_vien.so_dien_thoai_phu_huynh or '---' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white p-3 rounded mb-4 border shadow-sm">
+    <form method="GET" class="row g-2">
+        <div class="col-lg-5 col-md-12">
+            <label class="form-label small fw-bold text-secondary mb-1">Tìm hóa đơn</label>
+            <input type="text" name="kw_hd" class="form-control form-control-sm"
+                   placeholder="Mã hóa đơn hoặc tên khóa học..." value="{{ request.args.get('kw_hd', '') }}">
+        </div>
+        <div class="col-lg-4 col-md-8">
+            <label class="form-label small fw-bold text-secondary mb-1">Trạng thái</label>
+            <select name="status_hd" class="form-select form-select-sm">
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="1" {% if request.args.get(
+                'status_hd') == '1' %}selected{% endif %}>Chưa đóng</option>
+                <option value="2" {% if request.args.get(
+                'status_hd') == '2' %}selected{% endif %}>Đã đóng</option>
+            </select>
+        </div>
+        <div class="col-lg-3 col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">
+                <i class="bi bi-filter me-1"></i>Lọc dữ liệu
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="table-responsive d-none d-md-block">
+    <table class="table table-hover table-bordered text-nowrap align-middle bg-white border-top">
+        <thead class="table-light text-secondary small text-uppercase fw-bold">
+        <tr>
+            <th class="text-center" style="width: 100px;">Mã HĐ</th>
+            <th>Khóa học</th>
+            <th class="text-end">Số tiền</th>
+            <th class="text-center">Hạn đóng</th>
+            <th class="text-center">Trạng thái</th>
+            <th class="text-center">Người thu</th>
+            <th class="text-center" style="width: 130px;"><i class="bi bi-gear-fill"></i></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% if ds_hoa_don %}
+        {% for hd in ds_hoa_don %}
+        <tr>
+            <td class="text-center font-monospace fw-bold text-muted">#{{ hd.ma_hoa_don }}</td>
+            <td>
+                <div class="fw-bold">{{ hd.khoa_hoc.ten_khoa_hoc }}</div>
+                <small class="text-muted">{{ hd.khoa_hoc.ma_khoa_hoc }}</small>
+            </td>
+            <td class="text-end fw-bold text-danger">{{ "{:,.0f}".format(hd.so_tien) }} đ</td>
+            <td class="text-center small">{{ hd.ngay_han.strftime('%d/%m/%Y') }}</td>
+            <td class="text-center">
+                {% if hd.trang_thai.value == 1 %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">Chưa đóng</span>
+                {% else %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">Đã đóng</span>
+                <div class="text-muted" style="font-size: 0.7rem; margin-top: 2px;">{{ hd.ngay_nop.strftime('%d/%m/%Y
+                    %H:%M') }}
+                </div>
+                {% endif %}
+            </td>
+            <td class="text-center small text-muted">{{ hd.nhan_vien.ho_va_ten if hd.nhan_vien else '--' }}</td>
+            <td class="text-center">
+                {% if hd.trang_thai.value == 1 %}
+                <button class="btn btn-primary btn-sm w-100 shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalPay{{ hd.ma_hoa_don }}">
+                    <i class="bi bi-wallet2 me-1"></i>Thu tiền
+                </button>
+                {% else %}
+                <button class="btn btn-outline-dark btn-sm w-100 shadow-sm"
+                        onclick="printInvoice('{{ hd.ma_hoa_don }}', '{{ hd.khoa_hoc.ten_khoa_hoc }}', {{ hd.so_tien }})">
+                    <i class="bi bi-printer me-1"></i>In HĐ
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td colspan="7" class="text-center py-5 text-muted">Không có dữ liệu hóa đơn</td>
+        </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<div class="d-block d-md-none">
+    {% if ds_hoa_don %}
+    {% for hd in ds_hoa_don %}
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="badge bg-light text-dark border font-monospace">#{{ hd.ma_hoa_don }}</span>
+                {% if hd.trang_thai.value == 1 %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Chưa đóng</span>
+                {% else %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Đã đóng</span>
+                {% endif %}
+            </div>
+            <h6 class="fw-bold text-primary mb-2">{{ hd.khoa_hoc.ten_khoa_hoc }}</h6>
+
+            <hr class="my-2 dashed">
+
+            <div class="small">
+                <div class="mb-1"><span class="mobile-card-label">Số tiền:</span> <span
+                        class="text-danger fw-bold fs-6">{{ "{:,.0f}".format(hd.so_tien) }} đ</span></div>
+                <div class="mb-1"><span class="mobile-card-label">Hạn đóng:</span> <span class="text-muted">{{ hd.ngay_han.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div class="mb-3"><span class="mobile-card-label">Người thu:</span> <span class="text-muted">{{ hd.nhan_vien.ho_va_ten if hd.nhan_vien else '--' }}</span>
+                </div>
+            </div>
+
+            {% if hd.trang_thai.value == 1 %}
+            <button class="btn btn-primary w-100 fw-bold py-2" data-bs-toggle="modal"
+                    data-bs-target="#modalPay{{ hd.ma_hoa_don }}">
+                <i class="bi bi-wallet2 me-2"></i>THU TIỀN NGAY
+            </button>
+            {% else %}
+            <button class="btn btn-outline-dark w-100 fw-bold py-2"
+                    onclick="printInvoice('{{ hd.ma_hoa_don }}', '{{ hd.khoa_hoc.ten_khoa_hoc }}', {{ hd.so_tien }})">
+                <i class="bi bi-printer me-2"></i>IN HÓA ĐƠN
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5 text-muted bg-white border rounded">Chưa có hóa đơn nào.</div>
+    {% endif %}
+</div>
+
+{% for hd in ds_hoa_don %}
+{% if hd.trang_thai.value == 1 %}
+<div class="modal fade" id="modalPay{{ hd.ma_hoa_don }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h6 class="modal-title fw-bold">XÁC NHẬN THU TIỀN</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-center mb-3">Bạn xác nhận đã nhận đủ số tiền từ học viên?</p>
+                <div class="bg-light p-3 rounded border">
+                    <div class="d-flex justify-content-between mb-2"><span>Khóa học:</span> <strong>{{
+                        hd.khoa_hoc.ten_khoa_hoc }}</strong></div>
+                    <div class="d-flex justify-content-between text-danger fs-5"><span>Số tiền:</span> <strong>{{
+                        "{:,.0f}".format(hd.so_tien) }} đ</strong></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form action="{{ url_for('confirm_payment', ma_hoa_don=hd.ma_hoa_don) }}" method="POST" class="w-100">
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2">XÁC NHẬN HOÀN TẤT</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<script>
+    function printInvoice(maHD, tenKhoa, soTien) {
+        const formattedAmount = new Intl.NumberFormat('vi-VN').format(soTien) + ' đ';
+        const printWindow = window.open('', '_blank');
+        const htmlContent = `
+            <html>
+                <head>
+                    <title>In Hóa Đơn - ${maHD}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 30px; line-height: 1.5; }
+                        .text-center { text-align: center; }
+                        .header { border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
+                        .info { margin-bottom: 20px; }
+                        .table { width: 100%; border-collapse: collapse; }
+                        .table th, .table td { border: 1px solid #000; padding: 10px; text-align: left; }
+                        .total { text-align: right; font-size: 1.2em; font-weight: bold; margin-top: 20px; }
+                        .signature { margin-top: 50px; display: grid; grid-template-columns: 1fr 1fr; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header text-center">
+                        <h2>BIÊN LAI THU HỌC PHÍ</h2>
+                        <p>Mã hóa đơn: #<b>${maHD}</b></p>
+                    </div>
+                    <div class="info">
+                        <p>Học viên: <b>{{ hoc_vien.ho_va_ten }}</b></p>
+                        <p>Mã số: {{ hoc_vien.ma_nguoi_dung }} | Ngày: ${new Date().toLocaleDateString('vi-VN')}</p>
+                    </div>
+                    <table class="table">
+                        <thead><tr><th>Nội dung</th><th>Thành tiền</th></tr></thead>
+                        <tbody><tr><td>Học phí khóa: ${tenKhoa}</td><td>${formattedAmount}</td></tr></tbody>
+                    </table>
+                    <p class="total">TỔNG CỘNG: ${formattedAmount}</p>
+                    <div class="signature text-center">
+                        <div><p>Người nộp</p><br><br><span>(Ký tên)</span></div>
+                        <div><p>Người thu</p><br><br><span>(Ký tên)</span></div>
+                    </div>
+                    <script>window.onload = function() { window.print(); window.close(); }<\/script>
+                </body>
+            </html>`;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+    }
+</script>
+{% endblock %}

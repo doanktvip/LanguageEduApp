@@ -1,0 +1,216 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Đăng ký khóa học{% endblock %}
+
+{% block card_header %}
+<div class="p-3">
+    <i class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học
+</div>
+{% endblock %}
+
+{% block card_body %}
+<style>
+    input { background-image: none !important; }
+
+    /* CSS hỗ trợ giao diện mobile */
+    .mobile-label {
+        width: 100px;
+        display: inline-block;
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    .card-register {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid #dee2e6;
+    }
+    /* Hiệu ứng khi chọn checkbox trên mobile */
+    .card-register:has(.form-check-input:checked) {
+        border-color: #0d6efd;
+        background-color: #f8faff;
+    }
+    .card-register.disabled {
+        opacity: 0.7;
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+</style>
+
+{% if thong_bao %}
+<div class="alert alert-light border border-secondary border-opacity-25 shadow-sm mb-4">
+    <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-bell-fill text-warning me-2 fs-5"></i>
+        <span class="fw-bold text-dark">Kết quả xử lý:</span>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for item in thong_bao %}
+        <li class="list-group-item bg-transparent py-1 border-0 ps-0">
+            {% if item.type == 'success' %}
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <span class="text-success fw-medium">{{ item.content }}</span>
+            {% else %}
+            <i class="bi bi-x-circle-fill text-danger me-2"></i>
+            <span class="text-danger fw-medium">{{ item.content }}</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% if ds_khoa_hoc %}
+<form action="/register_course" method="POST" id="form-dang-ky">
+
+    <div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4 d-none d-md-block">
+        <div class="table-responsive">
+            <table class="table table-bordered text-nowrap mb-0 align-middle">
+                <thead class="bg-primary text-white">
+                <tr>
+                    <th class="text-center py-3 bg-primary" style="width: 50px;"><i class="bi bi-check2-square"></i>
+                    </th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75">Thông tin khóa học</th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75">Giáo viên & Lịch</th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75" style="width: 180px;">Sĩ số</th>
+                    <th class="py-3 text-uppercase small fw-bold opacity-75 text-end">Học phí</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for kh in ds_khoa_hoc %}
+                {% set het_cho = kh.si_so_hien_tai >= kh.si_so_toi_da %}
+                <tr class="{{ 'bg-light text-muted' if het_cho else 'bg-white' }}">
+                    <td class="text-center">
+                        <div class="form-check d-flex justify-content-center">
+                            <input class="form-check-input border-2 border-secondary"
+                                   style="transform: scale(1.2); cursor: pointer;" type="checkbox"
+                                   name="course_ids" value="{{ kh.ma_khoa_hoc }}"
+                                   id="chk_{{ kh.ma_khoa_hoc }}" {% if het_cho %}disabled{% endif %}>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex flex-column">
+                            <span class="fw-bold fs-6 {{ 'text-secondary' if het_cho else 'text-primary' }}">{{ kh.ten_khoa_hoc }}</span>
+                            <div class="small text-muted mt-1">
+                                <span class="badge bg-light text-dark border me-1"><i class="bi bi-upc-scan me-1"></i>{{ kh.ma_khoa_hoc }}</span>
+                                <span class="badge bg-light text-dark border">{{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="small">
+                            <div class="mb-1"><i class="bi bi-person-badge-fill me-2 text-secondary"></i>{{
+                                kh.giao_vien.ho_va_ten if kh.giao_vien else 'Chưa phân công' }}
+                            </div>
+                            <div><i class="bi bi-calendar-range me-2 text-secondary"></i>{{
+                                kh.ngay_bat_dau.strftime('%d/%m/%Y') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if het_cho %}
+                        <span class="badge bg-secondary w-100 py-2"><i class="bi bi-lock-fill me-1"></i>Đã đầy</span>
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-between small mb-1 fw-bold">
+                            <span class="{{ 'text-danger' if kh.si_so_hien_tai >= kh.si_so_toi_da - 2 else 'text-success' }}">{{ kh.si_so_hien_tai }}</span>
+                            <span class="text-muted">/ {{ kh.si_so_toi_da }}</span>
+                        </div>
+                        {% set percent = (kh.si_so_hien_tai / kh.si_so_toi_da * 100)|int %}
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar {{ 'bg-warning' if percent > 80 else 'bg-success' }}"
+                                 style="width: {{ percent }}%"></div>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-bold font-monospace fs-6">{{ "{:,.0f}".format(kh.hoc_phi) }} ₫</div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-block d-md-none">
+        {% for kh in ds_khoa_hoc %}
+        {% set het_cho = kh.si_so_hien_tai >= kh.si_so_toi_da %}
+        <label for="chk_mb_{{ kh.ma_khoa_hoc }}"
+               class="card card-register mb-3 shadow-sm rounded-3 w-100 {{ 'disabled' if het_cho else '' }}">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="pt-1">
+                        <input class="form-check-input border-2" type="checkbox" name="course_ids"
+                               value="{{ kh.ma_khoa_hoc }}" id="chk_mb_{{ kh.ma_khoa_hoc }}"
+                               {% if het_cho %}disabled{% endif %} style="transform: scale(1.3);">
+                    </div>
+
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1 {{ 'text-muted' if het_cho else 'text-primary' }}">{{ kh.ten_khoa_hoc
+                            }}</h6>
+                        <div class="mb-2">
+                            <span class="badge bg-light text-dark border font-monospace small"
+                                  style="font-size: 0.7rem;">{{ kh.ma_khoa_hoc }}</span>
+                            <span class="badge bg-light text-secondary border small" style="font-size: 0.7rem;">{{ kh.loai_khoa_hoc.ten_loai_khoa_hoc }}</span>
+                        </div>
+
+                        <div class="small mb-3">
+                            <div class="mb-1"><span class="mobile-label">Giáo viên:</span>{{ kh.giao_vien.ho_va_ten if
+                                kh.giao_vien else 'Chưa rõ' }}
+                            </div>
+                            <div class="mb-1"><span class="mobile-label">Lịch học:</span>{{
+                                kh.ngay_bat_dau.strftime('%d/%m') }} - {{ kh.ngay_ket_thuc.strftime('%d/%m/%y') }}
+                            </div>
+                            <div class="mb-1"><span class="mobile-label">Học phí:</span><span
+                                    class="fw-bold text-dark font-monospace text-end d-inline-block"
+                                    style="min-width: 80px;">{{ "{:,.0f}".format(kh.hoc_phi) }} ₫</span></div>
+                        </div>
+
+                        {% if het_cho %}
+                        <div class="bg-secondary bg-opacity-10 text-secondary text-center rounded py-1 small fw-bold">
+                            <i class="bi bi-lock-fill me-1"></i>LỚP ĐÃ ĐẦY
+                        </div>
+                        {% else %}
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                {% set percent = (kh.si_so_hien_tai / kh.si_so_toi_da * 100)|int %}
+                                <div class="progress-bar {{ 'bg-warning' if percent > 80 else 'bg-success' }}"
+                                     style="width: {{ percent }}%"></div>
+                            </div>
+                            <span class="small fw-bold text-muted">{{ kh.si_so_hien_tai }}/{{ kh.si_so_toi_da }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </label>
+        {% endfor %}
+    </div>
+
+    <div class="row g-2 mt-4">
+        <div class="col-12 col-md-auto me-md-auto d-none d-md-block">
+            <div class="text-muted small fst-italic">
+                <i class="bi bi-info-circle me-1"></i> Tích chọn vào ô bên trái lớp học bạn muốn đăng ký.
+            </div>
+        </div>
+        <div class="col-6 col-md-auto">
+            <button type="reset" class="btn btn-light border text-secondary fw-medium w-100">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Chọn lại
+            </button>
+        </div>
+        <div class="col-6 col-md-auto">
+            <button type="submit" class="btn btn-primary fw-bold shadow-sm w-100">
+                <i class="bi bi-send-check-fill me-2"></i> Đăng ký
+            </button>
+        </div>
+    </div>
+</form>
+{% else %}
+<div class="text-center py-5">
+    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3 text-muted"
+         style="width: 80px; height: 80px;">
+        <i class="bi bi-calendar-x-fill fs-1 opacity-50"></i>
+    </div>
+    <h5 class="text-muted fw-normal">Không tìm thấy khóa học khả dụng.</h5>
+</div>
+{% endif %}
+{% endblock %}

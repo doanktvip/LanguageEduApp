@@ -8,9 +8,7 @@
 
 {% block card_body %}
 <style>
-    input {
-        background-image: none !important;
-    }
+    input { background-image: none !important; }
 </style>
 <div class="row justify-content-center">
     <div class="col-md-10 col-lg-8">
@@ -18,6 +16,7 @@
             <h4 class="fw-bold text-primary">Tạo tài khoản mới</h4>
             <p class="text-muted small">Vui lòng điền đầy đủ thông tin bên dưới.</p>
         </div>
+
         <div class="position-relative mb-5 mx-4">
             <div class="progress" style="height: 2px;">
                 <div class="progress-bar bg-warning" role="progressbar"
@@ -34,73 +33,57 @@
                 2
             </button>
         </div>
-        {% if err_msg %}
-        <div class="alert alert-danger d-flex align-items-center border-0 shadow-sm mb-4" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-            <div>{{ err_msg }}</div>
-        </div>
-        {% endif %}
+
         <div class="collapse {% if not show_step2 %}show{% endif %}" id="step1">
             <form class="was-validated" method="post">
                 <input type="hidden" name="step" value="1">
-                <h6 class="text-uppercase text-muted small fw-bold mb-3">
-                    <i class="bi bi-shield-lock me-1"></i>Thông tin đăng ký
-                </h6>
+                <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-shield-lock me-1"></i>Thông tin
+                    đăng ký</h6>
+
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="name" name="name"
-                           placeholder="Họ và tên" required value="{{ data.get('name', '') }}"
-                           oninput="this.value = this.value.replace(/^\s+/g, '')"
-                           onblur="this.value = this.value.trim()">
+                    <input type="text" class="form-control" id="name" name="name" required
+                           value="{{ data.get('name', '') }}">
                     <label for="name">Họ và tên hiển thị</label>
-                    <div class="invalid-feedback">Vui lòng nhập họ tên.</div>
                 </div>
+
                 <div class="form-floating mb-3">
-                    <input type="text" class="form-control" id="username" name="username"
-                           placeholder="Tên đăng nhập" required value="{{ data.get('username', '') }}"
-                           oninput="this.value = this.value.replace(/[^a-zA-Z0-9@._-]/g, '')"
-                           {{ 'autofocus' if focus_field == 'username' else '' }}>
+                    <input type="text" class="form-control" id="username" name="username" required
+                           value="{{ data.get('username', '') }}" {{ 'autofocus' if focus_field == 'username' }}>
                     <label for="username">Tên đăng nhập</label>
-                    <div class="invalid-feedback">Chỉ chấp nhận chữ, số và ký tự @ . _ -</div>
                 </div>
+
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-floating mb-3 position-relative">
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="Mật khẩu" required minlength="6" maxlength="20"
-                                   value="{{ data.get('password', '') }}" {{ 'autofocus' if focus_field == 'password'
-                            else '' }}>
+                        <div class="form-floating mb-3">
+                            <input type="password" class="form-control" id="password" name="password" required
+                                   minlength="6" value="{{ data.get('password', '') }}" {{ 'autofocus' if focus_field ==
+                            'password' }}>
                             <label for="password">Mật khẩu</label>
-                            <div class="invalid-feedback">
-                                Mật khẩu phải từ 6 đến 20 ký tự.
-                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-floating mb-3 position-relative">
+                        <div class="form-floating mb-3">
                             <input type="password" class="form-control" id="re_enter_password" name="re_enter_password"
-                                   placeholder="Nhập lại" required
-                                   minlength="6" maxlength="20"
-                                   value="{{ data.get('re_enter_password', '') }}">
+                                   required
+                                   minlength="6" value="{{ data.get('re_enter_password', '') }}">
                             <label for="re_enter_password">Xác nhận mật khẩu</label>
-                            <div class="invalid-feedback">
-                                Vui lòng nhập lại mật khẩu khớp với bên trên.
-                            </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="d-flex justify-content-end mt-4">
-                    <button class="btn btn-primary px-4 fw-bold shadow-sm" type="submit">
-                        Tiếp theo <i class="bi bi-arrow-right ms-2"></i>
-                    </button>
+                    <button class="btn btn-primary px-4 fw-bold shadow-sm" type="submit">Tiếp theo <i
+                            class="bi bi-arrow-right ms-2"></i></button>
                 </div>
             </form>
         </div>
+
         <div class="collapse {% if show_step2 %}show{% endif %}" id="step2">
             <form class="was-validated" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="step" value="2">
-                <h6 class="text-uppercase text-muted small fw-bold mb-3">
-                    <i class="bi bi-person-badge me-1"></i>Thông tin cá nhân
-                </h6>
+                <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-person-badge me-1"></i>Thông
+                    tin cá nhân</h6>
+
                 <div class="text-center mb-4">
                     <div class="position-relative d-inline-block">
                         <img id="registerPreview"
@@ -114,32 +97,33 @@
                         </label>
                     </div>
                     <input type="file" class="d-none" id="image" name="image" accept=".png,.jpg,.jpeg">
-                    <div class="small text-muted mt-1 fst-italic">Ảnh đại diện (JPG, PNG, JPEG)</div>
                 </div>
+
                 <div class="row">
                     <div class="col-md-7">
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="email" name="email"
-                                   placeholder="Email" required value="{{ data.get('email', '') }}">
+                            <input type="email" class="form-control" id="email" name="email" required
+                                   value="{{ data.get('email', '') }}">
                             <label for="email">Địa chỉ Email</label>
                         </div>
                     </div>
                     <div class="col-md-5">
                         <div class="form-floating mb-3">
-                            <input type="tel" class="form-control" id="phone_number" name="phone_number"
-                                   placeholder="SĐT" required pattern="[0-9]{10}" maxlength="10"
-                                   value="{{ data.get('phone_number', '') }}"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number" required
+                                   pattern="[0-9]{10}"
+                                   value="{{ data.get('phone_number', '') }}">
                             <label for="phone_number">Số điện thoại</label>
                         </div>
                     </div>
                 </div>
+
                 <div class="form-floating mb-3">
                     <input type="date" class="form-control" id="dob" name="dob" required
                            value="{{ data.get('dob', '') }}">
                     <label for="dob">Ngày sinh</label>
                 </div>
-                <div class="d-flex justify-content-between mt-4 align-items-center">
+
+                <div class="d-flex justify-content-between mt-4">
                     <button class="btn btn-light text-secondary border fw-medium" type="submit" name="back_to_step1"
                             value="1" formnovalidate>
                         <i class="bi bi-arrow-left me-2"></i>Quay lại
@@ -152,12 +136,4 @@
         </div>
     </div>
 </div>
-
-{% endblock %}
-{% block javascript %}
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        setupImagePreview("image", "registerPreview");
-    });
-</script>
 {% endblock %}

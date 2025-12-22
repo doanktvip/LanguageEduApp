@@ -3,17 +3,25 @@
 {% block title %}Điều chỉnh học phí{% endblock %}
 
 {% block card_header %}
-<div class="p-3 d-flex justify-content-between align-items-center">
-    <span class="fw-bold text-uppercase">
-        {% if khoa_hoc %}
-            <i class="bi bi-cash-coin me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (ĐƠN LẺ)
-        {% else %}
-            <i class="bi bi-tags-fill me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (HÀNG LOẠT)
-        {% endif %}
-    </span>
-    <a href="{{ url_for('manager_course_list') }}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Quay lại
-    </a>
+<div class="p-3">
+    <div class="row align-items-center">
+        <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
+            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+                {% if khoa_hoc %}
+                    <i class="bi bi-cash-coin me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (ĐƠN LẺ)
+                {% else %}
+                    <i class="bi bi-tags-fill me-2"></i>ĐIỀU CHỈNH HỌC PHÍ (HÀNG LOẠT)
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="col-12 col-sm-auto">
+            <a href="{{ url_for('manager_course_list') }}"
+               class="btn btn-sm btn-outline-secondary w-100 d-block d-sm-inline-block">
+                <i class="bi bi-arrow-left me-1"></i>Quay lại
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -29,7 +37,6 @@
         display: flex; align-items: center; justify-content: center;
         margin: 0 auto;
     }
-    /* Avatar riêng cho Batch Update (Màu tím) */
     .course-avatar.is-batch {
         background-color: #e0cffc;
         color: #6610f2;
@@ -40,23 +47,6 @@
 
 <div class="row justify-content-center mt-4">
     <div class="col-md-8 col-lg-6">
-
-        {% if msg %}
-        <div class="alert alert-{{ msg_type }} shadow-sm border-0 mb-4">
-            {% if msg_type == 'success' %}
-            <i class="bi bi-check-circle-fill me-2"></i> {{ msg }}
-            <div class="mt-2">
-                <a href="{{ url_for('manager_course_list') }}" class="btn btn-success btn-sm fw-bold">
-                    <i class="bi bi-arrow-return-left me-1"></i> Quay về danh sách
-                </a>
-            </div>
-            {% else %}
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ msg }}
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% if (msg is none) or (msg_type != 'success') %}
         <div class="card shadow-sm border-0 bg-light">
             <div class="card-body p-4 {% if not khoa_hoc %}border border-2 border-indigo-subtle rounded{% endif %}">
 
@@ -72,7 +62,7 @@
                         <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Học phí hiện
                             tại</small>
                         <div class="fs-4 fw-bold text-dark" id="display_current_price">
-                            {{ "{:,.0f}".format(khoa_hoc.hoc_phi) }}
+                            {{ "{:,.0f}".format(khoa_hoc.hoc_phi) }} ₫
                         </div>
                     </div>
                     {% else %}
@@ -91,7 +81,6 @@
                 </div>
 
                 <form method="post" id="tuitionForm">
-
                     <div class="mb-3" {% if not khoa_hoc %}style="display:none" {% endif %}>
                         <label class="form-label fw-bold text-secondary small">CHỌN PHƯƠNG THỨC:</label>
                         <select class="form-select" id="method_select" onchange="toggleMethod()">
@@ -144,7 +133,7 @@
                         </div>
                         {% else %}
                         <div class="form-text mt-2 text-indigo">
-                            * Mức giảm này sẽ được nhân với giá hiện tại của từng khóa học.
+                            * Mức giảm này sẽ được áp dụng cho giá gốc của từng lớp.
                         </div>
                         {% endif %}
                     </div>
@@ -159,7 +148,8 @@
                             <i class="bi bi-check-lg me-2"></i>Lưu học phí mới
                         </button>
                         {% else %}
-                        <button type="submit" class="btn btn-warning fw-bold py-2 shadow-sm text-dark">
+                        <button type="submit" class="btn btn-warning fw-bold py-2 shadow-sm text-dark"
+                                onclick="return confirm('Bạn có chắc chắn muốn giảm giá cho TOÀN BỘ khóa học không?')">
                             <i class="bi bi-tags-fill me-2"></i>Áp dụng cho tất cả
                         </button>
                         {% endif %}
@@ -167,14 +157,12 @@
                 </form>
             </div>
         </div>
-        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block javascript %}
 <script>
-    // Kiểm tra xem đang ở chế độ nào
     const isSingleMode = {{ 'true' if khoa_hoc else 'false' }};
     const currentPrice = {{ khoa_hoc.hoc_phi if khoa_hoc else 0 }};
     const vnCurrency = new Intl.NumberFormat('vi-VN');
@@ -184,14 +172,12 @@
         const manualGroup = document.getElementById('manual_input_group');
         const percentGroup = document.getElementById('percent_input_group');
 
-        // Nếu là Batch Mode, luôn ép hiển thị Percent Group
         if (!isSingleMode) {
             if (manualGroup) manualGroup.style.display = 'none';
             percentGroup.style.display = 'block';
             return;
         }
 
-        // Logic cũ cho Single Mode
         const manualInput = document.getElementById('manual_price_display');
         if (method === 'manual') {
             manualGroup.style.display = 'block';
@@ -207,7 +193,7 @@
     }
 
     function handleManualInput() {
-        if (!isSingleMode) return; // Batch mode không dùng hàm này
+        if (!isSingleMode) return;
         const input = document.getElementById('manual_price_display');
         let rawValue = input.value.replace(/\D/g, '');
         if (rawValue === '') {
@@ -234,14 +220,11 @@
     }
 
     function applyPercentLogic(percent) {
-        // Luôn cập nhật vào input ẩn % để gửi về server (Cho Batch Mode)
         document.getElementById('percent_value_hidden').value = percent;
-
-        // Nếu là Single Mode thì tính ra tiền hiển thị chơi
         if (isSingleMode) {
             const discountAmount = currentPrice * (percent / 100);
             const newPrice = currentPrice - discountAmount;
-            document.getElementById('percent_result').innerText = vnCurrency.format(newPrice) + " ₫";
+            document.getElementById('percent_result').innerText = vnCurrency.format(Math.round(newPrice)) + " ₫";
             document.getElementById('final_price_value').value = Math.round(newPrice);
         }
     }
