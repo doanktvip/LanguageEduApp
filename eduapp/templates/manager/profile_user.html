@@ -22,11 +22,6 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    input {
-        background-image: none !important;
-    }
-</style>
 {% set status = request.args.get('status') %}
 {% if status == 'success' %}
 <div class="alert alert-success d-flex align-items-center mb-4 border-0 shadow-sm" role="alert">

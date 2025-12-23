@@ -1,0 +1,17 @@
+{% extends 'admin/model/edit.html' %}
+
+{% block body %}
+{{ super() }}
+<script src="https://cdn.ckeditor.com/4.22.1/standard/ckeditor.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var editorElement = document.getElementById('mo_ta');
+        if (editorElement) {
+            CKEDITOR.replace('mo_ta');
+        }
+    });
+</script>
+<style>
+    .cke_notification_warning { display: none !important; }
+</style>
+{% endblock %}

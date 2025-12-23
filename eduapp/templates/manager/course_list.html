@@ -22,12 +22,6 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    input { background-image: none !important; }
-    /* CSS phụ trợ để card mobile đẹp hơn */
-    .mobile-card-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; }
-</style>
-
 <div class="bg-light p-3 rounded mb-4 border shadow-sm">
     <form method="GET" action="{{ url_for('manager_course_list') }}" class="row g-2">
         <div class="col-lg-3 col-md-12">
@@ -139,16 +133,19 @@
             </td>
             <td class="text-center">
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-light btn-sm border shadow-sm js-dropdown-fixed" type="button"
+                            data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        {% if kh.tinh_trang.name != 'DA_KET_THUC' %}
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số</a></li>
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí</a></li>
+                        {% endif %}
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-people-fill me-2 text-info"></i>Học viên</a></li>
@@ -205,12 +202,14 @@
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow">
+                        {% if kh.tinh_trang.name != 'DA_KET_THUC' %}
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_edit_enrollment', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-pencil-square me-2 text-warning"></i>Sửa sĩ số</a></li>
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_edit_tuition', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-cash-coin me-2 text-success"></i>Sửa học phí</a></li>
+                        {% endif %}
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_course_detail', ma_khoa_hoc=kh.ma_khoa_hoc) }}"><i
                                 class="bi bi-people-fill me-2 text-info"></i>Xem học viên</a></li>

@@ -1,6 +1,6 @@
 import hashlib
 import cloudinary.uploader
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import or_, extract, func, case, desc
 from eduapp import db, app, mail
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
@@ -171,121 +171,202 @@ def get_chi_tiet_diem(ma_bang_diem, ma_cau_truc_diem):
 
 def get_attendance_sheet_data(course):
     weeks_data = course.lay_danh_sach_tuan_hoc()
-    date_columns = []
-    added_dates = set()
+    sessions = []
+    added_keys = set()
+
+    now = datetime.now()
+    today_date = now.date()
+    current_hour = now.hour
+
+    IS_MORNING_NOW = (current_hour < 12)
+
     for week in weeks_data:
         year = week['year']
-        for i in range(7):
-            if week['schedule']['CA_SANG'][i] or week['schedule']['CA_CHIEU'][i]:
-                day_str = week['days'][i]
+        for i, day_str in enumerate(week['days']):
+            try:
                 d, m = map(int, day_str.split('/'))
-                try:
-                    current_date = date(year, m, d)
-                    date_iso = current_date.isoformat()
-                    if date_iso not in added_dates:
-                        added_dates.add(date_iso)
-                        date_columns.append({
-                            'value': date_iso,
-                            'display': day_str,
+                current_date = date(year, m, d)
+                date_iso = current_date.strftime('%Y-%m-%d')
+
+                def add_session(shift_code, shift_name):
+                    unique_id = f"{date_iso}_{shift_code}"
+                    if unique_id not in added_keys:
+                        added_keys.add(unique_id)
+
+                        is_editable = False
+
+                        if current_date == today_date:
+                            if shift_code == 1 and IS_MORNING_NOW:
+                                is_editable = True
+                            elif shift_code == 2 and not IS_MORNING_NOW:
+                                is_editable = True
+
+                        is_past = False
+                        if current_date < today_date:
+                            is_past = True
+                        elif current_date == today_date:
+                            if shift_code == 1 and not IS_MORNING_NOW:
+                                is_past = True
+
+                        sessions.append({
+                            'id': unique_id,
+                            'date_val': date_iso,
+                            'shift_val': shift_code,
+                            'display_date': day_str,
                             'weekday': f"T{i + 2}" if i < 6 else "CN",
-                            'obj': current_date
+                            'shift_name': shift_name,
+                            'is_editable': is_editable,
+                            'is_past': is_past,
+                            'date_obj': current_date
                         })
-                except ValueError:
-                    continue
-    date_columns.sort(key=lambda x: x['value'])
-    attendance_data = db.session.query(
-        DiemDanh.ngay_diem_danh,
-        ChiTietDiemDanh.ma_hoc_vien,
-        ChiTietDiemDanh.trang_thai
-    ).join(ChiTietDiemDanh).filter(
-        DiemDanh.ma_khoa_hoc == course.ma_khoa_hoc
-    ).all()
-    attendance_map = {}
-    for ngay, ma_hv, trang_thai in attendance_data:
-        ngay_iso = ngay.strftime('%Y-%m-%d')
-        if ma_hv not in attendance_map:
-            attendance_map[ma_hv] = {}
-        attendance_map[ma_hv][ngay_iso] = trang_thai.value
+
+                if week['schedule'].get('CA_SANG') and week['schedule']['CA_SANG'][i]:
+                    add_session(1, "Sáng")
+
+                if week['schedule'].get('CA_CHIEU') and week['schedule']['CA_CHIEU'][i]:
+                    add_session(2, "Chiều")
+
+            except ValueError:
+                continue
+
+    sessions.sort(key=lambda x: x['id'])
+
+    target_session_id = None
+
+    for s in sessions:
+        if s['date_obj'] > today_date:
+            target_session_id = s['id']
+            break
+        elif s['date_obj'] == today_date:
+            if s['shift_val'] == 1 and IS_MORNING_NOW:
+                target_session_id = s['id']
+                break
+            if s['shift_val'] == 2:
+                target_session_id = s['id']
+                break
+
+    if not target_session_id and sessions:
+        target_session_id = sessions[-1]['id']
+
+    attendance_records = db.session.query(
+        DiemDanh.ngay_diem_danh, DiemDanh.ca_diem_danh, ChiTietDiemDanh.ma_hoc_vien, ChiTietDiemDanh.trang_thai
+    ).join(ChiTietDiemDanh).filter(DiemDanh.ma_khoa_hoc == course.ma_khoa_hoc).all()
+
+    map_data = {}
+    for ngay, ca, ma_hv, trang_thai in attendance_records:
+        d_str = ngay.strftime('%Y-%m-%d')
+        c_val = ca.value if hasattr(ca, 'value') else int(ca)
+        key = f"{ma_hv}_{d_str}_{c_val}"
+        val = 0
+        if trang_thai.name == 'CO_MAT':
+            val = 1
+        elif trang_thai.name == 'VANG_CO_PHEP':
+            val = 2
+        elif trang_thai.name == 'VANG_KHONG_PHEP':
+            val = 3
+        map_data[key] = val
+
     student_rows = []
-    today_iso = date.today().isoformat()
-    for enroll in course.ds_dang_ky:
+    sorted_enrollments = sorted(course.ds_dang_ky, key=lambda x: x.hoc_vien.ho_va_ten.split(' ')[-1])
+
+    for enroll in sorted_enrollments:
         hv = enroll.hoc_vien
-        row = {
-            'info': hv,
-            'cells': [],
-            'stats': {'total': 0, 'present': 0},
-            'percent': 0
-        }
-        for col in date_columns:
-            d_val = col['value']
-            status_val = attendance_map.get(hv.ma_nguoi_dung, {}).get(d_val, None)
-            is_future = (d_val > today_iso)
-            if status_val is None and d_val == today_iso:
-                status_val = 1
+        row = {'info': hv, 'cells': [], 'stats': {'total': 0, 'present': 0}, 'percent': 0}
+
+        for sess in sessions:
+            lookup_key = f"{hv.ma_nguoi_dung}_{sess['id']}"
+            status = map_data.get(lookup_key, 0)
+
+            if status == 0 and sess['is_editable']:
+                status = 1
+
             row['cells'].append({
-                'date': d_val,
-                'status': status_val,
-                'editable': (d_val == today_iso),
-                'ửa hôm is_future': is_future
+                'session_id': sess['id'],
+                'status': status,
+                'is_editable': sess['is_editable'],
+                'is_past': sess['is_past']
             })
-            if not is_future and status_val:
-                row['stats']['total'] += 1
-                if status_val == 1:
-                    row['stats']['present'] += 1
-                elif status_val == 2:
-                    row['stats']['present'] += 0.5
+
+            if sess['is_past'] or sess['is_editable']:
+                if status > 0:
+                    row['stats']['total'] += 1
+                    if status == 1:
+                        row['stats']['present'] += 1
+                    elif status == 2:
+                        row['stats']['present'] += 0.5
+
         if row['stats']['total'] > 0:
             row['percent'] = int((row['stats']['present'] / row['stats']['total']) * 100)
         else:
             row['percent'] = 0
+
         student_rows.append(row)
-    return date_columns, student_rows
+
+    return sessions, student_rows, target_session_id
 
 
 def save_attendance_sheet(course_id, form_data):
-    today = date.today()
-    today_str = today.isoformat()
+    """
+    Lưu dữ liệu từ form.
+    Format input name: att_{MA_HV}_{YYYY-MM-DD}_{SHIFT}
+    """
     try:
-        buoi_diem_danh = DiemDanh.query.filter_by(
-            ma_khoa_hoc=course_id,
-        ).filter(db.func.date(DiemDanh.ngay_diem_danh) == today).first()
-        if not buoi_diem_danh:
-            buoi_diem_danh = DiemDanh(ma_khoa_hoc=course_id, ngay_diem_danh=datetime.now())
-            db.session.add(buoi_diem_danh)
-            db.session.flush()
-        course = KhoaHoc.query.get(course_id)
-        if course:
-            for enroll in course.ds_dang_ky:
-                ma_hv = enroll.hoc_vien.ma_nguoi_dung
-                key = f"att_{ma_hv}_{today_str}"
-                if key in form_data:
-                    try:
-                        val = int(form_data.get(key))
-                    except ValueError:
-                        val = 3
-                    if val == 1:
-                        status = TrangThaiDiemDanhEnum.CO_MAT
-                    elif val == 2:
-                        status = TrangThaiDiemDanhEnum.VANG_CO_PHEP
-                    else:
-                        status = TrangThaiDiemDanhEnum.VANG_KHONG_PHEP
-                    detail = ChiTietDiemDanh.query.filter_by(
-                        ma_diem_danh=buoi_diem_danh.id,
-                        ma_hoc_vien=ma_hv
-                    ).first()
-                    if detail:
-                        detail.trang_thai = status
-                    else:
-                        detail = ChiTietDiemDanh(
-                            ma_diem_danh=buoi_diem_danh.id,
-                            ma_hoc_vien=ma_hv,
-                            trang_thai=status
-                        )
-                        db.session.add(detail)
+        data_map = {}
+        for key, val in form_data.items():
+            if key.startswith("att_"):
+                parts = key.split("_")
+
+                shift_val = int(parts[-1])
+                date_str = parts[-2]
+
+                ma_hv = "_".join(parts[1:-2])
+
+                session_key = f"{date_str}_{shift_val}"
+
+                if session_key not in data_map:
+                    data_map[session_key] = {}
+                data_map[session_key][ma_hv] = int(val)
+
+        for s_key, students in data_map.items():
+            date_str, shift_val = s_key.split("_")
+
+            ngay = datetime.strptime(date_str, "%Y-%m-%d").date()
+            ca = CaHocEnum(int(shift_val))
+            header = DiemDanh.query.filter_by(
+                ma_khoa_hoc=course_id, ngay_diem_danh=ngay, ca_diem_danh=ca
+            ).first()
+
+            if not header:
+                header = DiemDanh(ma_khoa_hoc=course_id, ngay_diem_danh=ngay, ca_diem_danh=ca)
+                db.session.add(header)
+                db.session.flush()  # Để lấy header.id ngay lập tức
+
+            # Lưu chi tiết từng học viên
+            for ma_hv, status_code in students.items():
+                # Map status code sang Enum
+                if status_code == 1:
+                    stt = TrangThaiDiemDanhEnum.CO_MAT
+                elif status_code == 2:
+                    stt = TrangThaiDiemDanhEnum.VANG_CO_PHEP
+                else:
+                    stt = TrangThaiDiemDanhEnum.VANG_KHONG_PHEP  # code 3
+
+                detail = ChiTietDiemDanh.query.filter_by(
+                    ma_diem_danh=header.id, ma_hoc_vien=ma_hv
+                ).first()
+
+                if detail:
+                    detail.trang_thai = stt
+                else:
+                    detail = ChiTietDiemDanh(
+                        ma_diem_danh=header.id, ma_hoc_vien=ma_hv, trang_thai=stt
+                    )
+                    db.session.add(detail)
+
         db.session.commit()
         return True
     except Exception as e:
-        print(f"Lỗi khi lưu điểm danh: {e}")
+        print(f"ERROR Saving Attendance: {e}")
         db.session.rollback()
         return False
 
@@ -393,19 +474,6 @@ def cap_nhat_si_so_toi_da(ma_khoa_hoc, si_so_moi):
         raise e
 
 
-def cap_nhat_hoc_phi(ma_khoa_hoc, hoc_phi_moi):
-    try:
-        kh = get_by_course_id(ma_khoa_hoc)
-        if kh:
-            kh.hoc_phi = hoc_phi_moi
-            db.session.commit()
-            return True
-        return False
-    except Exception as e:
-        db.session.rollback()
-        raise e
-
-
 def lay_si_so_hien_tai_lon_nhat():
     max_val = db.session.query(func.max(KhoaHoc.si_so_hien_tai)).filter(
         KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).scalar()
@@ -423,15 +491,57 @@ def cap_nhat_si_so_toan_bo(si_so_moi):
         raise e
 
 
+def cap_nhat_hoc_phi(ma_khoa_hoc, hoc_phi_moi):
+    try:
+        kh = get_by_course_id(ma_khoa_hoc)
+        if kh:
+            kh.hoc_phi = hoc_phi_moi
+            HoaDon.query.filter(
+                HoaDon.ma_khoa_hoc == ma_khoa_hoc,
+                HoaDon.trang_thai == 1
+            ).update({HoaDon.so_tien: hoc_phi_moi}, synchronize_session=False)
+
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi cập nhật học phí: {e}")
+        raise e
+
+
 def cap_nhat_hoc_phi_theo_phan_tram(phan_tram_giam):
     try:
         he_so = 1.0 - (phan_tram_giam / 100.0)
-        KhoaHoc.query.filter(KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC).update(
-            {KhoaHoc.hoc_phi: KhoaHoc.hoc_phi * he_so}, synchronize_session=False)
+
+        active_courses = KhoaHoc.query.filter(
+            KhoaHoc.tinh_trang != TinhTrangKhoaHocEnum.DA_KET_THUC
+        ).all()
+        active_course_ids = [c.ma_khoa_hoc for c in active_courses]
+
+        if not active_course_ids:
+            return True
+
+        KhoaHoc.query.filter(
+            KhoaHoc.ma_khoa_hoc.in_(active_course_ids)
+        ).update(
+            {KhoaHoc.hoc_phi: KhoaHoc.hoc_phi * he_so},
+            synchronize_session=False
+        )
+
+        HoaDon.query.filter(
+            HoaDon.ma_khoa_hoc.in_(active_course_ids),
+            HoaDon.trang_thai == 1
+        ).update(
+            {HoaDon.so_tien: HoaDon.so_tien * he_so},
+            synchronize_session=False
+        )
+
         db.session.commit()
         return True
     except Exception as e:
         db.session.rollback()
+        print(f"Lỗi cập nhật phần trăm: {e}")
         raise e
 
 
@@ -661,6 +771,10 @@ def update_trang_thai_nguoi_dung(ma_nd):
         return False
 
 
+def load_categories():
+    return LoaiKhoaHoc.query.all()
+
+
 def get_by_course_id(course_id):
     return KhoaHoc.query.get(course_id)
 
@@ -714,12 +828,36 @@ def tra_cuu_khoa_hoc(params=None, page=1, page_size=app.config["PAGE_SIZE"]):
     return query.order_by(KhoaHoc.ngay_bat_dau.desc()).paginate(page=page, per_page=page_size, error_out=False)
 
 
-def lay_khoa_hoc_chua_dang_ky(student_id):
-    subquery = db.session.query(BangDiem.ma_khoa_hoc).filter(BangDiem.ma_hoc_vien == student_id)
-    return KhoaHoc.query.filter(
-        KhoaHoc.tinh_trang == TinhTrangKhoaHocEnum.DANG_TUYEN_SINH,
-        ~KhoaHoc.ma_khoa_hoc.in_(subquery)
-    ).all()
+# Trong file dao.py
+
+def lay_khoa_hoc_chua_dang_ky(ma_nguoi_dung=None, kw=None, from_date=None, to_date=None, ma_loai=None):
+    # Khởi tạo query cơ bản: Chỉ lấy khóa ĐANG TUYỂN SINH
+    query = KhoaHoc.query.filter(KhoaHoc.tinh_trang == TinhTrangKhoaHocEnum.DANG_TUYEN_SINH)
+
+    # CHỈ LỌC KHÓA ĐÃ HỌC NẾU LÀ THÀNH VIÊN (có ma_nguoi_dung)
+    if ma_nguoi_dung:
+        subquery = db.session.query(BangDiem.ma_khoa_hoc).filter(
+            BangDiem.ma_hoc_vien == ma_nguoi_dung
+        )
+        query = query.filter(~KhoaHoc.ma_khoa_hoc.in_(subquery))
+
+    # --- Các bộ lọc tìm kiếm (Giữ nguyên) ---
+    if kw:
+        query = query.filter(or_(
+            KhoaHoc.ma_khoa_hoc.ilike(f"%{kw}%"),
+            KhoaHoc.ten_khoa_hoc.ilike(f"%{kw}%")
+        ))
+
+    if ma_loai and ma_loai.strip():
+        query = query.filter(KhoaHoc.ma_loai_khoa_hoc == ma_loai)
+
+    if from_date:
+        query = query.filter(KhoaHoc.ngay_bat_dau >= from_date)
+
+    if to_date:
+        query = query.filter(KhoaHoc.ngay_bat_dau <= to_date)
+
+    return query.order_by(KhoaHoc.ngay_bat_dau.desc()).all()
 
 
 def _base_user_query(ModelClass, kw=None, status=None):
@@ -735,6 +873,10 @@ def _base_user_query(ModelClass, kw=None, status=None):
         is_active = (str(status) == '1')
         query = query.filter(ModelClass.tinh_trang_hoat_dong == is_active)
     return query
+
+
+def lay_thong_tin_quan_ly_chinh():
+    return QuanLy.query.first()
 
 
 def lay_danh_sach_hoc_vien(kw=None, status=None, nam_sinh=None, page=1, per_page=app.config["PAGE_SIZE"]):
@@ -881,20 +1023,24 @@ def get_ds_hoa_don_by_hoc_vien(ma_hoc_vien):
         .order_by(HoaDon.trang_thai.asc(), HoaDon.ngay_tao.desc()).all()
 
 
-def xac_nhan_thanh_toan(ma_hoa_don, ma_nhan_vien):
+def xac_nhan_thanh_toan(ma_hoa_don, ma_nhan_vien=None):
     hoa_don = HoaDon.query.get(ma_hoa_don)
 
-    if hoa_don and hoa_don.trang_thai == TrangThaiHoaDonEnum.CHUA_THANH_TOAN:
+    if hoa_don and hoa_don.trang_thai != TrangThaiHoaDonEnum.DA_THANH_TOAN:
         try:
             hoa_don.trang_thai = TrangThaiHoaDonEnum.DA_THANH_TOAN
             hoa_don.ngay_nop = datetime.now()
-            hoa_don.ma_nhan_vien = ma_nhan_vien
+
+            if ma_nhan_vien:
+                hoa_don.ma_nhan_vien = ma_nhan_vien
+            else:
+                hoa_don.ma_nhan_vien = None
 
             db.session.commit()
-            return True, hoa_don
+            return True
         except Exception as e:
             db.session.rollback()
-            print(f"Lỗi khi thanh toán: {e}")
-            return False, hoa_don
+            print(f"Lỗi khi thanh toán online: {e}")
+            return False
 
-    return False, hoa_don
+    return False

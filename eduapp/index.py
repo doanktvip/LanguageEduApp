@@ -1,7 +1,8 @@
+import re
 import time
 import random
 import math
-from datetime import timedelta
+from datetime import timedelta, date
 import datetime
 import admin
 import cloudinary.uploader
@@ -11,8 +12,17 @@ from flask_login import current_user, login_user, logout_user
 from eduapp import app, dao, login_manager
 from eduapp.decorators import anonymous_required, giao_vien_required, hoc_vien_required, \
     giao_vien_hoac_hoc_vien_required, tinh_trang_xac_nhan_email_required, login_user_required, quan_ly_required, \
-    quan_ly_hoac_nhan_vien_required
-from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum
+    quan_ly_hoac_nhan_vien_required, hoc_vien_hoac_nhan_vien_required, bat_buoc_xac_minh_email
+from eduapp.models import NguoiDungEnum, TinhTrangKhoaHocEnum, CaHocEnum, TrangThaiHoaDonEnum
+
+
+@app.context_processor
+def common_attribute():
+    return {
+        "categories": dao.load_categories(),
+        "contact_email": app.config.get('MAIL_USERNAME'),
+        "hotline": dao.lay_thong_tin_quan_ly_chinh()
+    }
 
 
 @app.route('/')
@@ -34,18 +44,20 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+
         user = dao.login(username, password)
 
         if user:
             if not user.tinh_trang_hoat_dong:
-                msg = f"Tài khoản của bạn đã bị khóa! Vui lòng liên hệ: {app.config['MAIL_USERNAME']} để được hỗ trợ."
+                msg = f"Tài khoản bị khóa! Liên hệ: {app.config.get('MAIL_USERNAME')}."
                 flash(msg, "danger")
                 return redirect(url_for('login'))
-
+            session.permanent = True
             login_user(user)
+
             next_page = request.args.get('next')
             flash(f"Chào mừng {user.ho_va_ten} đã quay trở lại!", "success")
-            return redirect(next_page or '/')
+            return redirect(next_page if next_page else url_for('index'))
         else:
             flash("Tên tài khoản hoặc mật khẩu không chính xác.", "danger")
             return redirect(url_for('login'))
@@ -56,7 +68,8 @@ def login():
 @app.route('/logout')
 def logout():
     logout_user()
-    return redirect('/')
+    flash('Bạn đã đăng xuất thành công.', 'info')
+    return redirect(url_for('login'))
 
 
 @login_manager.user_loader
@@ -405,6 +418,7 @@ def profile(user_id):
 @app.route('/schedule', methods=['GET'])
 @login_user_required
 @giao_vien_hoac_hoc_vien_required
+@bat_buoc_xac_minh_email
 def schedule():
     cac_thu = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
     ds_khoa_hoc = []
@@ -461,6 +475,7 @@ def schedule():
 @app.route('/scoreboard', methods=['GET'])
 @login_user_required
 @hoc_vien_required
+@bat_buoc_xac_minh_email
 def scoreboard():
     ds_khoa_hoc_cua_hv = [bd.khoa_hoc for bd in current_user.ds_lop_hoc]
     if not ds_khoa_hoc_cua_hv:
@@ -484,50 +499,74 @@ def scoreboard():
 @app.route('/course_fee')
 @login_user_required
 @hoc_vien_required
+@bat_buoc_xac_minh_email
 def course_fee():
     ds_hoa_don = list(current_user.nhung_hoa_don)
     ds_hoa_don.sort(key=lambda x: x.ngay_tao, reverse=True)
     tong_tien = sum(hd.so_tien for hd in ds_hoa_don if hd.trang_thai.value == 2)
-    return render_template('student/course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien)
+    return render_template('student/course_fee.html', ds_hoa_don=ds_hoa_don, tong_tien=tong_tien,
+                           now=datetime.datetime.now())
 
 
 @app.route("/register_course", methods=['GET', 'POST'])
-@login_user_required
-@hoc_vien_required
+@bat_buoc_xac_minh_email
 def register_course():
     list_thong_bao = []
-    khoa_hoc_thanh_cong = []
+
+    if current_user.is_authenticated:
+        ma_hv_target = request.args.get('ma_hoc_vien')
+        if ma_hv_target and current_user.user_role == NguoiDungEnum.NHAN_VIEN:
+            target_user = dao.get_by_id(ma_hv_target)
+        else:
+            target_user = current_user
+    else:
+        # Nếu chưa đăng nhập (Khách)
+        target_user = None
+
+    # 2. XỬ LÝ POST (ĐĂNG KÝ)
     if request.method == 'POST':
+        # Nếu chưa đăng nhập mà cố tình POST -> Bắt đăng nhập ngay
+        if not current_user.is_authenticated:
+            return redirect(url_for('login', next=request.url))  # Sửa 'login_admin' thành route login của bạn
+
+        # Logic đăng ký giữ nguyên như cũ
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
-        print(ds_ma_khoa_hoc)
-        if ds_ma_khoa_hoc:
+        if ds_ma_khoa_hoc and target_user:
             for ma_kh in ds_ma_khoa_hoc:
                 kh_obj = dao.get_by_course_id(ma_kh)
-                ten_hien_thi = kh_obj.ten_khoa_hoc if kh_obj else ma_kh
-                hop_le, ly_do = dao.kiem_tra_trung_lich_hoc_vien(current_user.ma_nguoi_dung, ma_kh)
+                ten_khoa = kh_obj.ten_khoa_hoc if kh_obj else ma_kh
+
+                hop_le, ly_do = dao.kiem_tra_trung_lich_hoc_vien(target_user.ma_nguoi_dung, ma_kh)
                 if hop_le:
-                    ket_qua = dao.dang_ky_khoa_hoc(current_user.ma_nguoi_dung, ma_kh)
-                    if ket_qua:
-                        khoa_hoc_thanh_cong.append(ten_hien_thi)
-                        list_thong_bao.append({
-                            'type': 'success',
-                            'content': f"Khóa {ten_hien_thi}: Đăng ký thành công."
-                        })
+                    kq = dao.dang_ky_khoa_hoc(target_user.ma_nguoi_dung, ma_kh)
+                    if kq:
+                        list_thong_bao.append({'type': 'success', 'content': f"Khóa '{ten_khoa}': Đăng ký thành công!"})
                     else:
-                        list_thong_bao.append({
-                            'type': 'danger',
-                            'content': f"Khóa {ten_hien_thi}: Lớp đã đầy hoặc lỗi hệ thống."
-                        })
+                        list_thong_bao.append({'type': 'danger', 'content': f"Khóa '{ten_khoa}': Lỗi hệ thống."})
                 else:
-                    list_thong_bao.append({
-                        'type': 'danger',
-                        'content': f"Khóa {ten_hien_thi}: {ly_do}"
-                    })
-            if len(khoa_hoc_thanh_cong) > 0:
-                dao.send_course_registration_email(current_user.email, current_user.ho_va_ten, khoa_hoc_thanh_cong)
-    ds_khoa_hoc_chua_dang_ky = dao.lay_khoa_hoc_chua_dang_ky(current_user.ma_nguoi_dung)
-    return render_template("student/register_course.html", ds_khoa_hoc=ds_khoa_hoc_chua_dang_ky,
-                           thong_bao=list_thong_bao)
+                    list_thong_bao.append({'type': 'warning', 'content': f"Khóa '{ten_khoa}': {ly_do}"})
+        else:
+            list_thong_bao.append({'type': 'warning', 'content': "Bạn chưa chọn khóa học nào!"})
+
+    kw = request.args.get('kw')
+    from_date = request.args.get('from_date')
+    to_date = request.args.get('to_date')
+    cate_id = request.args.get('cate_id')
+
+    student_id = target_user.ma_nguoi_dung if target_user else None
+
+    ds_khoa_hoc = dao.lay_khoa_hoc_chua_dang_ky(
+        ma_nguoi_dung=student_id,
+        kw=kw,
+        from_date=from_date,
+        to_date=to_date,
+        ma_loai=cate_id
+    )
+
+    return render_template("student/register_course.html",
+                           ds_khoa_hoc=ds_khoa_hoc,
+                           thong_bao=list_thong_bao,
+                           target_user=target_user)
 
 
 @app.route('/grading', methods=['GET', 'POST'])
@@ -579,28 +618,35 @@ def grading():
 @login_user_required
 @giao_vien_required
 def attendance():
-    ds_khoa_hoc_raw = current_user.nhung_khoa_hoc
-    ds_khoa_hoc = sorted(ds_khoa_hoc_raw, key=lambda x: x.ngay_bat_dau, reverse=True)
+    ds_khoa_hoc = getattr(current_user, 'nhung_khoa_hoc', [])
+    ds_khoa_hoc = sorted(ds_khoa_hoc, key=lambda x: x.ngay_bat_dau, reverse=True)
+
     course_id = request.args.get('course_id') or request.form.get('course_id')
+
     if not course_id and ds_khoa_hoc:
         course_id = ds_khoa_hoc[0].ma_khoa_hoc
-    today_str = datetime.datetime.now().strftime('%Y-%m-%d')
+
     course = None
-    date_columns = []
-    student_rows = []
     if course_id:
-        valid_ids = [k.ma_khoa_hoc for k in ds_khoa_hoc]
-        if course_id in valid_ids:
-            course = dao.get_by_course_id(course_id)
+        course = dao.get_by_course_id(course_id)
+
     if request.method == 'POST' and course:
-        if dao.save_attendance_sheet(course_id, request.form):
-            return redirect(url_for('attendance', course_id=course_id, status='success'))
+        if dao.save_attendance_sheet(course.ma_khoa_hoc, request.form):
+            flash('Đã lưu điểm danh thành công!', 'success')
+            return redirect(url_for('attendance', course_id=course_id))
         else:
-            return redirect(url_for('attendance', course_id=course_id, status='failed'))
+            flash('Lỗi khi lưu dữ liệu.', 'danger')
+
+    sessions = []
+    student_rows = []
+    target_session_id = ""
+    today_str = date.today().strftime('%Y-%m-%d')
+
     if course:
-        date_columns, student_rows = dao.get_attendance_sheet_data(course)
-    return render_template('teacher/attendance.html', ds_khoa_hoc=ds_khoa_hoc, course=course, date_columns=date_columns,
-                           student_rows=student_rows, today_str=today_str)
+        sessions, student_rows, target_session_id = dao.get_attendance_sheet_data(course)
+
+    return render_template('teacher/attendance.html', ds_khoa_hoc=ds_khoa_hoc, course=course, sessions=sessions,
+                           student_rows=student_rows, target_session_id=target_session_id, today_str=today_str)
 
 
 @app.route('/manager/profile/<string:ma_nguoi_dung>', methods=['GET'])
@@ -1147,6 +1193,69 @@ def confirm_payment(ma_hoa_don):
 
     return redirect(url_for('staff_student_payment', ma_hoc_vien=hoa_don.ma_hoc_vien))
 
+
+@app.route('/pay/<int:bill_id>', methods=['GET'])
+@login_user_required
+def pay_page(bill_id):
+    hd = dao.get_hoa_don_by_id(bill_id)
+
+    if not hd or hd.ma_hoc_vien != current_user.ma_nguoi_dung:
+        flash('Không tìm thấy hóa đơn hoặc bạn không có quyền truy cập!', 'danger')
+        return redirect(url_for('course_fee'))
+
+    if hd.trang_thai == 2:
+        flash('Hóa đơn này đã được thanh toán hoàn tất.', 'success')
+        return redirect(url_for('course_fee'))
+
+    memo = f"HOC PHI {hd.ma_hoa_don}"
+
+    qr_url = (
+        f"https://img.vietqr.io/image/{app.config.get('BANK_ID')}-{app.config.get('ACCOUNT_NO')}-compact2.png"
+        f"?amount={int(hd.so_tien)}"
+        f"&addInfo={memo}"
+        f"&accountName={app.config.get('ACCOUNT_NAME')}"
+    )
+
+    return render_template('student/pay.html', hoa_don=hd, qr_url=qr_url, memo=memo,
+                           bank_info={'bank': app.config.get('BANK_ID'), 'account': app.config.get('ACCOUNT_NO'),
+                                      'name': app.config.get('ACCOUNT_NAME')})
+
+
+@app.route('/api/check_payment_status/<int:bill_id>', methods=['GET'])
+def check_payment_status(bill_id):
+    hd = dao.get_hoa_don_by_id(bill_id)
+    if hd and hd.trang_thai == TrangThaiHoaDonEnum.DA_THANH_TOAN:
+        return jsonify({'paid': True})
+    return jsonify({'paid': False})
+
+
+@app.route('/api/webhook/payment', methods=['POST'])
+def webhook_payment():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'No data'}), 400
+
+    content = data.get('content', '').upper()
+    amount = data.get('amount', 0)
+
+    match = re.search(r'HOC PHI\s*(\d+)', content)
+
+    if match:
+        bill_id = match.group(1)
+        hd = dao.get_hoa_don_by_id(bill_id)
+
+        if hd and hd.trang_thai != 2 and float(amount) >= float(hd.so_tien):
+
+            if dao.xac_nhan_thanh_toan(bill_id):
+                return jsonify({'success': True, 'message': 'Confirmed'})
+            else:
+                return jsonify({'success': False, 'message': 'Update failed'}), 500
+
+    return jsonify({'success': False, 'message': 'Ignored'})
+
+
+# curl -X POST http://127.0.0.1:5000/api/webhook/payment -H "Content-Type: application/json" -d "{\"content\": \"HOC PHI 37\", \"amount\": 5000000}"
 
 if __name__ == '__main__':
     with app.app_context():

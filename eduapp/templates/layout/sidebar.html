@@ -1,89 +1,96 @@
 <div class="border-end" style="z-index: 1000;">
-    <aside id="sidebarMenu" class="collapse collapse-horizontal sidebar-custom sticky-top d-md-block">
-        <div class="card card-body border-0 container-aside">
-            <div class="list-group list-group-flush">
-                {% if admin_view is defined %}
-                {% for item in admin_view.admin.menu() %}
-                {% if item.is_category() %}
-                <a href="#submenu-{{ loop.index }}"
-                   data-bs-toggle="collapse"
-                   aria-expanded="{% if item.is_active(admin_view) %}true{% else %}false{% endif %}"
-                   class="list-group-item list-group-item-action fw-bold bg-light mt-2 d-flex justify-content-between align-items-center">
-                    {{ item.name }}
-                    <i class="bi bi-chevron-down small"></i>
-                </a>
-
-                <div class="collapse {% if item.is_active(admin_view) %}show{% endif %}" id="submenu-{{ loop.index }}">
-                    {% for child in item.get_children() %}
-                    <a href="{{ child.get_url() }}"
-                       class="list-group-item list-group-item-action ps-4 border-0 small
-                   {% if child.is_active(admin_view) %}text-primary fw-bold bg-white{% else %}bg-light{% endif %}">
-                        Chỉnh sửa CSDL {{ child.name }}
+    <aside id="sidebarMenu" class="collapse collapse-horizontal sticky-top d-md-block container-aside">
+        <div class="d-flex flex-column bg-white sidebar-custom">
+            <div class="flex-grow-1 overflow-y-auto">
+                <div class="list-group list-group-flush">
+                    {% if admin_view is defined %}
+                    {% for item in admin_view.admin.menu() %}
+                    {% if item.is_category() %}
+                    <a href="#submenu-{{ loop.index }}"
+                       data-bs-toggle="collapse"
+                       aria-expanded="{% if item.is_active(admin_view) %}true{% else %}false{% endif %}"
+                       class="list-group-item list-group-item-action fw-bold bg-light mt-2 d-flex justify-content-between align-items-center">
+                        {{ item.name }}
+                        <i class="bi bi-chevron-down small"></i>
                     </a>
+                    <div class="collapse {% if item.is_active(admin_view) %}show{% endif %}"
+                         id="submenu-{{ loop.index }}">
+                        {% for child in item.get_children() %}
+                        <a href="{{ child.get_url() }}"
+                           class="list-group-item list-group-item-action ps-4 border-0 small
+                               {% if child.is_active(admin_view) %}text-primary fw-bold bg-white{% else %}bg-light{% endif %}">
+                            Chỉnh sửa CSDL {{ child.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    {% if item.is_accessible() and item.is_visible() %}
+                    <a href="{{ item.get_url() }}" class="list-group-item list-group-item-action mt-1
+                               {% if item.is_active(admin_view) %}active{% endif %}">
+                        <i class="bi bi-house-gear-fill me-2"></i> {{ item.name }}
+                    </a>
+                    {% endif %}
+                    {% endif %}
                     {% endfor %}
+                    <a href="/admin/exit" class="list-group-item list-group-item-action">
+                        <i class="bi bi-arrow-left me-2"></i> Quay về trang chủ chính
+                    </a>
+                    {% else %}
+                    <a href="/" class="list-group-item list-group-item-action"><i class="bi bi bi-house-fill me-2"></i>Trang
+                        chủ</a>
+                    {%if current_user.is_authenticated%}
+                    {%if current_user.vai_tro.value==1%}
+                    <a href="/course_fee" class="list-group-item list-group-item-action"><i
+                            class="bi bi-cash-stack me-2"></i>Xem học phí</a>
+                    <a href="/register_course" class="list-group-item list-group-item-action"><i
+                            class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học</a>
+                    <a href="/schedule" class="list-group-item list-group-item-action"><i
+                            class="bi bi-calendar-week-fill me-2"></i>Thời khóa biểu</a>
+                    <a href="/scoreboard" class="list-group-item list-group-item-action"><i
+                            class="bi bi-bar-chart-fill me-2"></i>Xem điểm</a>
+                    {%elif current_user.vai_tro.value==2%}
+                    <a href="/manager/employees" class="list-group-item list-group-item-action"><i
+                            class="bi bi-briefcase-fill me-2"></i>Quản lý nhân viên</a>
+                    <a href="/manager/teachers" class="list-group-item list-group-item-action"><i
+                            class="bi bi-pen-fill me-2"></i>Quản lý giáo viên</a>
+                    <a href="/manager/students" class="list-group-item list-group-item-action"><i
+                            class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
+                    <a href="/manager/courses" class="list-group-item list-group-item-action"><i
+                            class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
+                    <a href="/manager/stats" class="list-group-item list-group-item-action"><i
+                            class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
+                    <a href="javascript:;" class="list-group-item list-group-item-action"
+                       onclick="chuyenCheDoVaMoModal(event)">
+                        <i class="bi bi-database-lock me-2"></i>Quản lý cơ sở dữ liệu
+                    </a>
+                    {%elif current_user.vai_tro.value==3%}
+                    <a href="/grading" class="list-group-item list-group-item-action"><i
+                            class="bi bi-journal-bookmark-fill me-2"></i>Sổ điểm điện tử</a>
+                    <a href="/attendance" class="list-group-item list-group-item-action"><i
+                            class="bi bi-calendar-check-fill me-2"></i>Điểm danh</a>
+                    <a href="/schedule" class="list-group-item list-group-item-action"><i
+                            class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>
+                    {%elif current_user.vai_tro.value==4%}
+                    <a href="/manager/students" class="list-group-item list-group-item-action"><i
+                            class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
+                    <a href="/manager/stats" class="list-group-item list-group-item-action"><i
+                            class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
+                    {%endif%}
+                    {%else%}
+                    <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill me-2"></i>Đăng
+                        nhập</a>
+                    <a href="/register" class="list-group-item list-group-item-action"><i
+                            class="bi bi-person-plus-fill me-2"></i>Đăng ký</a>
+                    {%endif%}
+                    {%endif%}
                 </div>
-
-                {% else %}
-                {% if item.is_accessible() and item.is_visible() %}
-                <a href="{{ item.get_url() }}" class="list-group-item list-group-item-action mt-1
-               {% if item.is_active(admin_view) %}active{% endif %}">
-                    <i class="bi bi-house-gear-fill me-2"></i> {{ item.name }}
-                </a>
-                {% endif %}
-                {% endif %}
-                {% endfor %}
-                <a href="/admin/exit" class="list-group-item list-group-item-action">
-                    <i class="bi bi-arrow-left me-2"></i> Quay về trang chủ chính
-                </a>
-                {% else %}
-                <a href="/" class="list-group-item list-group-item-action"><i class="bi bi bi-house-fill me-2"></i>Trang
-                    chủ</a>
-                {%if current_user.is_authenticated%}
-                {%if current_user.vai_tro.value==1%}
-                <a href="/course_fee" class="list-group-item list-group-item-action"><i
-                        class="bi bi-cash-stack me-2"></i>Xem học phí</a>
-                <a href="/register_course" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-plus-fill me-2"></i>Đăng ký khóa học</a>
-                <a href="/schedule" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-week-fill me-2"></i>Thời khóa biểu</a>
-                <a href="/scoreboard" class="list-group-item list-group-item-action"><i
-                        class="bi bi-bar-chart-fill me-2"></i>Xem điểm</a>
-                {%elif current_user.vai_tro.value==2%}
-                <a href="/manager/employees" class="list-group-item list-group-item-action"><i
-                        class="bi bi-briefcase-fill me-2"></i>Quản lý nhân viên</a>
-                <a href="/manager/teachers" class="list-group-item list-group-item-action"><i
-                        class="bi bi-pen-fill me-2"></i>Quản lý giáo viên</a>
-                <a href="/manager/students" class="list-group-item list-group-item-action"><i
-                        class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
-                <a href="/manager/courses" class="list-group-item list-group-item-action"><i
-                        class="bi bi-journal-bookmark-fill me-2"></i>Quản lý khóa học</a>
-                <a href="/manager/stats" class="list-group-item list-group-item-action"><i
-                        class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
-                <a href="javascript:;" class="list-group-item list-group-item-action"
-                   onclick="chuyenCheDoVaMoModal(event)">
-                    <i class="bi bi-database-lock me-2"></i>Quản lý cơ sở dữ liệu
-                </a>
-                {%elif current_user.vai_tro.value==3%}
-                <a href="/grading" class="list-group-item list-group-item-action"><i
-                        class="bi bi-journal-bookmark-fill me-2"></i>Sổ điểm điện tử</a>
-                <a href="/attendance" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-check-fill me-2"></i>Điểm danh</a>
-                <a href="/schedule" class="list-group-item list-group-item-action"><i
-                        class="bi bi-calendar-week-fill me-2"></i>Xem lịch học</a>
-                {%elif current_user.vai_tro.value==4%}
-                <a href="/manager/students" class="list-group-item list-group-item-action"><i
-                        class="bi bi-person-workspace me-2"></i>Quản lý học viên</a>
-                <a href="/manager/stats" class="list-group-item list-group-item-action"><i
-                        class="bi bi-graph-up-arrow me-2"></i>Xem thống kê</a>
-                {%endif%}
-                {%else%}
-                <a href="/login" class="list-group-item list-group-item-action"><i class="bi bi-lock-fill me-2"></i>Đăng
-                    nhập</a>
-                <a href="/register" class="list-group-item list-group-item-action"><i
-                        class="bi bi-person-plus-fill me-2"></i>Đăng ký</a>
-                {%endif%}
-                {%endif%}
             </div>
+
+            <div class="mt-auto p-3 text-center border-top bg-white">
+                <img src="https://res.cloudinary.com/db4bjqp4f/image/upload/v1766419066/plqrxhslluf2ppu8wsfj.png"
+                     alt="" class="img-fluid sidebar-logo" style="display: inline-block;">
+            </div>
+
         </div>
     </aside>
 </div>

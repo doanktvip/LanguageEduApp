@@ -1,7 +1,8 @@
+import random
 from datetime import datetime, timedelta
 from enum import Enum as RoleEnum
 from flask_login import UserMixin
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime, Enum, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, DateTime, Enum, UniqueConstraint, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship
 from eduapp import db, app
@@ -55,7 +56,6 @@ class TrangThaiDiemDanhEnum(RoleEnum):
 # ==========================================
 
 class NguoiDung(db.Model, UserMixin):
-    """Bảng cha chứa thông tin chung"""
     __tablename__ = "nguoi_dung"
 
     ma_nguoi_dung = Column(String(20), primary_key=True)
@@ -150,6 +150,7 @@ class LoaiKhoaHoc(db.Model):
     ma_loai_khoa_hoc = Column(String(10), primary_key=True)
     ten_loai_khoa_hoc = Column(String(50), nullable=False)
     hoc_phi = Column(Float, nullable=False)
+    mo_ta = Column(Text)
     nhung_khoa_hoc = relationship('KhoaHoc', backref='loai_khoa_hoc', lazy=True)
 
     def __str__(self):
@@ -294,6 +295,7 @@ class DiemDanh(db.Model):
     id = Column(Integer, autoincrement=True, primary_key=True)
     ma_khoa_hoc = Column(String(20), ForeignKey('khoa_hoc.ma_khoa_hoc'), nullable=False)
     ngay_diem_danh = Column(DateTime, default=datetime.now())
+    ca_diem_danh = Column(Enum(CaHocEnum), nullable=False)
 
     # Chi tiết: Buổi này ai đi, ai vắng
     chi_tiet = relationship('ChiTietDiemDanh', backref='buoi_diem_danh', lazy=True, cascade="all, delete-orphan")
@@ -305,7 +307,6 @@ class ChiTietDiemDanh(db.Model):
     ma_diem_danh = Column(Integer, ForeignKey('diem_danh.id'), primary_key=True)
     ma_hoc_vien = Column(String(20), ForeignKey('hoc_vien.ma_nguoi_dung'), primary_key=True)
     trang_thai = Column(Enum(TrangThaiDiemDanhEnum), default=TrangThaiDiemDanhEnum.CO_MAT)
-    ghi_chu = Column(String(200))
 
 
 # ==========================================
@@ -387,7 +388,7 @@ class HoaDon(db.Model):
     __tablename__ = "hoa_don"
     ma_hoa_don = Column(Integer, autoincrement=True, primary_key=True)
     ngay_tao = Column(DateTime, default=datetime.now())
-    ngay_han = Column(DateTime, default=datetime.now() + timedelta(days=30))
+    ngay_han = Column(DateTime, nullable=True)
     ngay_nop = Column(DateTime, nullable=True)
     so_tien = Column(Float, nullable=False)
     trang_thai = Column(Enum(TrangThaiHoaDonEnum), default=TrangThaiHoaDonEnum.CHUA_THANH_TOAN)
@@ -395,6 +396,20 @@ class HoaDon(db.Model):
     ma_hoc_vien = Column(String(20), ForeignKey('hoc_vien.ma_nguoi_dung'), nullable=False)
     ma_khoa_hoc = Column(String(20), ForeignKey('khoa_hoc.ma_khoa_hoc'), nullable=False)
     ma_nhan_vien = Column(String(20), ForeignKey('nhan_vien.ma_nguoi_dung'), nullable=True)
+
+    def __init__(self, **kwargs):
+        super(HoaDon, self).__init__(**kwargs)
+        if self.ngay_han is None:
+            self.tu_dong_tinh_ngay_han()
+
+    def tu_dong_tinh_ngay_han(self):
+        if self.ma_khoa_hoc:
+            kh = db.session.get(KhoaHoc, self.ma_khoa_hoc)
+
+            if kh:
+                self.ngay_han = kh.ngay_bat_dau + timedelta(days=10)
+            else:
+                self.ngay_han = datetime.now() + timedelta(days=30)
 
     def to_dict(self):
         return {
@@ -412,302 +427,222 @@ class HoaDon(db.Model):
         return ket_qua
 
 
-def chay_thu_nghiem_truy_van():
-    print("\n" + "=" * 40)
-    print("DEMO TRUY VẤN DỮ LIỆU TRUNG TÂM")
-    print("=" * 40)
-
-    # ---------------------------------------------------------
-    # 1. TRUY VẤN NGƯỜI DÙNG (Kế thừa đa hình)
-    # ---------------------------------------------------------
-    print("\n--- 1. LẤY DANH SÁCH HỌC VIÊN ---")
-
-    # Lệnh này trả về: Một danh sách (List) các object HocVien
-    ds_hoc_vien = HocVien.query.all()
-
-    for hv in ds_hoc_vien:
-        # Nhờ kế thừa, ta gọi được thuộc tính của bảng cha (ho_va_ten)
-        # và bảng con (ngay_sinh) trên cùng 1 object.
-        print(f"Học viên: {hv.ho_va_ten} (Mã: {hv.ma_nguoi_dung})")
-        print(f" - Email: {hv.email}")
-        print(f" - Ngày sinh: {hv.ngay_sinh.strftime('%d/%m/%Y')}")
-
-    # ---------------------------------------------------------
-    # 2. TRUY VẤN KHÓA HỌC & GIÁO VIÊN
-    # ---------------------------------------------------------
-    print("\n--- 2. CHI TIẾT KHÓA HỌC BEG001 ---")
-
-    # Lệnh này trả về: Một Object KhoaHoc duy nhất (hoặc None nếu không tìm thấy)
-    # Cách này gọi .get() từ phiên làm việc (session) của Database
-    # Cú pháp: db.session.get(Tên_Class, "Khóa_Chính")
-    khoa_hoc = db.session.get(KhoaHoc, "BEG001")
-
-    if khoa_hoc:
-        print(f"Tên khóa: {khoa_hoc.ten_khoa_hoc}")
-        print(f"Học phí: {khoa_hoc.loai_khoa_hoc.hoc_phi:,.0f} VND")  # Relationship sang LoaiKhoaHoc
-        print(f"Giáo viên CN: {khoa_hoc.giao_vien.ho_va_ten}")  # Relationship sang GiaoVien
-
-        # Sử dụng Association Proxy để lấy list học viên nhanh
-        print(f"Danh sách lớp ({len(khoa_hoc.ds_hoc_vien)} học viên):")
-        for hv in khoa_hoc.ds_hoc_vien:
-            print(f" -> {hv.ho_va_ten}")
-
-    # ---------------------------------------------------------
-    # 3. TRUY VẤN LỊCH HỌC
-    # ---------------------------------------------------------
-    print("\n--- 3. LỊCH HỌC CỦA LỚP ---")
-    # khoa_hoc.lich_hoc trả về một List các object LichHoc
-    for lh in khoa_hoc.lich_hoc:
-        thu_str = lh.thu.name  # Trả về string 'THU_HAI', 'THU_TU'...
-        ca_str = lh.ca_hoc.name  # Trả về string 'CA_SANG'...
-        phong = lh.phong_hoc.ten_phong_hoc
-        print(f" - {thu_str} | {ca_str} tại phòng {phong}")
-
-    # ---------------------------------------------------------
-    # 4. TRUY VẤN BẢNG ĐIỂM ĐỘNG (Phần khó nhất)
-    # ---------------------------------------------------------
-    print("\n--- 4. BẢNG ĐIỂM CHI TIẾT ---")
-
-    # Lấy bảng điểm của học viên đầu tiên trong danh sách
-    hoc_vien_dau_tien = ds_hoc_vien[0]
-
-    # Lấy các lớp học viên này đang học
-    # Trả về List các object BangDiem
-    cac_lop_dang_hoc = hoc_vien_dau_tien.ds_lop_hoc
-
-    for bang_diem in cac_lop_dang_hoc:
-        print(f"Kết quả môn: {bang_diem.khoa_hoc.ten_khoa_hoc}")
-        print(f" -> Tổng kết: {bang_diem.diem_trung_binh} (Đậu: {bang_diem.ket_qua})")
-        print(" -> Chi tiết điểm thành phần:")
-
-        # Truy cập vào bảng ChiTietDiem
-        for diem_ct in bang_diem.ds_diem_thanh_phan:
-            # diem_ct.cau_truc_diem giúp ta lấy tên đầu điểm (VD: Giữa kỳ)
-            ten_dau_diem = diem_ct.cau_truc_diem.ten_loai_diem
-            trong_so = diem_ct.cau_truc_diem.trong_so * 100
-            gia_tri = diem_ct.gia_tri_diem
-
-            print(f"    * {ten_dau_diem} ({trong_so}%): {gia_tri} điểm")
-
-    # ---------------------------------------------------------
-    # 5. TRUY VẤN ĐIỂM DANH
-    # ---------------------------------------------------------
-    print("\n--- 5. TÌNH TRẠNG ĐIỂM DANH ---")
-    # Lấy buổi điểm danh gần nhất của khóa học
-    buoi_dd = DiemDanh.query.filter_by(ma_khoa_hoc="BEG001").first()
-
-    if buoi_dd:
-        print(f"Ngày điểm danh: {buoi_dd.ngay_diem_danh.strftime('%d/%m/%Y')}")
-        for ct in buoi_dd.chi_tiet:
-            ten_hv = ct.hoc_vien.ho_va_ten
-            trang_thai = ct.trang_thai.name  # CO_MAT / VANG...
-            ghi_chu = f"({ct.ghi_chu})" if ct.ghi_chu else ""
-            print(f" - {ten_hv}: {trang_thai} {ghi_chu}")
-
-    # ---------------------------------------------------------
-    # 6. TRUY VẤN TÀI CHÍNH (HÓA ĐƠN)
-    # ---------------------------------------------------------
-    print("\n--- 6. DOANH THU (HÓA ĐƠN) ---")
-    ds_hoa_don = HoaDon.query.all()
-    tong_tien = 0
-    for hd in ds_hoa_don:
-        print(f"HĐ #{hd.ma_hoa_don}: {hd.so_tien:,.0f} VND - HV: {hd.hoc_vien.ho_va_ten}")
-        tong_tien += hd.so_tien
-
-    print(f"=> TỔNG DOANH THU: {tong_tien:,.0f} VND")
-
-
 def tao_du_lieu_mau():
-    print("--- BẮT ĐẦU TẠO DỮ LIỆU MẪU (NEW SCHEMA) ---")
+    print("--- BẮT ĐẦU TẠO DỮ LIỆU MẪU (FULL LỊCH HỌC & NGHIỆP VỤ) ---")
 
-    # 1. Reset Database
+    # 0. RESET DATABASE
     db.drop_all()
     db.create_all()
-    print("-> Đã reset database thành công.")
 
-    # --- 2. TẠO NGƯỜI DÙNG (USERS) ---
-    # Giả lập mã hash MD5 cho password '123'
-    mat_khau_chung = "202cb962ac59075b964b07152d234b70"
-
-    # 2.1 Quản trị viên
-    admin = QuanLy(
-        ma_nguoi_dung="QL250001", ten_dang_nhap="admin", mat_khau=mat_khau_chung,
-        ho_va_ten="Nguyễn Quản Trị", email="admin@edu.com", so_dien_thoai="0909000111",
-        vai_tro=NguoiDungEnum.QUAN_LY
-    )
-
-    # 2.2 Nhân viên tư vấn
-    nv1 = NhanVien(
-        ma_nguoi_dung="NV250001", ten_dang_nhap="thu_ngan", mat_khau=mat_khau_chung,
-        ho_va_ten="Lê Thu Ngân", email="thungan@edu.com", so_dien_thoai="0909111222",
-        vai_tro=NguoiDungEnum.NHAN_VIEN
-    )
-
-    # 2.3 Giáo viên
-    gv1 = GiaoVien(
-        ma_nguoi_dung="GV250001", ten_dang_nhap="mr_smith", mat_khau=mat_khau_chung,
-        ho_va_ten="John Smith", email="john@edu.com", so_dien_thoai="0912333444",
-        vai_tro=NguoiDungEnum.GIAO_VIEN, nam_kinh_nghiem=10
-    )
-    gv2 = GiaoVien(
-        ma_nguoi_dung="GV250002", ten_dang_nhap="ms_hien", mat_khau=mat_khau_chung,
-        ho_va_ten="Nguyễn Thu Hiền", email="hien@edu.com", so_dien_thoai="0912333555",
-        vai_tro=NguoiDungEnum.GIAO_VIEN, nam_kinh_nghiem=5
-    )
-
-    # 2.4 Học viên
-    hv1 = HocVien(
-        ma_nguoi_dung="HV250001", ten_dang_nhap="hv_an", mat_khau=mat_khau_chung,
-        ho_va_ten="Phạm Văn An", email="an@edu.com", so_dien_thoai="0987654001",
-        vai_tro=NguoiDungEnum.HOC_VIEN, so_dien_thoai_phu_huynh="0911000001",
-        ngay_sinh=datetime(2005, 5, 20)
-    )
-    hv2 = HocVien(
-        ma_nguoi_dung="HV250002", ten_dang_nhap="hv_binh", mat_khau=mat_khau_chung,
-        ho_va_ten="Lê Thanh Bình", email="binh@edu.com", so_dien_thoai="0987654002",
-        vai_tro=NguoiDungEnum.HOC_VIEN,
-        ngay_sinh=datetime(2006, 8, 15)
-    )
-
-    db.session.add_all([admin, nv1, gv1, gv2, hv1, hv2])
-    db.session.commit()
-    print("-> Đã tạo xong Users.")
-
-    # --- 3. TẠO LOẠI KHÓA HỌC (THEO CẤP ĐỘ) ---
-    # Yêu cầu hình ảnh: Beginner, Intermediate, Advanced
-    loai_beg = LoaiKhoaHoc(ma_loai_khoa_hoc="ENG-BEG", ten_loai_khoa_hoc="Tiếng Anh Beginner", hoc_phi=3000000)
-    loai_int = LoaiKhoaHoc(ma_loai_khoa_hoc="ENG-INT", ten_loai_khoa_hoc="Tiếng Anh Intermediate", hoc_phi=4500000)
-    loai_adv = LoaiKhoaHoc(ma_loai_khoa_hoc="ENG-ADV", ten_loai_khoa_hoc="Tiếng Anh Advanced", hoc_phi=6000000)
-    loai_toeic = LoaiKhoaHoc(ma_loai_khoa_hoc="TOEIC", ten_loai_khoa_hoc="Luyện thi TOEIC", hoc_phi=5000000)
-
-    db.session.add_all([loai_beg, loai_int, loai_adv, loai_toeic])
-    db.session.commit()
-    print("-> Đã tạo xong Loại khóa học (Cấp độ).")
-
-    # --- 4. TẠO PHÒNG HỌC ---
-    phongs = [PhongHoc(ten_phong_hoc=f"P{i}") for i in range(101, 106)]
-    db.session.add_all(phongs)
-    db.session.commit()
-
-    # --- 5. TẠO KHÓA HỌC ---
+    mat_khau_chung = "202cb962ac59075b964b07152d234b70"  # 123
     today = datetime.now()
 
-    # Khóa 1: Tiếng Anh Beginner (Đang học)
-    kh_beg = KhoaHoc(
-        ma_khoa_hoc="BEG001",
-        ten_khoa_hoc="Tiếng Anh Căn Bản K25",
-        ma_loai_khoa_hoc="ENG-BEG",
-        ma_giao_vien="GV250001",  # Mr. Smith dạy
-        si_so_hien_tai=2, si_so_toi_da=20,
-        ngay_bat_dau=today - timedelta(days=30),
-        ngay_ket_thuc=today + timedelta(days=60),
-        tinh_trang=TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH  # Đã chốt lớp
-    )
+    # ==========================================
+    # 1. DỮ LIỆU CỐ ĐỊNH (LOẠI KHÓA HỌC - KHÔNG SỬA)
+    # ==========================================
+    loai_khoa_hocs = [
+        LoaiKhoaHoc(
+            ma_loai_khoa_hoc="ENG-BEG",
+            ten_loai_khoa_hoc="Tiếng Anh Sơ Cấp",
+            hoc_phi=3000000,
+            mo_ta="""
+            <p><strong>Khóa học dành cho người mất gốc:</strong></p>
+            <ul>
+                <li>Hệ thống lại toàn bộ ngữ pháp nền tảng.</li>
+                <li>Luyện chuẩn phát âm theo bảng IPA.</li>
+                <li>Xây dựng vốn từ vựng cơ bản thông dụng.</li>
+            </ul>
+            """
+        ),
+        LoaiKhoaHoc(
+            ma_loai_khoa_hoc="ENG-INT",
+            ten_loai_khoa_hoc="Tiếng Anh Trung Cấp",
+            hoc_phi=4500000,
+            mo_ta="""
+            <p><strong>Tập trung vào Giao tiếp phản xạ:</strong></p>
+            <ul>
+                <li>Thực hành hội thoại theo chủ đề công sở và đời sống.</li>
+                <li>Cải thiện kỹ năng Nghe - Nói tự nhiên.</li>
+                <li>Tăng cường sự tự tin khi giao tiếp với người nước ngoài.</li>
+            </ul>
+            """
+        ),
+        LoaiKhoaHoc(
+            ma_loai_khoa_hoc="ENG-ADV",
+            ten_loai_khoa_hoc="Tiếng Anh Cao Cấp",
+            hoc_phi=6000000,
+            mo_ta="""
+            <p><strong>Luyện thi chứng chỉ quốc tế (IELTS/TOEIC):</strong></p>
+            <ul>
+                <li>Trang bị chiến thuật làm bài thi hiệu quả.</li>
+                <li>Nâng cao toàn diện 4 kỹ năng: Nghe, Nói, Đọc, Viết.</li>
+                <li>Luyện đề chuyên sâu và giải đáp thắc mắc chi tiết.</li>
+            </ul>
+            """
+        )
+    ]
+    phong_hoc = PhongHoc(ten_phong_hoc="P101 - Lab")
 
-    # Khóa 2: TOEIC (Sắp mở)
-    kh_toeic = KhoaHoc(
-        ma_khoa_hoc="TOEIC001",
-        ten_khoa_hoc="Luyện giải đề TOEIC 600+",
-        ma_loai_khoa_hoc="TOEIC",
-        ma_giao_vien="GV250002",  # Ms. Hiền dạy
-        si_so_hien_tai=0, si_so_toi_da=25,
-        ngay_bat_dau=today + timedelta(days=10),
-        ngay_ket_thuc=today + timedelta(days=100),
+    db.session.add_all(loai_khoa_hocs + [phong_hoc])
+    db.session.commit()
+
+    # ==========================================
+    # 2. NHÂN SỰ & HỌC VIÊN
+    # ==========================================
+    # Admin
+    ma_ql = NguoiDung.tao_ma_nguoi_dung(NguoiDungEnum.QUAN_LY)
+    admin = QuanLy(ma_nguoi_dung=ma_ql, ten_dang_nhap="admin", mat_khau=mat_khau_chung, ho_va_ten="Quản Trị Viên",
+                   email="admin@edu.vn", so_dien_thoai="0909000000", vai_tro=NguoiDungEnum.QUAN_LY)
+
+    # Nhân viên
+    ma_nv = NguoiDung.tao_ma_nguoi_dung(NguoiDungEnum.NHAN_VIEN)
+    nv = NhanVien(ma_nguoi_dung=ma_nv, ten_dang_nhap="staff", mat_khau=mat_khau_chung, ho_va_ten="Nguyễn Thu Ngân",
+                  email="staff@edu.vn", so_dien_thoai="0909000001", vai_tro=NguoiDungEnum.NHAN_VIEN)
+
+    # Giáo viên
+    ma_gv = NguoiDung.tao_ma_nguoi_dung(NguoiDungEnum.GIAO_VIEN)
+    gv = GiaoVien(ma_nguoi_dung=ma_gv, ten_dang_nhap="teacher", mat_khau=mat_khau_chung, ho_va_ten="Thầy English",
+                  email="teacher@edu.vn", so_dien_thoai="0909000002", vai_tro=NguoiDungEnum.GIAO_VIEN,
+                  nam_kinh_nghiem=5)
+
+    db.session.add_all([admin, nv, gv])
+    db.session.commit()
+
+    # 4 Học viên đại diện (Giỏi, Yếu, Nợ, Mới)
+    ds_hv = []
+    configs_hv = [
+        ("hv_gioi", "Lê Văn Giỏi", "gioi@edu.vn"),
+        ("hv_yeu", "Trần Văn Yếu", "yeu@edu.vn"),
+        ("hv_no", "Phạm Thị Nợ", "no@edu.vn"),
+        ("hv_moi", "Vũ Văn Mới", "moi@edu.vn")
+    ]
+
+    for tk, ten, email in configs_hv:
+        ma = NguoiDung.tao_ma_nguoi_dung(NguoiDungEnum.HOC_VIEN)
+        hv = HocVien(ma_nguoi_dung=ma, ten_dang_nhap=tk, mat_khau=mat_khau_chung, ho_va_ten=ten, email=email,
+                     so_dien_thoai="0900000000", vai_tro=NguoiDungEnum.HOC_VIEN, ngay_sinh=datetime(2002, 1, 1))
+        db.session.add(hv)
+        db.session.commit()  # Commit lẻ để ID tăng dần
+        ds_hv.append(ma)
+
+    ma_hv1, ma_hv2, ma_hv3, ma_hv4 = ds_hv
+
+    # ==========================================
+    # 3. KHÓA HỌC & LỊCH HỌC (ĐẢM BẢO CÓ LỊCH)
+    # ==========================================
+
+    # --- KHÓA 1: ĐÃ KẾT THÚC (Sơ cấp - 2/4/6 Sáng) ---
+    ma_kh1 = KhoaHoc.tao_ma_khoa_hoc_moi("ENG-BEG")
+    kh1 = KhoaHoc(
+        ma_khoa_hoc=ma_kh1, ten_khoa_hoc="Tiếng Anh Sơ Cấp K1 (Đã xong)",
+        ma_loai_khoa_hoc="ENG-BEG", ma_giao_vien=ma_gv,
+        si_so_hien_tai=2, si_so_toi_da=10, hoc_phi=3000000,
+        ngay_bat_dau=today - timedelta(days=90), ngay_ket_thuc=today - timedelta(days=10),
+        tinh_trang=TinhTrangKhoaHocEnum.DA_KET_THUC
+    )
+    db.session.add(kh1)
+    # Tạo lịch khóa 1
+    for thu in [TuanEnum.THU_HAI, TuanEnum.THU_TU, TuanEnum.THU_SAU]:
+        db.session.add(
+            LichHoc(ma_khoa_hoc=ma_kh1, ma_phong_hoc=phong_hoc.ma_phong_hoc, thu=thu, ca_hoc=CaHocEnum.CA_SANG))
+
+    # --- KHÓA 2: ĐANG DIỄN RA (Trung cấp - 3/5/7 Chiều) ---
+    ma_kh2 = KhoaHoc.tao_ma_khoa_hoc_moi("ENG-INT")
+    kh2 = KhoaHoc(
+        ma_khoa_hoc=ma_kh2, ten_khoa_hoc="Tiếng Anh Trung Cấp K2 (Đang học)",
+        ma_loai_khoa_hoc="ENG-INT", ma_giao_vien=ma_gv,
+        si_so_hien_tai=2, si_so_toi_da=10, hoc_phi=4500000,
+        ngay_bat_dau=today - timedelta(days=20), ngay_ket_thuc=today + timedelta(days=40),
+        tinh_trang=TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH
+    )
+    db.session.add(kh2)
+    # Tạo lịch khóa 2
+    for thu in [TuanEnum.THU_BA, TuanEnum.THU_NAM, TuanEnum.THU_BAY]:
+        db.session.add(
+            LichHoc(ma_khoa_hoc=ma_kh2, ma_phong_hoc=phong_hoc.ma_phong_hoc, thu=thu, ca_hoc=CaHocEnum.CA_CHIEU))
+
+    # --- KHÓA 3: SẮP MỞ (Cao cấp - 2/4/6 Chiều) ---
+    ma_kh3 = KhoaHoc.tao_ma_khoa_hoc_moi("ENG-ADV")
+    kh3 = KhoaHoc(
+        ma_khoa_hoc=ma_kh3, ten_khoa_hoc="Tiếng Anh Cao Cấp K3 (Sắp mở)",
+        ma_loai_khoa_hoc="ENG-ADV", ma_giao_vien=ma_gv,
+        si_so_hien_tai=1, si_so_toi_da=10, hoc_phi=6000000,
+        ngay_bat_dau=today + timedelta(days=10), ngay_ket_thuc=today + timedelta(days=90),
         tinh_trang=TinhTrangKhoaHocEnum.DANG_TUYEN_SINH
     )
-
-    db.session.add_all([kh_beg, kh_toeic])
-    db.session.commit()
-    print("-> Đã tạo xong Khóa học.")
-
-    # --- 6. TẠO CẤU TRÚC ĐIỂM (YÊU CẦU QUAN TRỌNG) ---
-    # Khóa Beginner có 3 cột điểm: Chuyên cần (20%), Giữa kỳ (30%), Cuối kỳ (50%)
-    ct1 = CauTrucDiem(ma_khoa_hoc="BEG001", ten_loai_diem="Chuyên cần", trong_so=0.2)
-    ct2 = CauTrucDiem(ma_khoa_hoc="BEG001", ten_loai_diem="Giữa kỳ", trong_so=0.3)
-    ct3 = CauTrucDiem(ma_khoa_hoc="BEG001", ten_loai_diem="Cuối kỳ", trong_so=0.5)
-
-    # Khóa TOEIC chỉ có 2 cột điểm: Mock Test (40%), Final Test (60%)
-    ct4 = CauTrucDiem(ma_khoa_hoc="TOEIC001", ten_loai_diem="Mock Test", trong_so=0.4)
-    ct5 = CauTrucDiem(ma_khoa_hoc="TOEIC001", ten_loai_diem="Final Test", trong_so=0.6)
-
-    db.session.add_all([ct1, ct2, ct3, ct4, ct5])
-    db.session.commit()
-    print("-> Đã tạo cấu trúc điểm động.")
-
-    # --- 7. TẠO LỊCH HỌC ---
-    # BEG001: Thứ 2-4-6 Ca Sáng
+    db.session.add(kh3)
+    # Tạo lịch khóa 3
     for thu in [TuanEnum.THU_HAI, TuanEnum.THU_TU, TuanEnum.THU_SAU]:
-        lh = LichHoc(ma_khoa_hoc="BEG001", ma_phong_hoc=1, thu=thu, ca_hoc=CaHocEnum.CA_SANG)
-        db.session.add(lh)
+        db.session.add(
+            LichHoc(ma_khoa_hoc=ma_kh3, ma_phong_hoc=phong_hoc.ma_phong_hoc, thu=thu, ca_hoc=CaHocEnum.CA_CHIEU))
 
+    # Cấu trúc điểm chung
+    db.session.add_all([
+        CauTrucDiem(ma_khoa_hoc=ma_kh1, ten_loai_diem="Cuối kỳ", trong_so=1.0),
+        CauTrucDiem(ma_khoa_hoc=ma_kh2, ten_loai_diem="Cuối kỳ", trong_so=1.0)
+    ])
     db.session.commit()
 
-    # --- 8. ĐĂNG KÝ HỌC & NHẬP ĐIỂM CHI TIẾT ---
+    # ==========================================
+    # 4. NGHIỆP VỤ & CASE STUDY
+    # ==========================================
 
-    # 8.1: Đăng ký HV An và HV Bình vào lớp BEG001
-    bd_an = BangDiem(ma_khoa_hoc="BEG001", ma_hoc_vien="HV250001")
-    bd_binh = BangDiem(ma_khoa_hoc="BEG001", ma_hoc_vien="HV250002")
-
-    db.session.add_all([bd_an, bd_binh])
-    db.session.commit()  # Commit để có ID bảng điểm
-
-    # 8.2: Nhập điểm cho HV An (Học giỏi)
-    # Lấy ID cấu trúc điểm đã tạo ở trên (ct1, ct2...)
-    dt_an_1 = ChiTietDiem(ma_bang_diem=bd_an.id, ma_cau_truc_diem=ct1.id, gia_tri_diem=10.0)  # Chuyên cần
-    dt_an_2 = ChiTietDiem(ma_bang_diem=bd_an.id, ma_cau_truc_diem=ct2.id, gia_tri_diem=10.0)  # Giữa kỳ
-    # Chưa có cuối kỳ
-
-    # Nhập điểm cho HV Bình (Học yếu)
-    dt_binh_1 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct1.id, gia_tri_diem=8.0)  # Chuyên cần
-    dt_binh_2 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct2.id, gia_tri_diem=4.0)  # Giữa kỳ
-    dt_binh_3 = ChiTietDiem(ma_bang_diem=bd_binh.id, ma_cau_truc_diem=ct3.id, gia_tri_diem=8.0)  # Chuyên cần
-
-    db.session.add_all([dt_an_1, dt_an_2, dt_binh_1, dt_binh_2, dt_binh_3])
+    # --- CASE 1: ĐÃ KẾT THÚC (HV1 Đậu, HV2 Rớt) ---
+    # Enroll & Hóa đơn
+    bd1 = BangDiem(ma_khoa_hoc=ma_kh1, ma_hoc_vien=ma_hv1)
+    bd2 = BangDiem(ma_khoa_hoc=ma_kh1, ma_hoc_vien=ma_hv2)
+    hd1 = HoaDon(ma_khoa_hoc=ma_kh1, ma_hoc_vien=ma_hv1, so_tien=3000000, trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
+                 ma_nhan_vien=ma_nv, ngay_nop=today)
+    hd2 = HoaDon(ma_khoa_hoc=ma_kh1, ma_hoc_vien=ma_hv2, so_tien=3000000, trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
+                 ma_nhan_vien=ma_nv, ngay_nop=today)
+    db.session.add_all([bd1, bd2, hd1, hd2])
     db.session.commit()
 
-    # 8.3: Cập nhật điểm tổng kết tự động
-    bd_an.cap_nhat_tong_ket()
-    bd_binh.cap_nhat_tong_ket()
-    db.session.commit()
-    print("-> Đã nhập điểm và tính toán kết quả.")
+    # Nhập điểm (Lấy ID cấu trúc điểm khóa 1)
+    ct_k1 = CauTrucDiem.query.filter_by(ma_khoa_hoc=ma_kh1).first()
+    db.session.add(ChiTietDiem(ma_bang_diem=bd1.id, ma_cau_truc_diem=ct_k1.id, gia_tri_diem=9.0, ban_nhap=True))  # Giỏi
+    db.session.add(ChiTietDiem(ma_bang_diem=bd2.id, ma_cau_truc_diem=ct_k1.id, gia_tri_diem=4.0, ban_nhap=True))  # Yếu
+    bd1.cap_nhat_tong_ket();
+    bd2.cap_nhat_tong_ket()
 
-    # --- 9. HÓA ĐƠN ---
-    hd1 = HoaDon(
-        so_tien=3000000, trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
-        ma_hoc_vien="HV250001", ma_khoa_hoc="BEG001", ma_nhan_vien="NV250001",
-        ngay_nop=datetime.now() + timedelta(days=10)
-    )
-    hd2 = HoaDon(
-        so_tien=3000000,
-        ma_hoc_vien="HV250002", ma_khoa_hoc="BEG001"
-    )
-    db.session.add_all([hd1, hd2])
-    db.session.commit()
-
-    # --- 10. ĐIỂM DANH (YÊU CẦU MỚI) ---
-    # Tạo 1 buổi điểm danh ngày hôm nay cho lớp BEG001
-    dd_buoi_1 = DiemDanh(ma_khoa_hoc="BEG001", ngay_diem_danh=datetime.now())
-    db.session.add(dd_buoi_1)
+    # --- CASE 2: ĐANG HỌC (HV1 Đi học, HV3 Nợ tiền + Cúp học) ---
+    # Enroll
+    bd3 = BangDiem(ma_khoa_hoc=ma_kh2, ma_hoc_vien=ma_hv1)
+    bd4 = BangDiem(ma_khoa_hoc=ma_kh2, ma_hoc_vien=ma_hv3)
+    # Hóa đơn: HV1 Đã đóng, HV3 Nợ
+    hd3 = HoaDon(ma_khoa_hoc=ma_kh2, ma_hoc_vien=ma_hv1, so_tien=4500000, trang_thai=TrangThaiHoaDonEnum.DA_THANH_TOAN,
+                 ma_nhan_vien=ma_nv, ngay_nop=today)
+    hd4 = HoaDon(ma_khoa_hoc=ma_kh2, ma_hoc_vien=ma_hv3, so_tien=4500000,
+                 trang_thai=TrangThaiHoaDonEnum.CHUA_THANH_TOAN)
+    hd4.ngay_han = today - timedelta(days=5)  # Quá hạn
+    db.session.add_all([bd3, bd4, hd3, hd4])
     db.session.commit()
 
-    # Chi tiết: An đi học, Bình vắng
-    ctdd_1 = ChiTietDiemDanh(
-        ma_diem_danh=dd_buoi_1.id, ma_hoc_vien="HV250001",
-        trang_thai=TrangThaiDiemDanhEnum.CO_MAT
-    )
-    ctdd_2 = ChiTietDiemDanh(
-        ma_diem_danh=dd_buoi_1.id, ma_hoc_vien="HV250002",
-        trang_thai=TrangThaiDiemDanhEnum.VANG_KHONG_PHEP, ghi_chu="Ngủ quên"
-    )
+    # Điểm danh: Tạo 1 buổi vào Thứ 3 tuần trước (để khớp với Lịch 3-5-7)
+    # Tìm ngày Thứ 3 gần nhất tính từ ngày bắt đầu khóa
+    ngay_diem_danh = kh2.ngay_bat_dau + timedelta(days=0)  # Giả sử bắt đầu đúng lịch, nếu không code sẽ tự khớp
+    while ngay_diem_danh.weekday() != TuanEnum.THU_BA.value:
+        ngay_diem_danh += timedelta(days=1)
 
-    db.session.add_all([ctdd_1, ctdd_2])
+    dd = DiemDanh(ma_khoa_hoc=ma_kh2, ngay_diem_danh=ngay_diem_danh, ca_diem_danh=CaHocEnum.CA_CHIEU)
+    db.session.add(dd)
     db.session.commit()
-    print("-> Đã tạo dữ liệu điểm danh.")
 
-    print("\n=== HOÀN TẤT TẠO DỮ LIỆU MẪU ===")
+    # Chi tiết điểm danh
+    db.session.add(ChiTietDiemDanh(ma_diem_danh=dd.id, ma_hoc_vien=ma_hv1, trang_thai=TrangThaiDiemDanhEnum.CO_MAT))
+    db.session.add(
+        ChiTietDiemDanh(ma_diem_danh=dd.id, ma_hoc_vien=ma_hv3, trang_thai=TrangThaiDiemDanhEnum.VANG_KHONG_PHEP))
+
+    # --- CASE 3: SẮP MỞ (HV4 Đăng ký) ---
+    bd5 = BangDiem(ma_khoa_hoc=ma_kh3, ma_hoc_vien=ma_hv4)
+    hd5 = HoaDon(ma_khoa_hoc=ma_kh3, ma_hoc_vien=ma_hv4, so_tien=6000000,
+                 trang_thai=TrangThaiHoaDonEnum.CHUA_THANH_TOAN)
+    db.session.add_all([bd5, hd5])
+
+    db.session.commit()
+    print("-> DỮ LIỆU ĐÃ SẴN SÀNG: 3 Khóa học (Full Lịch), 4 Học viên (Đủ mọi trạng thái).")
 
 
 if __name__ == "__main__":
     with app.app_context():
         tao_du_lieu_mau()
-        chay_thu_nghiem_truy_van()

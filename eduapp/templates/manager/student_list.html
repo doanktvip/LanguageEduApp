@@ -22,12 +22,6 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    input { background-image: none !important; }
-    /* CSS căn chỉnh nhãn cho Card Mobile */
-    .mobile-card-label { width: 110px; display: inline-block; font-weight: 600; color: #6c757d; }
-</style>
-
 <div class="bg-light p-3 rounded mb-4 border shadow-sm">
     <form method="GET" action="{{ url_for('manager_student_list') }}" class="row g-2">
         <div class="col-lg-4 col-md-12">
@@ -139,6 +133,10 @@
                                href="{{ url_for('staff_student_payment', ma_hoc_vien=hv.ma_nguoi_dung) }}">
                             <i class="bi bi-cash-stack me-2 text-success"></i>Thanh toán học phí
                         </a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('register_course', ma_hoc_vien=hv.ma_nguoi_dung) }}">
+                            <i class="bi bi-calendar-plus-fill me-2 text-primary"></i>Đăng ký khóa học
+                        </a></li>
                         {% endif %}
                         {% if current_user.vai_tro.value==2 %}
                         <li><a class="dropdown-item"
@@ -195,6 +193,17 @@
                                href="{{ url_for('manager_profile_user', ma_nguoi_dung=hv.ma_nguoi_dung) }}">
                             <i class="bi bi-person-lines-fill me-2 text-warning"></i>Xem hồ sơ
                         </a></li>
+                        {% if current_user.vai_tro.value==4 %}
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('staff_student_payment', ma_hoc_vien=hv.ma_nguoi_dung) }}">
+                            <i class="bi bi-cash-stack me-2 text-success"></i>Thanh toán học phí
+                        </a></li>
+                        <li><a class="dropdown-item"
+                               href="{{ url_for('register_course', ma_hoc_vien=hv.ma_nguoi_dung) }}">
+                            <i class="bi bi-calendar-plus-fill me-2 text-primary"></i>Đăng ký khóa học
+                        </a></li>
+                        {% endif %}
+                        {% if current_user.vai_tro.value==2 %}
                         <li><a class="dropdown-item"
                                href="{{ url_for('manager_reset_password_page', ma_nguoi_dung=hv.ma_nguoi_dung) }}">
                             <i class="bi bi-key me-2 text-info"></i>Đặt lại mật khẩu
@@ -212,6 +221,7 @@
                                href="{{ url_for('thay_doi_trang_thai', ma_nd=hv.ma_nguoi_dung) }}">
                             <i class="bi bi-unlock-fill me-2"></i>Kích hoạt lại
                         </a></li>
+                        {% endif %}
                         {% endif %}
                     </ul>
                 </div>
