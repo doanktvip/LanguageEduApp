@@ -5,7 +5,7 @@ from sqlalchemy import and_, or_, extract, func
 from eduapp import db, app
 from eduapp.models import HocVien, GiaoVien, NhanVien, QuanLy, NguoiDungEnum, KhoaHoc, PhongHoc, LoaiKhoaHoc, NguoiDung, \
     BangDiem, CauTrucDiem, TinhTrangKhoaHocEnum, HoaDon, ChiTietDiem, ChiTietDiemDanh, TrangThaiDiemDanhEnum, DiemDanh, \
-    TuanEnum, CaHocEnum, LichHoc
+    TuanEnum, CaHocEnum, LichHoc, TrangThaiHoaDonEnum
 
 
 def login(username, password):
@@ -798,4 +798,26 @@ def cap_nhat_database_tinh_trang_khoa_hoc():
     except Exception as e:
         db.session.rollback()
         print(f"Lỗi khi cập nhật database: {e}")
+        return False
+
+
+def get_hoa_don_by_id(ma_hoa_don):
+    try:
+        return HoaDon.query.get(int(ma_hoa_don))
+    except Exception:
+        return None
+
+
+def thanh_toan_hoa_don(ma_hoa_don):
+    try:
+        hd = HoaDon.query.get(int(ma_hoa_don))
+        if hd:
+            hd.trang_thai = TrangThaiHoaDonEnum.DA_THANH_TOAN
+            hd.ngay_nop = datetime.now()
+            db.session.commit()
+            return True
+        return False
+    except Exception as e:
+        db.session.rollback()
+        print(f"Lỗi thanh toán: {e}")
         return False

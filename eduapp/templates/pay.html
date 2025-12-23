@@ -1,0 +1,72 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Thanh toán hóa đơn{% endblock %}
+
+{% block card_header %}
+<div class="p-3 d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-credit-card-2-front me-2"></i>Cổng thanh toán học phí</span>
+    <a href="{{ url_for('course_fee') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</div>
+{% endblock %}
+
+{% block card_body %}
+<div class="row g-4">
+    <div class="col-md-5 border-end">
+        <div class="text-center">
+            <h5 class="fw-bold text-primary mb-3">Quét mã QR để thanh toán</h5>
+            <div class="card shadow-sm d-inline-block p-2 mb-3">
+                <img src="https://img.vietqr.io/image/MB-0000000000-compact2.png?amount={{ hoa_don.so_tien }}&addInfo=HOC PHI {{ hoa_don.ma_hoa_don }}&accountName=EDU CENTER" 
+                     alt="QR Code" class="img-fluid" style="width: 250px; height: 250px;">
+            </div>
+            <p class="text-muted small">
+                Ngân hàng: <b>MB Bank</b><br>
+                Số tài khoản: <b>0000 0000 00</b><br>
+                Chủ tài khoản: <b>EDU CENTER</b><br>
+                Nội dung: <b>HOC PHI {{ hoa_don.ma_hoa_don }}</b>
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <h5 class="fw-bold mb-4 border-bottom pb-2">Thông tin giao dịch</h5>
+        
+        <div class="mb-3 row">
+            <label class="col-sm-4 text-muted">Mã hóa đơn:</label>
+            <div class="col-sm-8 fw-bold">#{{ hoa_don.ma_hoa_don }}</div>
+        </div>
+        <div class="mb-3 row">
+            <label class="col-sm-4 text-muted">Học viên:</label>
+            <div class="col-sm-8">{{ current_user.ho_va_ten }} ({{ current_user.ma_nguoi_dung }})</div>
+        </div>
+        <div class="mb-3 row">
+            <label class="col-sm-4 text-muted">Khóa học:</label>
+            <div class="col-sm-8 text-primary fw-bold">{{ hoa_don.khoa_hoc.ten_khoa_hoc }}</div>
+        </div>
+        <div class="mb-3 row">
+            <label class="col-sm-4 text-muted">Ngày tạo:</label>
+            <div class="col-sm-8">{{ hoa_don.ngay_tao.strftime('%d/%m/%Y') }}</div>
+        </div>
+
+        <div class="alert alert-warning mt-4 d-flex align-items-center" role="alert">
+            <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+            <div>
+                Tổng số tiền cần thanh toán:<br>
+                <span class="fs-4 fw-bold text-danger">{{ "{:,.0f}".format(hoa_don.so_tien) }} VNĐ</span>
+            </div>
+        </div>
+
+        <hr>
+
+        <form action="{{ url_for('process_payment') }}" method="post" onsubmit="return confirm('Bạn xác nhận đã chuyển khoản thành công?');">
+            <input type="hidden" name="ma_hoa_don" value="{{ hoa_don.ma_hoa_don }}">
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg fw-bold">
+                    <i class="bi bi-check-lg me-2"></i>Tôi đã chuyển khoản
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

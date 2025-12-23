@@ -1002,6 +1002,31 @@ def kiem_tra_pin_admin():
         return jsonify({'success': False, 'message': 'Mã PIN không chính xác.'}), 200
 
 
+@app.route('/pay/<int:bill_id>', methods=['GET'])
+@login_user_required
+def pay_page(bill_id):
+    if not current_user.is_authenticated:
+        return redirect('/')
+    hd = dao.get_hoa_don_by_id(bill_id)
+    if not hd or hd.ma_hoc_vien != current_user.ma_nguoi_dung:
+        return redirect(url_for('course_fee'))
+
+    if hd.trang_thai.value == 2:  # 2 là Đã thanh toán
+        return redirect(url_for('course_fee'))
+
+    return render_template('pay.html', hoa_don=hd)
+
+
+@app.route('/process_payment', methods=['POST'])
+def process_payment():
+    if not current_user.is_authenticated:
+        return redirect('/')
+    ma_hoa_don = request.form.get('ma_hoa_don')
+    if dao.thanh_toan_hoa_don(ma_hoa_don):
+        pass
+    return redirect(url_for('course_fee'))
+
+
 if __name__ == '__main__':
     with app.app_context():
         app.run(debug=True)
