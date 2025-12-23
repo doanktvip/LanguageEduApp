@@ -13,6 +13,14 @@
     width: 8px;
 }
 
+.banner-img {
+    height: 500px;
+}
+
+.sidebar-logo {
+    width: calc(var(--sidebar-width) / 2);
+}
+
 .table-responsive::-webkit-scrollbar-track {
     background: #f8f9fa;
     border-radius: 4px;
@@ -26,7 +34,7 @@
 
 .sidebar-custom {
     top: var(--header-height);
-    height: calc(100vh - var(--header-height));
+    min-height: calc(100vh - var(--header-height));
 }
 
 .container-aside { min-width: var(--sidebar-width); }
@@ -132,14 +140,156 @@ thead .sticky-cell {
     z-index: 10000 !important;
 }
 
+.card-register {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+}
+
+.card-register:has(.form-check-input:checked) {
+    border-color: #0d6efd;
+    background-color: #f8faff;
+}
+
+.card-register.disabled {
+    opacity: 0.7;
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+input { background-image: none !important; }
+
+.mobile-card-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; }
+
+.course-avatar {
+    width: 80px; height: 80px;
+    background-color: #e9ecef;
+    color: #0d6efd;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto;
+    transition: all 0.3s;
+}
+
+.course-avatar.is-batch {
+    background-color: #e0cffc;
+    color: #6610f2;
+    border: 2px dashed #6610f2;
+}
+
+.dashed { border-top: 1px dashed #ddd; }
+
+.no-spin::-webkit-inner-spin-button, .no-spin::-webkit-outer-spin-button {
+    -webkit-appearance: none; margin: 0;
+}
+
+.text-indigo { color: #6610f2; }
+
+.password-toggle { cursor: pointer; z-index: 10; }
+
+.score-card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.score-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.score-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: #6c757d;
+    letter-spacing: 0.5px;
+}
+
+.weight-badge {
+    font-size: 0.7rem;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.summary-box {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+}
+
+.dashed-hr { border-top: 1px dashed #dee2e6; margin: 10px 0; }
+
+.input-score:focus { background-color: #fff !important; border-color: #0d6efd; box-shadow: 0 0 0 0.2rem rgba(13,110,253,.15); }
+
+.today-highlight { background-color: rgba(13, 110, 253, 0.05) !important; }
+
+.border-end-md { border-right: 1px solid #dee2e6; }
+
+#btn-back-to-top {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: none;
+  z-index: 9999;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+/* Container bên ngoài: Giới hạn khung nhìn, ẩn phần thừa */
+.scrolling-container {
+    width: 100%;
+    overflow: hidden;
+    padding: 10px 0;
+    position: relative;
+    background: linear-gradient(90deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+/* Phần tử chứa nội dung chạy */
+.scrolling-text {
+    display: flex;        /* Dùng flex để xếp ngang hàng */
+    align-items: center;  /* Căn giữa theo chiều dọc */
+
+    /* QUAN TRỌNG NHẤT: Bắt buộc mở rộng khung bằng độ dài nội dung */
+    min-width: max-content;
+
+    /* Animation chạy từ 0 đến -50% */
+    animation: scroll-infinite 40s linear infinite; /* Tăng lên 40s cho mượt nếu chữ dài */
+}
+
+/* Khi di chuột vào thì dừng */
+.scrolling-text:hover {
+    animation-play-state: paused;
+    cursor: grab;
+}
+
+/* Định nghĩa chuyển động */
+@keyframes scroll-infinite {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
 @media (max-width: 768px) {
     :root {
         --header-stats: 200px;
         --header-stats-hv: 150px;
     }
 
+    .border-end-md { border-right: none; }
+
     .container-aside {
         min-width: calc(100vw - var(--sidebar-width));
+    }
+
+    .sidebar-logo {
+        width: auto;
+    }
+
+    .banner-img {
+        height: auto;
+        object-fit: cover;
+        width: 100%;
     }
 
     header:has(#sidebarToggle[aria-expanded="true"]) {

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import cloudinary
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -12,6 +14,11 @@ app.secret_key = "123dasdadasdasdasd"
 app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/eduappdb?charset=utf8mb4"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 app.config["PAGE_SIZE"] = 5
+
+# --- CẤU HÌNH NGÂN HÀNG ---
+app.config['BANK_ID'] = '970415'
+app.config['ACCOUNT_NO'] = '106872611637'
+app.config['ACCOUNT_NAME'] = 'TRUONG VAN DUNG'
 
 # --- CẤU HÌNH NGÔN NGỮ (BABEL) ---
 app.config['BABEL_DEFAULT_LOCALE'] = 'vi'

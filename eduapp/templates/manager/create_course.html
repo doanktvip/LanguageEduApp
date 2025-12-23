@@ -22,11 +22,6 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    input {
-        background-image: none !important;
-    }
-</style>
 <form method="POST" action="" id="form-create-course">
     <div class="row g-4">
         <div class="col-lg-5">
@@ -41,7 +36,7 @@
                                value="{{ form_data.ten_khoa_hoc if form_data else '' }}" required>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-7 mb-3">
                             <label class="form-label fw-bold">Loại khóa học</label>
                             <select name="ma_loai_khoa_hoc" id="select-loai-kh" class="form-select"
                                     onchange="calculateTuition()">
@@ -54,7 +49,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-5 mb-3">
                             <label class="form-label fw-bold">Sĩ số tối đa</label>
                             <div class="input-group">
                                 <input type="number" name="si_so" class="form-control" min="10" max="100" required
@@ -76,7 +71,7 @@
                     </div>
                     <hr class="text-muted">
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-7 mb-3">
                             <label class="form-label fw-bold">Thời lượng</label>
                             <select name="thoi_luong" id="thoi_luong" class="form-select text-primary fw-medium"
                                     onchange="handleDurationChange()">
@@ -91,7 +86,7 @@
                                 '12' %}selected{% endif %}>1 Năm (Dài hạn)</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-5 mb-3">
                             <label class="form-label fw-bold">Học phí (VNĐ)</label>
                             <div class="input-group">
                                 <input type="text" id="hoc_phi_display" class="form-control fw-bold text-success"

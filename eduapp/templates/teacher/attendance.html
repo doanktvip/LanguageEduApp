@@ -3,16 +3,16 @@
 {% block title %} Điểm danh lớp học {% endblock %}
 
 {% block card_header %}
-<div class="p-3">
+<div class="p-3 bg-white border-bottom">
     <div class="row align-items-center">
         <div class="col-12 col-sm text-center text-sm-start mb-2 mb-sm-0">
-            <span class="text-uppercase fw-bold h5 m-0 d-block d-sm-inline">
+            <h5 class="text-uppercase fw-bold m-0 text-primary">
                 <i class="bi bi-calendar-check-fill me-2"></i>ĐIỂM DANH LỚP HỌC
-            </span>
+            </h5>
         </div>
         {% if course %}
         <div class="col-12 col-sm-auto text-center">
-            <span class="badge bg-light text-primary border shadow-sm px-3 py-2">
+            <span class="badge bg-light text-dark border px-3 py-2">
                 Sĩ số: <strong>{{ course.si_so_hien_tai }}</strong>/{{ course.si_so_toi_da }}
             </span>
         </div>
@@ -22,22 +22,13 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    /* Giữ lại các CSS layout cơ bản của bạn */
-    input { background-image: none !important; }
-    .table-responsive { border-radius: 8px; overflow: hidden; }
-    .mobile-label { width: 100px; display: inline-block; font-weight: 600; color: #6c757d; font-size: 0.85rem; }
-    .dashed-hr { border-top: 1px dashed #dee2e6; margin: 10px 0; }
-    .today-highlight { background-color: rgba(13, 110, 253, 0.05) !important; }
-</style>
-
 <div class="bg-light p-3 rounded mb-4 border shadow-sm">
     <form action="/attendance" method="GET" id="form-select-course" class="row g-3">
         <div class="col-12 col-lg-6">
-            <label class="form-label small fw-bold text-secondary mb-1">Chọn lớp học điểm danh</label>
-            <div class="input-group input-group-sm">
-                <span class="input-group-text bg-white text-primary"><i class="bi bi-search"></i></span>
-                <select name="course_id" class="form-select fw-bold border-start-0" onchange="this.form.submit()">
+            <div class="input-group">
+                <span class="input-group-text bg-white text-primary border-end-0"><i class="bi bi-search"></i></span>
+                <select name="course_id" class="form-select fw-bold border-start-0 shadow-none"
+                        onchange="this.form.submit()">
                     {% for kh in ds_khoa_hoc %}
                     <option value="{{ kh.ma_khoa_hoc }}" {{
                     'selected' if course and kh.ma_khoa_hoc == course.ma_khoa_hoc else '' }}>
@@ -47,11 +38,17 @@
                 </select>
             </div>
         </div>
-        <div class="col-12 col-lg-6 d-flex align-items-end justify-content-lg-end">
+        <div class="col-12 col-lg-6 d-flex align-items-center justify-content-lg-end">
             {% if course %}
-            <div class="badge bg-white text-dark border p-2 shadow-sm small w-100 w-lg-auto">
-                <i class="bi bi-calendar-event text-primary me-2"></i>Hôm nay: <strong class="text-primary">{{ today_str
-                }}</strong>
+            <div class="text-muted small fw-bold">
+                <i class="bi bi-calendar-event text-danger"></i> Buổi đang chọn:
+                <span class="text-danger fw-bold">
+                    {% for s in sessions %}
+                        {% if s.id == target_session_id %}
+                            {{ s.display_date }} ({{ s.shift_name }})
+                        {% endif %}
+                    {% endfor %}
+                </span>
             </div>
             {% endif %}
         </div>
@@ -60,73 +57,94 @@
 
 {% if course %}
 {% if student_rows and student_rows|length > 0 %}
-<form action="/attendance" method="POST">
+<form action="/attendance" method="POST" id="attendanceForm">
     <input type="hidden" name="course_id" value="{{ course.ma_khoa_hoc }}">
 
-    <div id="mainTableContainer" class="table-responsive d-none d-md-block shadow-sm border mb-3"
+    <div id="mainTableContainer" class="table-responsive d-none d-md-block shadow-sm border bg-white mb-4"
          style="max-height: 65vh;">
-        <table class="table table-bordered table-hover mb-0 align-middle text-center bg-white">
-            <thead class="table-light sticky-top shadow-sm">
-            <tr class="text-uppercase small fw-bold">
-                <th class="col-fix-left bg-light text-start ps-3 py-3" style="z-index: 100;">Học viên</th>
-                {% for col in date_columns %}
-                {% set is_today = (col['value'] == today_str) %}
-                <th class="{{ 'bg-primary text-white shadow' if is_today else 'text-secondary' }}"
-                    data-date="{{ col['value'] }}" style="min-width: 120px;">
-                    <div style="font-size: 0.7rem;">{{ col['weekday'] }}</div>
-                    <div>{{ col['display'] }}</div>
+        <table class="table table-bordered table-hover mb-0 align-middle text-center" style="min-width: 1000px;">
+            <thead>
+            <tr class="small fw-bold">
+                <th class="text-start ps-3 bg-white shadow-sm"
+                    style="position: sticky; left: 0; z-index: 1010; border-right: 2px solid #dee2e6;">
+                    HỌC VIÊN
+                </th>
+                {% for sess in sessions %}
+                {% set is_target = (sess.id == target_session_id) %}
+                <th id="col_{{ sess.id }}"
+                    class="{{ 'bg-primary text-white border-primary' if is_target else 'bg-white text-secondary' }}"
+                    style="min-width: 100px;">
+                    <div style="font-size: {{ '1rem' if is_target else '0.85rem' }};">
+                        {{ sess.display_date }}
+                    </div>
+                    <div class="badge {{ 'bg-white text-primary' if is_target else 'bg-light text-muted border' }} fw-normal mt-1">
+                        {{ sess.shift_name }}
+                    </div>
                 </th>
                 {% endfor %}
-                <th class="col-fix-right bg-light" style="z-index: 100;">%</th>
+                <th class="bg-white fw-bold shadow-sm"
+                    style="position: sticky; right: 0; z-index: 1010; border-left: 2px solid #dee2e6;">%
+                </th>
             </tr>
             </thead>
             <tbody>
             {% for row in student_rows %}
             <tr>
-                <td class="col-fix-left bg-light text-start ps-3 border-end fw-bold">
-                    <div class="text-truncate" style="max-width: 160px;">{{ row['info'].ho_va_ten }}</div>
-                    <small class="text-muted font-monospace d-block" style="font-size: 0.75rem;">{{
-                        row['info'].ma_nguoi_dung }}</small>
+                <td class="text-start ps-3 bg-white shadow-sm"
+                    style="position: sticky; left: 0; z-index: 1010; border-right: 2px solid #dee2e6;">
+                    <div class="fw-bold text-dark text-truncate" style="max-width: 220px;">{{ row.info.ho_va_ten }}
+                    </div>
+                    <div class="small text-muted font-monospace">{{ row.info.ma_nguoi_dung }}</div>
                 </td>
-                {% for cell in row['cells'] %}
-                <td class="text-center p-1 {{ 'today-col' if cell['date'] == today_str }}">
-                    {% if cell['editable'] %}
-                    <div class="btn-group btn-group-sm w-100 shadow-sm">
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="r1_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}" value="1" {{ 'checked' if
-                        cell['status'] == 1 }}>
-                        <label class="btn {{ 'btn-success' if cell['status'] == 1 else 'btn-outline-success border-0' }} px-1"
-                               for="r1_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}">
+
+                {% for cell in row.cells %}
+                {% set input_name = 'att_' ~ row.info.ma_nguoi_dung ~ '_' ~ cell.session_id %}
+                {% set is_target = (cell.session_id == target_session_id) %}
+                {% set status_val = cell.status | int %}
+
+                <td class="p-2 {{ 'bg-primary bg-opacity-10 border-primary border-opacity-25' if is_target else '' }}">
+
+                    {% if cell.is_editable %}
+                    <div class="btn-group w-100 bg-white shadow-sm rounded js-attendance-group" role="group">
+
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="c_{{ input_name }}" value="1"
+                               {{ 'checked' if status_val == 1 }}>
+                        <label class="btn {{ 'btn-success text-white' if status_val == 1 else 'btn-outline-success' }} border-0 py-2 fw-bold"
+                               for="c_{{ input_name }}" title="Có mặt" data-type="1">
                             <i class="bi bi-check-lg"></i>
                         </label>
 
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="r2_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}" value="2" {{ 'checked' if
-                        cell['status'] == 2 }}>
-                        <label class="btn {{ 'btn-warning text-dark' if cell['status'] == 2 else 'btn-outline-warning border-0' }} px-1"
-                               for="r2_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}">P</label>
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="p_{{ input_name }}" value="2"
+                               {{ 'checked' if status_val == 2 }}>
+                        <label class="btn {{ 'btn-warning text-dark' if status_val == 2 else 'btn-outline-warning text-dark' }} border-0 fw-bold py-2"
+                               for="p_{{ input_name }}" title="Có phép" data-type="2">P</label>
 
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="r3_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}" value="3" {{ 'checked' if
-                        cell['status'] == 3 }}>
-                        <label class="btn {{ 'btn-danger' if cell['status'] == 3 else 'btn-outline-danger border-0' }} px-1"
-                               for="r3_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}">
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="v_{{ input_name }}" value="3"
+                               {{ 'checked' if status_val == 3 }}>
+                        <label class="btn {{ 'btn-danger text-white' if status_val == 3 else 'btn-outline-danger' }} border-0 py-2 fw-bold"
+                               for="v_{{ input_name }}" title="Vắng" data-type="3">
                             <i class="bi bi-x-lg"></i>
                         </label>
                     </div>
+
                     {% else %}
-                    {% if cell['status'] == 1 %}<i class="bi bi-check-circle-fill text-success fs-5"></i>
-                    {% elif cell['status'] == 2 %}<span class="badge bg-warning text-dark">P</span>
-                    {% elif cell['status'] == 3 %}<i class="bi bi-x-circle-fill text-danger fs-5"></i>
-                    {% else %}<span class="text-muted opacity-25">-</span>{% endif %}
+                    {% if status_val > 0 %}
+                    <div class="text-muted opacity-75">
+                        {% if status_val == 1 %} <i class="bi bi-check-lg text-success fs-5"></i>
+                        {% elif status_val == 2 %} <span class="fw-bold text-warning">P</span>
+                        {% elif status_val == 3 %} <i class="bi bi-x-lg text-danger fs-5"></i>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted opacity-25 small fw-bold">-</span>
+                    {% endif %}
                     {% endif %}
                 </td>
                 {% endfor %}
-                <td class="col-fix-right bg-light fw-bold">
-                    <span class="{{ 'text-success' if row['percent'] >= 80 else 'text-danger' }}">{{ row['percent'] }}%</span>
+
+                <td class="bg-white fw-bold shadow-sm"
+                    style="position: sticky; right: 0; z-index: 1010; border-left: 2px solid #dee2e6;">
+                    <span class="{{ 'text-success' if row.percent >= 80 else 'text-danger' }}">{{ row.percent }}%</span>
                 </td>
             </tr>
             {% endfor %}
@@ -134,111 +152,90 @@
         </table>
     </div>
 
-    <div class="d-md-none">
-        {% for row in student_rows %}
-        <div class="card mb-3 shadow-sm border-0 overflow-hidden">
-            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="fw-bold text-primary mb-0">{{ row['info'].ho_va_ten }}</h6>
-                    <small class="text-muted font-monospace">{{ row['info'].ma_nguoi_dung }}</small>
-                </div>
-                <div class="text-end">
-                    <div class="small text-muted">Chuyên cần</div>
-                    <span class="fw-bold fs-5 {{ 'text-success' if row['percent'] >= 80 else 'text-danger' }}">{{ row['percent'] }}%</span>
+    <div class="d-md-none pb-4">
+        <div class="alert alert-primary shadow-sm border-0 d-flex align-items-center mb-3">
+            <i class="bi bi-calendar-event fs-1 me-3"></i>
+            <div>
+                <div class="small text-uppercase fw-bold opacity-75">Điểm danh hôm nay</div>
+                <div class="fs-5 fw-bold">
+                    {% for s in sessions %}
+                    {% if s.id == target_session_id %}
+                    {{ s.display_date }} ({{ s.shift_name }})
+                    {% endif %}
+                    {% endfor %}
                 </div>
             </div>
-            <div class="card-body bg-light bg-opacity-50 pt-0">
-                <div class="dashed-hr"></div>
+        </div>
 
-                {% for cell in row['cells'] %}
-                {% if cell['date'] == today_str %}
-                <div class="p-2 bg-white rounded border border-primary border-opacity-25 shadow-sm mb-2">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold text-primary"><i
-                                class="bi bi-pencil-square me-1"></i>Điểm danh hôm nay</span>
-                        <span class="badge bg-primary rounded-pill">Hôm nay</span>
-                    </div>
-                    <div class="btn-group w-100">
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="m_r1_{{ row['info'].ma_nguoi_dung }}" value="1" {{ 'checked' if cell['status'] == 1
-                        }}>
-                        <label class="btn {{ 'btn-success' if cell['status'] == 1 else 'btn-outline-success' }} py-2"
-                               for="m_r1_{{ row['info'].ma_nguoi_dung }}">
-                            <i class="bi bi-check-lg me-1"></i>Có mặt
-                        </label>
+        {% for row in student_rows %}
+        <div class="card mb-3 shadow-sm border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">{{ row.info.ho_va_ten }}</h6>
+                    <small class="text-muted font-monospace">{{ row.info.ma_nguoi_dung }}</small>
+                </div>
+                <span class="badge {{ 'bg-success' if row.percent >= 80 else 'bg-danger' }}">{{ row.percent }}%</span>
+            </div>
+            <div class="card-body bg-light bg-opacity-25">
+                {% for cell in row.cells %}
+                {% if cell.session_id == target_session_id and cell.is_editable %}
+                {% set status_val = cell.status | int %}
+                {% set input_name = 'att_' ~ row.info.ma_nguoi_dung ~ '_' ~ cell.session_id %}
 
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="m_r2_{{ row['info'].ma_nguoi_dung }}" value="2" {{ 'checked' if cell['status'] == 2
-                        }}>
-                        <label class="btn {{ 'btn-warning text-dark' if cell['status'] == 2 else 'btn-outline-warning' }} py-2"
-                               for="m_r2_{{ row['info'].ma_nguoi_dung }}">
-                            Có phép
-                        </label>
+                <div class="bg-white p-3 rounded border shadow-sm">
+                    <div class="btn-group w-100 js-attendance-group" role="group">
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="m_c_{{ input_name }}"
+                               value="1" {{ 'checked' if status_val == 1 }}>
+                        <label class="btn {{ 'btn-success text-white' if status_val == 1 else 'btn-outline-success' }} py-2"
+                               for="m_c_{{ input_name }}" data-type="1">Có mặt</label>
 
-                        <input type="radio" class="btn-check"
-                               name="att_{{ row['info'].ma_nguoi_dung }}_{{ cell['date'] }}"
-                               id="m_r3_{{ row['info'].ma_nguoi_dung }}" value="3" {{ 'checked' if cell['status'] == 3
-                        }}>
-                        <label class="btn {{ 'btn-danger' if cell['status'] == 3 else 'btn-outline-danger' }} py-2"
-                               for="m_r3_{{ row['info'].ma_nguoi_dung }}">
-                            <i class="bi bi-x-lg me-1"></i>Vắng
-                        </label>
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="m_p_{{ input_name }}"
+                               value="2" {{ 'checked' if status_val == 2 }}>
+                        <label class="btn {{ 'btn-warning text-dark' if status_val == 2 else 'btn-outline-warning text-dark' }} py-2"
+                               for="m_p_{{ input_name }}" data-type="2">Phép</label>
+
+                        <input type="radio" class="btn-check" name="{{ input_name }}" id="m_v_{{ input_name }}"
+                               value="3" {{ 'checked' if status_val == 3 }}>
+                        <label class="btn {{ 'btn-danger text-white' if status_val == 3 else 'btn-outline-danger' }} py-2"
+                               for="m_v_{{ input_name }}" data-type="3">Vắng</label>
                     </div>
                 </div>
                 {% endif %}
                 {% endfor %}
-
-                <div class="mt-2 text-center">
-                    <button class="btn btn-sm btn-link text-decoration-none text-muted small" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#history{{ loop.index }}">
-                        <i class="bi bi-clock-history me-1"></i>Xem lịch sử điểm danh
-                    </button>
-                    <div class="collapse mt-2" id="history{{ loop.index }}">
-                        <div class="row g-2 px-1">
-                            {% for cell in row['cells'] %}
-                            {% if cell['date'] != today_str and not cell['ửa hôm is_future'] %}
-                            <div class="col-4">
-                                <div class="bg-white border rounded p-1 text-center small shadow-sm">
-                                    <div class="text-muted mb-1" style="font-size: 0.65rem;">{{
-                                        cell['date'][-5:].replace('-', '/') }}
-                                    </div>
-                                    {% if cell['status'] == 1 %}<i class="bi bi-check-lg text-success fw-bold"></i>
-                                    {% elif cell['status'] == 2 %}<span class="text-warning fw-bold">P</span>
-                                    {% elif cell['status'] == 3 %}<i class="bi bi-x-lg text-danger fw-bold"></i>
-                                    {% else %}<span class="text-muted">-</span>{% endif %}
-                                </div>
-                            </div>
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
         {% endfor %}
     </div>
 
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 mb-5 mb-md-0">
-        <div class="small text-muted fst-italic order-2 order-md-1 text-center text-md-start">
-            <i class="bi bi-info-circle me-1"></i>Hệ thống tự động lưu lịch sử vắng/có mặt sau khi bấm lưu.
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow order-1 order-md-2 w-100 w-md-auto">
-            <i class="bi bi-save me-2"></i>LƯU DỮ LIỆU
+    {% set ns = namespace(show_save_btn=false) %}
+    {% for s in sessions %}
+    {% if s.is_editable %}
+    {% set ns.show_save_btn = true %}
+    {% endif %}
+    {% endfor %}
+
+    {% if ns.show_save_btn %}
+    <div class="text-center mt-2 mb-4">
+        <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold shadow">
+            <i class="bi bi-box-arrow-in-down me-2"></i>LƯU ĐIỂM DANH
         </button>
     </div>
+    {% else %}
+    <div class="text-center mt-4 mb-4 text-muted small">
+        <i class="bi bi-lock-fill"></i> Hiện tại không có buổi học nào cần điểm danh.
+    </div>
+    {% endif %}
+
 </form>
 {% else %}
-<div class="text-center py-5 bg-white rounded border mt-3 shadow-sm">
-    <i class="bi bi-people-fill display-4 text-muted opacity-25"></i>
-    <h5 class="text-muted mt-3 fw-bold">Chưa có học viên nào đăng ký lớp này.</h5>
+<div class="text-center py-5">
+    <div class="text-muted opacity-50 display-1"><i class="bi bi-people"></i></div>
+    <h5 class="text-muted mt-3">Lớp này chưa có học viên.</h5>
 </div>
 {% endif %}
 {% else %}
-<div class="alert alert-info text-center mt-4 border-0 shadow-sm py-4">
-    <i class="bi bi-arrow-up-circle fs-2 d-block mb-2"></i>
-    Vui lòng chọn khóa học để thực hiện điểm danh.
+<div class="alert alert-info text-center shadow-sm mt-4">
+    Vui lòng chọn khóa học để bắt đầu.
 </div>
 {% endif %}
 {% endblock %}
@@ -246,28 +243,60 @@
 {% block javascript %}
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Hàm cuộn bảng Desktop tới cột ngày hiện tại
-        const scrollToDate = () => {
-            const container = document.getElementById('mainTableContainer');
-            const dateHeaders = document.querySelectorAll('th[data-date]');
-            const stickyCol = document.querySelector('.col-fix-left');
-            if (!container || !dateHeaders.length) return;
-            const todayStr = "{{ today_str }}";
-            let targetHeader = null;
-            for (let header of dateHeaders) {
-                if (header.getAttribute('data-date') === todayStr) {
-                    targetHeader = header;
-                    break;
+        // 1. Logic cuộn bảng (Giữ nguyên)
+        const container = document.getElementById('mainTableContainer');
+        const targetId = "col_{{ target_session_id }}";
+        const targetEl = document.getElementById(targetId);
+
+        if (container && targetEl) {
+            const offset = targetEl.offsetLeft - 260;
+            setTimeout(() => {
+                container.scrollTo({ left: offset, behavior: 'smooth' });
+            }, 300);
+        }
+
+        // 2. LOGIC JAVASCRIPT XỬ LÝ CHUYỂN MÀU NÚT BẤM (MỚI)
+        // Tìm tất cả các group nút điểm danh
+        const groups = document.querySelectorAll('.js-attendance-group');
+
+        groups.forEach(group => {
+            const radios = group.querySelectorAll('input[type="radio"]');
+
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Khi một nút được chọn, reset giao diện cả nhóm trước
+                    updateVisualsForGroup(group);
+                });
+            });
+        });
+
+        function updateVisualsForGroup(group) {
+            const labels = group.querySelectorAll('label');
+            const radios = group.querySelectorAll('input[type="radio"]');
+
+            radios.forEach((radio, index) => {
+                const label = labels[index];
+                const type = label.getAttribute('data-type'); // 1: Có mặt, 2: Phép, 3: Vắng
+
+                if (radio.checked) {
+                    if (type == '1') {
+                        label.className = "btn btn-success text-white border-0 py-2 fw-bold";
+                    } else if (type == '2') {
+                        label.className = "btn btn-warning text-dark border-0 fw-bold py-2";
+                    } else if (type == '3') {
+                        label.className = "btn btn-danger text-white border-0 py-2 fw-bold";
+                    }
+                } else {
+                    if (type == '1') {
+                        label.className = "btn btn-outline-success border-0 py-2 fw-bold";
+                    } else if (type == '2') {
+                        label.className = "btn btn-outline-warning text-dark border-0 fw-bold py-2";
+                    } else if (type == '3') {
+                        label.className = "btn btn-outline-danger border-0 py-2 fw-bold";
+                    }
                 }
-            }
-            if (targetHeader) {
-                const stickyWidth = stickyCol ? stickyCol.offsetWidth : 150;
-                const scrollLeftPos = targetHeader.offsetLeft - stickyWidth - 10;
-                container.scrollTo({ left: scrollLeftPos, behavior: 'smooth' });
-            }
-        };
-        scrollToDate();
-        setTimeout(scrollToDate, 500);
+            });
+        }
     });
 </script>
 {% endblock %}

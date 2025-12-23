@@ -9,36 +9,6 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    /* CSS hỗ trợ giao diện mobile */
-    .score-card {
-        border-radius: 12px;
-        transition: all 0.3s ease;
-    }
-    .score-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-    }
-    .score-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        font-weight: 600;
-        color: #6c757d;
-        letter-spacing: 0.5px;
-    }
-    .weight-badge {
-        font-size: 0.7rem;
-        background-color: #f8f9fa;
-        color: #6c757d;
-        border: 1px solid #dee2e6;
-    }
-    /* Hiệu ứng bóng cho phần tổng kết trên mobile */
-    .summary-box {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px solid #dee2e6;
-    }
-</style>
-
 {% if ma_khoa_hoc_hien_tai %}
 <div class="row mb-4">
     <div class="col-12 col-md-6">

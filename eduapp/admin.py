@@ -1,5 +1,4 @@
-import hashlib
-from flask import redirect, url_for, session, request, jsonify
+from flask import redirect, url_for, session
 from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_login import current_user
@@ -59,8 +58,8 @@ def format_tinh_trang_khoa(view, context, model, name):
     tt = getattr(model, name)
     colors = {TinhTrangKhoaHocEnum.DANG_TUYEN_SINH: 'success', TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH: 'warning',
               TinhTrangKhoaHocEnum.DA_KET_THUC: 'secondary'}
-    labels = {TinhTrangKhoaHocEnum.DANG_TUYEN_SINH: 'Đang Tuyển', TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH: 'Đang Học',
-              TinhTrangKhoaHocEnum.DA_KET_THUC: 'Kết Thúc'}
+    labels = {TinhTrangKhoaHocEnum.DANG_TUYEN_SINH: 'Đang tuyển', TinhTrangKhoaHocEnum.DUNG_TUYEN_SINH: 'Đang học',
+              TinhTrangKhoaHocEnum.DA_KET_THUC: 'Kết thúc'}
     return Markup(f'<span class="badge bg-{colors.get(tt, "secondary")} text-white">{labels.get(tt, tt.name)}</span>')
 
 
@@ -130,8 +129,8 @@ class NhanVienView(UserBaseView):
 
 
 class KhoaHocView(AuthenticatedView):
-    can_create = False;
-    can_edit = True;
+    can_create = False
+    can_edit = True
     can_delete = True
     column_list = ['ma_khoa_hoc', 'ten_khoa_hoc', 'loai_khoa_hoc', 'giao_vien', 'hoc_phi', 'si_so_hien_tai',
                    'tinh_trang']
@@ -140,37 +139,48 @@ class KhoaHocView(AuthenticatedView):
     form_columns = ['ma_khoa_hoc', 'ten_khoa_hoc', 'loai_khoa_hoc', 'giao_vien', 'ngay_bat_dau', 'ngay_ket_thuc',
                     'si_so_toi_da', 'hoc_phi', 'tinh_trang']
     column_formatters = {'hoc_phi': format_tien_te, 'tinh_trang': format_tinh_trang_khoa}
-    column_labels = dict(ma_khoa_hoc='Mã Khóa', ten_khoa_hoc='Tên Khóa Học', loai_khoa_hoc='Loại Khóa',
-                         giao_vien='Giáo Viên', hoc_phi='Học Phí', si_so_hien_tai='Sĩ Số', tinh_trang='Trạng Thái',
-                         ngay_bat_dau='Ngày Bắt Đầu', ngay_ket_thuc='Ngày Kết Thúc', si_so_toi_da='Sĩ Số Tối Đa')
+    column_labels = dict(ma_khoa_hoc='Mã khóa', ten_khoa_hoc='Tên khóa học', loai_khoa_hoc='Loại khóa',
+                         giao_vien='Giáo viên', hoc_phi='Học phí', si_so_hien_tai='Sĩ số', tinh_trang='Trạng thái',
+                         ngay_bat_dau='Ngày bắt đầu', ngay_ket_thuc='Ngày kết thúc', si_so_toi_da='Sĩ số tối đa')
     inline_models = [(LichHoc,
-                      dict(form_label='Chi Tiết Lịch Học', form_columns=['ma_lich_hoc', 'thu', 'ca_hoc', 'phong_hoc'],
-                           column_labels={'ma_lich_hoc': 'ID', 'thu': 'Thứ Trong Tuần', 'ca_hoc': 'Ca Học',
-                                          'phong_hoc': 'Phòng Học'}))]
+                      dict(form_label='Chi tiết lịch học', form_columns=['ma_lich_hoc', 'thu', 'ca_hoc', 'phong_hoc'],
+                           column_labels={'ma_lich_hoc': 'ID', 'thu': 'Thứ trong tuần', 'ca_hoc': 'Ca học',
+                                          'phong_hoc': 'Phòng học'}))]
 
 
 class LoaiKhoaHocView(AuthenticatedView):
-    column_list = ['ma_loai_khoa_hoc', 'ten_loai_khoa_hoc', 'hoc_phi']
-    column_labels = dict(ma_loai_khoa_hoc='Mã Loại', ten_loai_khoa_hoc='Tên Loại Khóa', hoc_phi='Học Phí Tham Khảo')
+    column_list = ['ma_loai_khoa_hoc', 'ten_loai_khoa_hoc', 'hoc_phi', 'mo_ta']
+    column_labels = dict(
+        ma_loai_khoa_hoc='Mã loại',
+        ten_loai_khoa_hoc='Tên loại khóa',
+        hoc_phi='Học phí tham khảo',
+        mo_ta='Mô tả'
+    )
     column_formatters = {'hoc_phi': format_tien_te}
+
+    create_template = 'admin/custom_edit.html'
+    edit_template = 'admin/custom_edit.html'
+
+    create_modal = False
+    edit_modal = False
 
 
 class PhongHocView(AuthenticatedView):
     column_list = ['ma_phong_hoc', 'ten_phong_hoc']
-    column_labels = dict(ma_phong_hoc='Mã Phòng', ten_phong_hoc='Tên Phòng')
+    column_labels = dict(ma_phong_hoc='Mã phòng', ten_phong_hoc='Tên phòng')
 
 
 class HoaDonView(AuthenticatedView):
-    can_create = False;
-    can_edit = False;
+    can_create = False
+    can_edit = False
     can_delete = True
     column_list = ['ma_hoa_don', 'hoc_vien', 'khoa_hoc', 'so_tien', 'trang_thai', 'ngay_tao', 'ngay_nop']
     column_filters = ['trang_thai', 'ngay_tao', 'hoc_vien.ho_va_ten']
     column_sortable_list = ['ngay_tao', 'so_tien', 'trang_thai']
     column_formatters = {'so_tien': format_tien_te, 'trang_thai': format_trang_thai_hd}
-    column_labels = dict(ma_hoa_don='Mã HĐ', hoc_vien='Học Viên', khoa_hoc='Khóa Học', so_tien='Số Tiền',
-                         trang_thai='Trạng Thái', ngay_tao='Ngày Tạo', ngay_nop='Ngày Thanh Toán',
-                         nhan_vien='Nhân Viên Thu')
+    column_labels = dict(ma_hoa_don='Mã HĐ', hoc_vien='Học viên', khoa_hoc='Khóa học', so_tien='Số tiền',
+                         trang_thai='Trạng thái', ngay_tao='Ngày tạo', ngay_nop='Ngày thanh toán',
+                         nhan_vien='Nhân viên thu')
 
 
 # ==============================================================================
@@ -200,14 +210,14 @@ class MyAdminIndexView(AdminSecurityMixin, AdminIndexView):
 # 5. KHỞI TẠO ADMIN & ADD VIEWS
 # ==============================================================================
 
-admin = Admin(app=app, name="Hệ Thống Quản Lý", index_view=MyAdminIndexView())
+admin = Admin(app=app, name="Hệ thống quản lý", index_view=MyAdminIndexView())
 
-admin.add_view(HocVienView(HocVien, db.session, name='Học Viên', category='Người Dùng'))
-admin.add_view(GiaoVienView(GiaoVien, db.session, name='Giáo Viên', category='Người Dùng'))
-admin.add_view(NhanVienView(NhanVien, db.session, name='Nhân Viên', category='Người Dùng'))
+admin.add_view(HocVienView(HocVien, db.session, name='Học viên', category='Người dùng'))
+admin.add_view(GiaoVienView(GiaoVien, db.session, name='Giáo viên', category='Người dùng'))
+admin.add_view(NhanVienView(NhanVien, db.session, name='Nhân viên', category='Người dùng'))
 
-admin.add_view(KhoaHocView(KhoaHoc, db.session, name='Danh Sách Khóa', category='Đào Tạo'))
-admin.add_view(LoaiKhoaHocView(LoaiKhoaHoc, db.session, name='Loại Khóa', category='Đào Tạo'))
-admin.add_view(PhongHocView(PhongHoc, db.session, name='Phòng Học', category='Đào Tạo'))
+admin.add_view(KhoaHocView(KhoaHoc, db.session, name='Danh sách khóa học', category='Đào tạo'))
+admin.add_view(LoaiKhoaHocView(LoaiKhoaHoc, db.session, name='Loại khóa', category='Đào tạo'))
+admin.add_view(PhongHocView(PhongHoc, db.session, name='Phòng học', category='Đào tạo'))
 
-admin.add_view(HoaDonView(HoaDon, db.session, name='Hóa Đơn', category='Tài Chính'))
+admin.add_view(HoaDonView(HoaDon, db.session, name='Hóa đơn', category='Tài chính'))

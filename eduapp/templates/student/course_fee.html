@@ -9,27 +9,8 @@
 {% endblock %}
 
 {% block card_body %}
-<style>
-    .mobile-label {
-        width: 110px;
-        display: inline-block;
-        font-weight: 600;
-        color: #6c757d;
-        font-size: 0.85rem;
-    }
-    .card-mobile {
-        transition: transform 0.2s;
-        border-left: 4px solid #0d6efd;
-    }
-    .card-mobile.paid {
-        border-left-color: #198754;
-    }
-    .font-monospace {
-        font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
-</style>
-
 {% if ds_hoa_don %}
+
 <div class="border rounded-3 shadow-sm overflow-hidden bg-white mb-4 d-none d-md-block">
     <div class="table-responsive">
         <table class="table table-bordered text-nowrap mb-0 align-middle">
@@ -47,6 +28,10 @@
             </thead>
             <tbody>
             {% for hd in ds_hoa_don %}
+            {# --- LOGIC KIỂM TRA QUÁ HẠN --- #}
+            {# Điều kiện: Chưa thanh toán (1) VÀ Có ngày hạn VÀ Ngày hạn nhỏ hơn hiện tại #}
+            {% set is_overdue = (hd.trang_thai.value == 1 and hd.ngay_han and hd.ngay_han < now) %}
+
             <tr class="{{ 'bg-light' if hd.trang_thai.value == 2 else '' }}">
                 <td class="text-center text-muted small">{{ loop.index }}</td>
                 <td>
@@ -58,20 +43,37 @@
                         </div>
                     </div>
                 </td>
+
+                {# CỘT HẠN ĐÓNG #}
                 <td class="text-center">
                     {% if hd.ngay_han %}
-                    <div class="small fw-medium text-dark bg-light rounded py-1 border d-inline-block px-2">{{
-                        hd.ngay_han.strftime('%d/%m/%Y') }}
+                    {% if is_overdue %}
+                    <div class="small fw-bold text-danger bg-danger bg-opacity-10 rounded py-1 border border-danger border-opacity-25 d-inline-block px-2">
+                        <i class="bi bi-exclamation-circle me-1"></i>{{ hd.ngay_han.strftime('%d/%m/%Y') }}
                     </div>
-                    {% else %}<span class="text-muted">-</span>{% endif %}
+                    {% else %}
+                    <div class="small fw-medium text-dark bg-light rounded py-1 border d-inline-block px-2">
+                        {{ hd.ngay_han.strftime('%d/%m/%Y') }}
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
                 </td>
+
                 <td class="text-end">
-                    <div class="fw-bold font-monospace fs-6 text-dark">{{ "{:,.0f}".format(hd.so_tien) }} ₫</div>
+                    <div class="fw-bold fs-6 text-dark">{{ "{:,.0f}".format(hd.so_tien) }} ₫</div>
                 </td>
+
+                {# CỘT TRẠNG THÁI #}
                 <td class="text-center">
                     {% if hd.trang_thai.value == 2 %}
                     <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2 small">
                             <i class="bi bi-check-circle-fill me-1"></i>Đã xong
+                        </span>
+                    {% elif is_overdue %}
+                    <span class="badge bg-danger text-white border border-danger rounded-pill px-3 py-2 small shadow-sm">
+                            <i class="bi bi-bell-fill me-1"></i>Quá hạn
                         </span>
                     {% else %}
                     <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2 small">
@@ -79,9 +81,12 @@
                         </span>
                     {% endif %}
                 </td>
+
                 <td class="text-center">
                     {% if hd.trang_thai.value == 1 %}
-                    <a href="#" class="btn btn-sm btn-primary shadow-sm fw-bold px-3">Thanh toán</a>
+                    <a href="/pay/{{hd.ma_hoa_don}}" class="btn btn-sm btn-primary shadow-sm fw-bold px-3">
+                        Thanh toán
+                    </a>
                     {% else %}
                     <button class="btn btn-sm btn-outline-secondary opacity-50 border-0" disabled><i
                             class="bi bi-lock-fill"></i></button>
@@ -96,39 +101,53 @@
 
 <div class="d-block d-md-none">
     {% for hd in ds_hoa_don %}
-    <div class="card card-mobile mb-3 shadow-sm border-0 {{ 'paid' if hd.trang_thai.value == 2 else '' }}">
+
+    {# Logic quá hạn cho Mobile #}
+    {% set is_overdue = (hd.trang_thai.value == 1 and hd.ngay_han and hd.ngay_han < now) %}
+
+    <div class="card card-register mb-3 shadow-sm border-0 {{ 'paid' if hd.trang_thai.value == 2 else '' }} {{ 'border-danger border-2' if is_overdue else '' }}">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <h6 class="fw-bold text-primary mb-0">{{ hd.khoa_hoc.ten_khoa_hoc if hd.khoa_hoc else 'Hóa đơn lẻ'
                     }}</h6>
-                <span class="badge {{ 'bg-success' if hd.trang_thai.value == 2 else 'bg-warning text-dark' }} rounded-pill">
-                        {{ 'Đã xong' if hd.trang_thai.value == 2 else 'Chưa đóng' }}
-                    </span>
+
+                {# Badge trạng thái #}
+                {% if hd.trang_thai.value == 2 %}
+                <span class="badge bg-success rounded-pill">Đã xong</span>
+                {% elif is_overdue %}
+                <span class="badge bg-danger rounded-pill">Quá hạn</span>
+                {% else %}
+                <span class="badge bg-warning text-dark rounded-pill">Chưa đóng</span>
+                {% endif %}
             </div>
 
             <div class="mb-3">
-                    <span class="badge bg-light text-dark border font-monospace small">
+                    <span class="badge bg-light text-dark border small">
                         <i class="bi bi-upc-scan me-1"></i>{{ hd.ma_hoa_don }}
                     </span>
             </div>
 
             <div class="small">
                 <div class="mb-1">
-                    <span class="mobile-label">Ngày tạo:</span>
+                    <span class="mobile-card-label">Ngày tạo:</span>
                     <span class="text-muted">{{ hd.ngay_tao.strftime('%d/%m/%Y') }}</span>
                 </div>
                 <div class="mb-1">
-                    <span class="mobile-label">Hạn đóng:</span>
+                    <span class="mobile-card-label">Hạn đóng:</span>
+                    {% if is_overdue %}
+                    <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ hd.ngay_han.strftime('%d/%m/%Y') if hd.ngay_han else '-' }}</span>
+                    {% else %}
                     <span class="text-danger fw-medium">{{ hd.ngay_han.strftime('%d/%m/%Y') if hd.ngay_han else '-' }}</span>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
-                    <span class="mobile-label">Số tiền:</span>
-                    <span class="fw-bold text-dark font-monospace fs-6">{{ "{:,.0f}".format(hd.so_tien) }} ₫</span>
+                    <span class="mobile-card-label">Số tiền:</span>
+                    <span class="fw-bold text-dark fs-6">{{ "{:,.0f}".format(hd.so_tien) }} ₫</span>
                 </div>
             </div>
 
             {% if hd.trang_thai.value == 1 %}
-            <a href="#" class="btn btn-primary w-100 fw-bold py-2 mt-2 shadow-sm">
+            <a href="/pay/{{hd.ma_hoa_don}}" class="btn btn-primary w-100 fw-bold py-2 mt-2 shadow-sm">
                 <i class="bi bi-credit-card me-2"></i>Thanh toán ngay
             </a>
             {% endif %}
@@ -139,7 +158,7 @@
 
 <div class="bg-light p-3 rounded-3 border text-end mb-4 shadow-sm">
     <span class="text-uppercase fw-bold text-muted me-2 small">Tổng đã thanh toán:</span>
-    <span class="fs-4 fw-bold text-success font-monospace">{{ "{:,.0f}".format(tong_tien) }} ₫</span>
+    <span class="fs-4 fw-bold text-success">{{ "{:,.0f}".format(tong_tien) }} ₫</span>
 </div>
 
 {% else %}
