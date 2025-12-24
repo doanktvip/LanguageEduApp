@@ -520,16 +520,12 @@ def register_course():
         else:
             target_user = current_user
     else:
-        # Nếu chưa đăng nhập (Khách)
         target_user = None
 
-    # 2. XỬ LÝ POST (ĐĂNG KÝ)
     if request.method == 'POST':
-        # Nếu chưa đăng nhập mà cố tình POST -> Bắt đăng nhập ngay
         if not current_user.is_authenticated:
-            return redirect(url_for('login', next=request.url))  # Sửa 'login_admin' thành route login của bạn
+            return redirect(url_for('login', next=request.url))
 
-        # Logic đăng ký giữ nguyên như cũ
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
         if ds_ma_khoa_hoc and target_user:
             for ma_kh in ds_ma_khoa_hoc:
@@ -563,9 +559,7 @@ def register_course():
         ma_loai=cate_id
     )
 
-    return render_template("student/register_course.html",
-                           ds_khoa_hoc=ds_khoa_hoc,
-                           thong_bao=list_thong_bao,
+    return render_template("student/register_course.html", ds_khoa_hoc=ds_khoa_hoc, thong_bao=list_thong_bao,
                            target_user=target_user)
 
 
@@ -656,7 +650,7 @@ def manager_profile_user(ma_nguoi_dung):
     user_to_show = dao.get_by_id(ma_nguoi_dung)
     if not user_to_show:
         return redirect('/')
-    if user_to_show.vai_tro != NguoiDungEnum.HOC_VIEN:
+    if user_to_show.vai_tro != NguoiDungEnum.HOC_VIEN and current_user.vai_tro == NguoiDungEnum.NHAN_VIEN:
         return redirect(url_for('manager_student_list'))
     return render_template('manager/profile_user.html', user=user_to_show)
 
