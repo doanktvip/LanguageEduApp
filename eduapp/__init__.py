@@ -1,5 +1,4 @@
 from datetime import timedelta
-
 import cloudinary
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy

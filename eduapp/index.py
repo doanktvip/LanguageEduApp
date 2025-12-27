@@ -4,7 +4,7 @@ import random
 import math
 from datetime import timedelta, date
 import datetime
-import admin
+from eduapp import admin
 import cloudinary.uploader
 import json
 from flask import render_template, redirect, request, url_for, session, jsonify, flash
@@ -515,7 +515,7 @@ def register_course():
 
     if current_user.is_authenticated:
         ma_hv_target = request.args.get('ma_hoc_vien')
-        if ma_hv_target and current_user.user_role == NguoiDungEnum.NHAN_VIEN:
+        if ma_hv_target and current_user.vai_tro == NguoiDungEnum.NHAN_VIEN:
             target_user = dao.get_by_id(ma_hv_target)
         else:
             target_user = current_user
@@ -525,7 +525,7 @@ def register_course():
     if request.method == 'POST':
         if not current_user.is_authenticated:
             return redirect(url_for('login', next=request.url))
-
+        dem = 0
         ds_ma_khoa_hoc = request.form.getlist('course_ids')
         if ds_ma_khoa_hoc and target_user:
             for ma_kh in ds_ma_khoa_hoc:
@@ -536,6 +536,7 @@ def register_course():
                 if hop_le:
                     kq = dao.dang_ky_khoa_hoc(target_user.ma_nguoi_dung, ma_kh)
                     if kq:
+                        dem += 1
                         list_thong_bao.append({'type': 'success', 'content': f"Khóa '{ten_khoa}': Đăng ký thành công!"})
                     else:
                         list_thong_bao.append({'type': 'danger', 'content': f"Khóa '{ten_khoa}': Lỗi hệ thống."})
@@ -543,7 +544,9 @@ def register_course():
                     list_thong_bao.append({'type': 'warning', 'content': f"Khóa '{ten_khoa}': {ly_do}"})
         else:
             list_thong_bao.append({'type': 'warning', 'content': "Bạn chưa chọn khóa học nào!"})
-
+        if dem != 0:
+            dao.send_course_registration_email(user_email=target_user.email, user_name=target_user.ho_va_ten,
+                                               course_list=ds_ma_khoa_hoc)
     kw = request.args.get('kw')
     from_date = request.args.get('from_date')
     to_date = request.args.get('to_date')
