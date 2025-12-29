@@ -365,7 +365,10 @@ def update_email_verify():
         return redirect(url_for('verify_page'))
 
     if dao.update_email(current_user.ten_dang_nhap, new_email):
-        flash("Cập nhật email thành công! Mã xác minh mới đã được gửi.", "success")
+        new_otp = str(random.randint(0, 999999)).zfill(6)
+        if dao.send_verification_email(new_email, current_user.ho_va_ten, new_otp):
+            flash(f"Mã mới đã gửi tới {new_email}", "info")
+            return redirect(url_for('verify_page'))
         return redirect(url_for('verify_page', action='resend'))
     else:
         flash("Lỗi hệ thống: Không thể cập nhật email lúc này.", "danger")
